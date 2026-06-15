@@ -1,0 +1,12 @@
+rootProject.name = 'kairos'
+
+include 'common'
+include 'kairos-api'
+include 'kairos-engine'
+include 'kairos-worker'
+include 'kairos-adapters:kafka'
+include 'kairos-adapters:sqs'
+include 'kairos-adapters:webhook'
+include 'kairos-adapters:rabbitmq'
+include 'kairos-admin'
+include 'kairos-sdk'
