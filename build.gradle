@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+group = 'dev.kairos'
+version = '0.1.0-SNAPSHOT'
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(26)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}
