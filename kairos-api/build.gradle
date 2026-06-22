@@ -1,1 +1,20 @@
-description = 'TODO'
+description = 'Kairos REST API (entry point)'
+
+dependencies {
+    testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
+    testImplementation platform("org.testcontainers:testcontainers-bom:${testcontainersBomVersion}")
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
+
+    testImplementation "org.flywaydb:flyway-core:${flywayVersion}"
+    testImplementation "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
+    testImplementation "org.postgresql:postgresql:${postgresDriverVersion}"
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
