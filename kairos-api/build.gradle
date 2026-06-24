@@ -31,11 +31,9 @@ dependencies {
     jooqGenerator "org.postgresql:postgresql:${postgresDriverVersion}"
 
     testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
-    testImplementation platform("org.testcontainers:testcontainers-bom:${testcontainersBomVersion}")
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation "com.h2database:h2:${h2Version}"
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

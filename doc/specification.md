@@ -118,7 +118,7 @@ the "no further mutations after deletion" rule.
 ## 7. Application Layer — Use Cases (M1, implemented)
 
 The application layer orchestrates the domain via five use cases, all in
-`dev.kairos.domain.task.usecases`. Each use case receives its port(s) and a
+`dev.kairos.application.task.usecases`. Each use case receives its port(s) and a
 `java.time.Clock` through its constructor — no field injection, no framework
 dependency. Timestamps are always sourced from the injected clock so tests
 can run with a fixed instant.
@@ -174,7 +174,7 @@ case falls back to the domain defaults: `active = true`,
 `UpdateTaskCommand` intentionally omits it — a task's owning service cannot
 be changed after creation.
 
-### Commands (`dev.kairos.domain.task.commands`)
+### Commands (`dev.kairos.application.task.commands`)
 
 `CreateTaskCommand` and `UpdateTaskCommand` are plain Java records carrying
 raw field values (no domain types). The API edge will map an incoming request
@@ -280,6 +280,34 @@ The Hexagonal boundary isn't proven by writing one adapter; it's proven
 the first time a *second* adapter ships with zero changes to the domain or
 application layers. Treat that as a concrete checkpoint (see M7 in the
 development plan), not an assumption.
+
+**Layer separation as realized in M1.** The `application` package
+(`dev.kairos.application.task`) now physically exists alongside
+`dev.kairos.domain.task`. Use cases and command records live in the
+application package; the domain package contains only entities, value
+objects, ports, and domain exceptions — no orchestration logic. The
+infrastructure layer (`dev.kairos.infrastructure`) provides the concrete
+port implementations:
+
+- `JooqTaskRepository` (`dev.kairos.infrastructure.task`) implements
+  `TaskRepository` using jOOQ. `save()` is an upsert
+  (`INSERT ... ON CONFLICT (id) DO UPDATE`) covering all editable fields
+  plus `updated_at` and `deleted_at`. The upsert deliberately never writes
+  the engine-owned denormalized columns (`last_status`, `last_run_at`,
+  `next_run_at`) — those are exclusively managed by the engine. Transaction
+  management is left to the caller; the repository has no opinion on it.
+- `TaskMapper` (`dev.kairos.infrastructure.task`, package-private) converts
+  between `TasksRecord` (jOOQ-generated) and the `Task` domain entity. It
+  lives in the infrastructure package so the domain stays free of any jOOQ
+  types. JSONB columns are converted via `JSONB.valueOf(string)` /
+  `jsonb.data()`; timestamps are converted between `OffsetDateTime` (jOOQ
+  record) and `Instant` (domain entity) via UTC offset.
+- `JooqDestinationRepository` (`dev.kairos.infrastructure.destination`)
+  implements `DestinationRepository.existsById` via `DSLContext.fetchExists`.
+- `DSLContextFactory` (`dev.kairos.infrastructure`) builds a shared
+  `DSLContext` from a `DataSource` with `renderSchema = false` and
+  `renderQuotedNames = NEVER`, and is injected into every repository at
+  startup. Transaction management belongs to the application/API layer.
 
 ## 10. Future Work (Explicitly Out of V1)
 

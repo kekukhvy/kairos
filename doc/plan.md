@@ -90,7 +90,7 @@ All use cases receive their port(s) and a `java.time.Clock` via constructor
 (no field injection, no framework); timestamps are always sourced from the
 injected clock for determinism and testability.
 
-**Commands** (`dev.kairos.domain.task.commands`):
+**Commands** (`dev.kairos.application.task.commands`):
 - `CreateTaskCommand` — carries raw field values (no domain types) including
   `service`; `active` and `supportsRetry` are nullable `Boolean`.
 - `UpdateTaskCommand` — same editable fields, `service` intentionally absent
@@ -106,11 +106,21 @@ injected clock for determinism and testability.
   at `kairos-api/src/main/generated` (package
   `dev.kairos.infrastructure.generated`). JSONB columns (`tasks.payload`,
   `destinations.config`, `execution_history.result`) are typed as
-  `org.jooq.JSONB`; conversion to/from `String` is handled in a mapper
-  (not yet present). DB connection resolves: env var → `local.properties`
+  `org.jooq.JSONB`; conversion to/from `String` is handled in `TaskMapper`.
+  DB connection resolves: env var → `local.properties`
   (gitignored) → hardcoded local default.
-- [ ] `JooqTaskRepository implements TaskRepository`
-- [ ] Mapping between JOOQ records and the domain entity
+- [x] `JooqTaskRepository implements TaskRepository` — upsert via
+  `INSERT ... ON CONFLICT (id) DO UPDATE`; never writes the engine-owned
+  denormalized columns (`last_status`, `last_run_at`, `next_run_at`);
+  transaction management delegated to the caller.
+- [x] `TaskMapper` (package-private, infra layer) — bidirectional mapping
+  between `TasksRecord` (jOOQ) and `Task` domain entity; JSONB↔String via
+  `JSONB.data()` / `JSONB.valueOf()`; `OffsetDateTime`↔`Instant` via UTC offset.
+- [x] `JooqDestinationRepository implements DestinationRepository` —
+  `existsById` via `DSLContext.fetchExists`; full CRUD deferred to M2.
+- [x] `DSLContextFactory` — builds a shared `DSLContext` from a `DataSource`
+  (`renderSchema = false`, `renderQuotedNames = NEVER`); injected into
+  repositories at startup.
 
 ### API (kairos-api)
 - [ ] `POST /api/v1/tasks` — create
