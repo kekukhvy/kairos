@@ -1,24 +1,19 @@
 package dev.kairos;
 
 import dev.kairos.config.AppConfig;
-import dev.kairos.config.DataSourceFactory;
-import dev.kairos.config.DatabaseMigrator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
-
 public class KairosApplication {
 
-    private static Logger logger = LoggerFactory.getLogger(KairosApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(KairosApplication.class);
 
-    public static void main() {
-        logger.info("tarting Kairos...");
+    public static void main(String[] args) {
+        log.info("Starting Kairos...");
 
-        AppConfig appConfig = AppConfig.load();
-        DataSource dataSource = DataSourceFactory.getDataSource(appConfig);
-        DatabaseMigrator.migrate(dataSource, appConfig);
+        AppConfig config = AppConfig.load();
+        ApplicationContext.build(config).start();
 
-        logger.info("KairosApplication started");
+        log.info("Kairos started");
     }
 }

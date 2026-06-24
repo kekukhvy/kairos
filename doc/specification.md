@@ -149,21 +149,18 @@ can run with a fixed instant.
 | `UpdateTaskUseCase` | `TaskId`, `UpdateTaskCommand`, `Clock` | `Task` | `TaskNotFoundException` (missing/deleted); `ValidationException` (unknown destination or invalid field) |
 | `GetTaskUseCase` | `TaskId` | `Task` | `TaskNotFoundException` (missing or soft-deleted) |
 | `ListTasksUseCase` | `Pagination` | `List<Task>` | — |
-| `SoftDeleteTaskUseCase` | `TaskId`, `Clock` | void | `TaskNotFoundException` (missing or soft-deleted) |
+| `SoftDeleteTaskUseCase` | `TaskId`, `Clock` | void | `TaskNotFoundException` (task not found); `TaskAlreadyDeletedException` (task already soft-deleted) |
 
 **Soft-delete visibility rules:**
-- `GET`, `UPDATE`, `SOFT_DELETE` on a soft-deleted task all raise
-  `TaskNotFoundException` (→ HTTP 404). A repeat `DELETE` therefore also
-  returns 404, not 409. The domain method `Task.softDelete()` itself throws
-  `TaskAlreadyDeletedException` as an internal guard, but `SoftDeleteTaskUseCase`
-  pre-checks `isDeleted()` and raises `TaskNotFoundException` before reaching
-  that guard — making the 409 path unreachable through the use case.
-  **Contradiction with the API table in §8:** that table advertises 409 for
-  repeat-delete. Aligning the use case behavior with the intended 409 semantic
-  (by throwing `TaskAlreadyDeletedException` instead of `TaskNotFoundException`
-  in the already-deleted branch of `SoftDeleteTaskUseCase`) is deferred to
-  the controller / API layer milestone — a human should resolve this before
-  controllers are written.
+- `GET` and `UPDATE` on a soft-deleted task raise `TaskNotFoundException`
+  (→ HTTP 404).
+- `DELETE` on a task that was already soft-deleted raises
+  `TaskAlreadyDeletedException` (→ HTTP 409). The use case calls
+  `taskRepository.findById` (which returns the row regardless of
+  soft-delete state), then delegates to `task.softDelete(now)`. If the task
+  is already deleted, `Task.softDelete()` throws `TaskAlreadyDeletedException`
+  directly; the use case does **not** pre-check `isDeleted()` for the delete
+  path, so the 409 surfaces naturally without an extra branch.
 
 **Nullable boolean defaults:** `CreateTaskCommand` and `UpdateTaskCommand`
 carry `active` and `supportsRetry` as nullable `Boolean`. When null the use
@@ -186,35 +183,112 @@ the domain validate them.
 The first vertical slice covers Task only — no Schedule/Execution API yet
 (those land in M3+ per the development plan).
 
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/tasks` | create a task |
-| GET | `/api/v1/tasks/{id}` | fetch (404 if deleted/not found) |
-| GET | `/api/v1/tasks` | list (excluding soft-deleted, paginated) |
-| PUT | `/api/v1/tasks/{id}` | update |
-| DELETE | `/api/v1/tasks/{id}` | soft delete |
+**HTTP framework:** Javalin 6.4.0 (`io.javalin:javalin`). The server port
+is read from `server.port` in `application.properties` (default `8080`).
+A route overview is available at `/routes` (Javalin bundled plugin).
 
-Example create request body:
+### Endpoints
+
+| Method | Path | Success status | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/tasks` | 201 | create a task |
+| `GET` | `/api/v1/tasks/{id}` | 200 | fetch (404 if deleted or not found) |
+| `GET` | `/api/v1/tasks` | 200 | list (excluding soft-deleted, paginated) |
+| `PUT` | `/api/v1/tasks/{id}` | 200 | update (full replacement of editable fields) |
+| `DELETE` | `/api/v1/tasks/{id}` | 204 | soft delete — stamps `deleted_at`, no response body |
+
+### Exception → HTTP status mapping (`GlobalExceptionHandler`)
+
+| Exception | HTTP status | Notes |
+|---|---|---|
+| `ValidationException` | 400 | field-level constraint violations |
+| `IllegalArgumentException` | 400 | malformed path param (e.g. non-UUID `{id}`) |
+| `TaskNotFoundException` | 404 | task missing or already soft-deleted (GET/PUT) |
+| `TaskAlreadyDeletedException` | 409 | repeat DELETE on an already-deleted task |
+| any other `Exception` | 500 | logged server-side; body is `{"error":"Internal server error"}` |
+
+All error bodies use `ErrorResponse(String error)` — a single `error` field
+with a human-readable message.
+
+### DTO contracts (`common` module)
+
+**`CreateTaskRequest`** — body for `POST /api/v1/tasks`:
+
+| Field | Java type | Notes |
+|---|---|---|
+| `service` | `String` | owning service name |
+| `name` | `String` | required (validated by domain) |
+| `description` | `String` | nullable |
+| `active` | `Boolean` | nullable → domain default `true` |
+| `destinationId` | `String` | must reference an existing destination |
+| `messageType` | `String` | required |
+| `payload` | `JsonNode` | any valid JSON value; nullable → stored as JSONB |
+| `timeoutMs` | `int` | must be > 0 |
+| `supportsRetry` | `Boolean` | nullable → domain default `false` |
+
+**`UpdateTaskRequest`** — body for `PUT /api/v1/tasks/{id}`:
+
+Same fields as `CreateTaskRequest` **minus `service`** — the owning service
+is immutable after creation. `active` and `supportsRetry` nullable with the
+same defaults.
+
+**`TaskResponse`** — body for all successful task reads (200, 201):
+
+| Field | Java type | Notes |
+|---|---|---|
+| `id` | `UUID` | |
+| `service` | `String` | |
+| `name` | `String` | |
+| `description` | `String` | nullable |
+| `active` | `boolean` | |
+| `destinationId` | `String` | |
+| `messageType` | `String` | |
+| `payload` | `JsonNode` | embedded as a real JSON node, not an escaped string; null if not set |
+| `timeoutMs` | `int` | |
+| `supportsRetry` | `boolean` | |
+| `createdAt` | `Instant` | ISO-8601 string |
+| `updatedAt` | `Instant` | ISO-8601 string |
+
+`deletedAt` is intentionally absent — deleted tasks are never returned;
+callers receive 404 instead.
+
+**`PageResponse<T>`** — wrapper for `GET /api/v1/tasks`:
 
 ```json
 {
-  "service": "booking-service",
-  "name": "expire-booking",
-  "description": "Cancel reservation after timeout",
-  "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
-  "payload": { "bookingId": "123" },
-  "timeoutMs": 5000,
-  "supportsRetry": true
+  "items": [ ...TaskResponse... ],
+  "limit": 20,
+  "offset": 0
 }
 ```
 
-The response is the same body plus `id`, `active: true`, `createdAt`,
-`updatedAt`, `deletedAt: null`.
+Query parameters: `limit` (nullable, default applied by `Pagination`) and
+`offset` (nullable, default `0`).
 
-Errors: `400` — validation (e.g. missing `name` or a non-existent
-`destinationId`), `404` — task not found or already soft-deleted, `409` —
-attempting to delete an already-deleted task.
+**`ErrorResponse`** — body for all 4xx/5xx:
+
+```json
+{ "error": "human-readable message" }
+```
+
+### ObjectMapper configuration (`ObjectMapperFactory`)
+
+One shared `ObjectMapper` instance is created at startup and injected into
+both the Javalin JSON mapper (`JavalinJackson`) and `TaskHandler`/`TaskDtoMapper`:
+
+- `JavaTimeModule` registered — `Instant` serializes as an ISO-8601 string.
+- `WRITE_DATES_AS_TIMESTAMPS = false` — human-readable dates, not numeric arrays.
+- `FAIL_ON_UNKNOWN_PROPERTIES = false` — forward-compatible: extra fields from
+  newer clients are silently ignored.
+
+### Payload handling
+
+`JsonNode payload` in the request is serialized to a JSON string
+(`JsonConverter.jsonToString`) before being passed to the command/domain layer,
+where it is stored as JSONB. On the response path, `TaskDtoMapper.toResponse`
+parses the stored string back to a `JsonNode` so the response embeds payload
+as a real JSON object rather than an escaped string. A null or JSON-null node
+results in a null `payload` field in the response.
 
 ## 9. Architecture: DDD + Hexagonal
 
@@ -239,7 +313,8 @@ already ran into, not because the domain itself is complex.
   `Validation` utility (`requireText`, `requirePositive`) when field-level
   constraints are violated (e.g. blank name, non-positive `timeoutMs`).
 - `TaskAlreadyDeletedException extends DomainException` — thrown by
-  `Task.update()` when the task is already soft-deleted.
+  `Task.update()` and `Task.softDelete()` when the task is already
+  soft-deleted. Maps to HTTP 409 at the API layer.
 
 The `Validation` utility class (`dev.kairos.common.util.helpers.Validation`)
 provides two static guards used across the domain:
@@ -287,7 +362,8 @@ development plan), not an assumption.
 application package; the domain package contains only entities, value
 objects, ports, and domain exceptions — no orchestration logic. The
 infrastructure layer (`dev.kairos.infrastructure`) provides the concrete
-port implementations:
+port implementations, and the HTTP layer (`dev.kairos.api`) sits at the
+outermost ring, depending on the application layer but unknown to it:
 
 - `JooqTaskRepository` (`dev.kairos.infrastructure.task`) implements
   `TaskRepository` using jOOQ. `save()` is an upsert
@@ -308,6 +384,31 @@ port implementations:
   `DSLContext` from a `DataSource` with `renderSchema = false` and
   `renderQuotedNames = NEVER`, and is injected into every repository at
   startup. Transaction management belongs to the application/API layer.
+- `ObjectMapperFactory` (`dev.kairos.infrastructure`) produces the single
+  shared `ObjectMapper` (see §8 for configuration). It is wired into both
+  the Javalin JSON mapper and `TaskHandler` at startup.
+- `Router` (`dev.kairos.api`) creates the `Javalin` instance, registers the
+  `GlobalExceptionHandler`, and exposes `registerTaskRoutes` to attach
+  `TaskHandler` method references. Routes are registered as method references
+  (`taskHandler::list`, etc.), keeping `TaskHandler` free of Javalin types
+  except `io.javalin.http.Context`.
+- `TaskHandler` (`dev.kairos.api.task`) translates HTTP context to commands
+  and delegates to the use cases. It holds a reference to `ObjectMapper`
+  solely for `JsonConverter.jsonToString` (request → command) and
+  `TaskDtoMapper.toResponse` (domain entity → response DTO).
+- `TaskDtoMapper` (`dev.kairos.api.task`, package-private) performs the
+  `Task` → `TaskResponse` mapping, including the payload string → `JsonNode`
+  conversion for the response.
+- `JsonConverter` (`dev.kairos.common.util.helpers`) serializes an inbound
+  `JsonNode` to a JSON string for the domain/storage layer. A null or
+  JSON-null node returns null; a serialization failure throws
+  `ValidationException`.
+- `ApplicationContext` (`dev.kairos`) wires every layer in order:
+  infrastructure → repositories → use cases → handlers → HTTP. The Javalin
+  server port is read from `config.getIntProperty("server.port", 8080)`.
+  `KairosApplication.main` loads `AppConfig`, calls
+  `ApplicationContext.build(config).start()`, and exits normally — the
+  Javalin thread keeps the process alive.
 
 ## 10. Future Work (Explicitly Out of V1)
 

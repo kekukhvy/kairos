@@ -1,0 +1,171 @@
+# Kairos — Task API
+# M1 scenarios: happy path + all error cases
+#
+# PRE-REQUISITE: a destination row must exist before creating tasks (FK constraint).
+# Run this once against your local Docker DB:
+#
+#   INSERT INTO destinations (id, type, config)
+#   VALUES ('booking-kafka', 'KAFKA', '{"topic": "bookings"}');
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+### ✅ 1. Create task — 201
+# @name createTask
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "booking-service",
+  "name": "expire-booking",
+  "description": "Cancels a reservation after the hold window expires",
+  "active": true,
+  "destinationId": "booking-kafka",
+  "messageType": "booking.expire.v1",
+  "payload": {
+    "bookingId": "abc-123",
+    "reason": "hold_expired"
+  },
+  "timeoutMs": 5000,
+  "supportsRetry": true
+}
+
+
+### ✅ 2. Get task by ID — 200
+GET http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+
+
+### ✅ 3. List tasks — 200 (default pagination)
+GET http://localhost:8080/api/v1/tasks
+
+
+### ✅ 4. List tasks — 200 (explicit pagination)
+GET http://localhost:8080/api/v1/tasks?limit=5&offset=0
+
+
+### ✅ 5. Update task — 200
+# @name updateTask
+PUT http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+Content-Type: application/json
+
+{
+  "name": "expire-booking",
+  "description": "Updated description after retry policy change",
+  "active": true,
+  "destinationId": "booking-kafka",
+  "messageType": "booking.expire.v2",
+  "payload": {
+    "bookingId": "abc-123",
+    "reason": "hold_expired",
+    "version": 2
+  },
+  "timeoutMs": 10000,
+  "supportsRetry": true
+}
+
+
+### ✅ 6. Get updated task — 200 (verify updatedAt changed)
+GET http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+
+
+### ✅ 7. Delete task — 204
+# @name deleteTask
+DELETE http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+
+
+# ── Error scenarios ───────────────────────────────────────────────────────────
+
+
+### ❌ 8. Get deleted task — 404
+GET http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+
+
+### ❌ 9. Update deleted task — 404
+PUT http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+Content-Type: application/json
+
+{
+  "name": "expire-booking",
+  "description": "This update should fail",
+  "active": true,
+  "destinationId": "booking-kafka",
+  "messageType": "booking.expire.v1",
+  "payload": null,
+  "timeoutMs": 5000,
+  "supportsRetry": false
+}
+
+
+### ❌ 10. Delete already-deleted task — 409
+DELETE http://localhost:8080/api/v1/tasks/{{createTask.response.body.id}}
+
+
+### ❌ 11. Get non-existent task — 404
+GET http://localhost:8080/api/v1/tasks/00000000-0000-0000-0000-000000000000
+
+
+### ❌ 12. Create task — 400 (missing required field: name)
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "booking-service",
+  "destinationId": "booking-kafka",
+  "messageType": "booking.expire.v1",
+  "timeoutMs": 5000
+}
+
+
+### ❌ 13. Create task — 400 (timeoutMs ≤ 0)
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "booking-service",
+  "name": "expire-booking",
+  "destinationId": "booking-kafka",
+  "messageType": "booking.expire.v1",
+  "timeoutMs": -1
+}
+
+
+### ❌ 14. Create task — 400 (destinationId does not exist)
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "booking-service",
+  "name": "expire-booking",
+  "destinationId": "does-not-exist",
+  "messageType": "booking.expire.v1",
+  "timeoutMs": 5000
+}
+
+
+### ❌ 15. Get task — 400 (malformed UUID)
+GET http://localhost:8080/api/v1/tasks/not-a-uuid
+
+
+### ✅ 16. Create second task (verify list shows both before deleting)
+# @name createTask2
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "payment-service",
+  "name": "expire-payment-session",
+  "destinationId": "booking-kafka",
+  "messageType": "payment.session.expire.v1",
+  "payload": {
+    "sessionId": "sess-999"
+  },
+  "timeoutMs": 3000
+}
+
+
+### ✅ 17. List — 200 (second task visible, deleted first task absent)
+GET http://localhost:8080/api/v1/tasks
+
+
+### ✅ 18. Cleanup — delete second task
+DELETE http://localhost:8080/api/v1/tasks/{{createTask2.response.body.id}}

@@ -123,13 +123,18 @@ injected clock for determinism and testability.
   repositories at startup.
 
 ### API (kairos-api)
-- [ ] `POST /api/v1/tasks` — create
-- [ ] `GET /api/v1/tasks/{id}` — fetch (404 if missing or deleted)
-- [ ] `GET /api/v1/tasks` — list (excluding deleted, paginated)
-- [ ] `PUT /api/v1/tasks/{id}` — update
-- [ ] `DELETE /api/v1/tasks/{id}` — soft delete (`deleted_at = now()`, not a physical delete)
-- [ ] DTO contracts in `common` (request/response)
-- [ ] Error handling: 400 (validation), 404 (not found / deleted), 409 (deleting an already-deleted task)
+- [x] `POST /api/v1/tasks` — create (201 + `TaskResponse`)
+- [x] `GET /api/v1/tasks/{id}` — fetch (404 if missing or deleted)
+- [x] `GET /api/v1/tasks` — list (excluding deleted, paginated; query params `limit`/`offset`)
+- [x] `PUT /api/v1/tasks/{id}` — update (full replacement of editable fields, 200 + `TaskResponse`)
+- [x] `DELETE /api/v1/tasks/{id}` — soft delete (`deleted_at = now()`, 204 no body)
+- [x] DTO contracts in `common`: `CreateTaskRequest`, `UpdateTaskRequest`, `TaskResponse`,
+  `PageResponse<T>`, `ErrorResponse`
+- [x] Error handling: 400 (`ValidationException`, `IllegalArgumentException`),
+  404 (`TaskNotFoundException`), 409 (`TaskAlreadyDeletedException`), 500 (anything else)
+- [x] HTTP framework: Javalin 6.4.0; `ObjectMapperFactory` (JavaTimeModule, ISO-8601
+  timestamps, `FAIL_ON_UNKNOWN_PROPERTIES=false`); `Router` + `GlobalExceptionHandler`;
+  `ApplicationContext` wiring; server port from `server.port` (default 8080)
 
 ### Tests
 - [ ] Unit tests for domain/use cases (no DB)

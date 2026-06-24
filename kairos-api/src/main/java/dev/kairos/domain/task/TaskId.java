@@ -9,13 +9,19 @@ public record TaskId(UUID value) {
         Objects.requireNonNull(value, "TaskId cannot be null!");
     }
 
-    /** A brand-new random identity for a task being created. */
+    /**
+     * A brand-new random identity for a task being created.
+     */
     public static TaskId newId() {
         return new TaskId(UUID.randomUUID());
     }
 
     public static TaskId of(UUID value) {
         return new TaskId(value);
+    }
+
+    public static TaskId fromString(String id) {
+        return new TaskId(UUID.fromString(id));
     }
 
     @Override

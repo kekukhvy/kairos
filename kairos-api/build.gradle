@@ -26,7 +26,11 @@ dependencies {
     implementation "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
     implementation "org.postgresql:postgresql:${postgresDriverVersion}"
 
+    implementation "io.javalin:javalin:${javalinVersion}"
     implementation "org.jooq:jooq:${jooqVersion}"
+
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    runtimeOnly "ch.qos.logback:logback-classic:${logbackVersion}"
 
     jooqGenerator "org.postgresql:postgresql:${postgresDriverVersion}"
 
