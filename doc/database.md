@@ -240,6 +240,15 @@ of a `FIXED` schedule.
 
 ---
 
+## JOOQ codegen notes
+
+JSONB columns (`tasks.payload`, `destinations.config`,
+`execution_history.result`) are generated as `org.jooq.JSONB` — no forced
+type converter is registered. Conversion to/from `String` is handled
+explicitly in the mapper layer via `JSONB.valueOf(string)` /
+`jsonb.data()`. This avoids a hidden implicit conversion and keeps the
+mapping transparent.
+
 ## TBD / open questions
 
 - Exact self-healing mechanism for the planner itself (a lock/lease table

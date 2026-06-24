@@ -16,7 +16,12 @@ this way.
   duplicated.
 - **Task** — the definition of work: what to deliver, where, with what
   timeout and retry policy. A stable entity that changes rarely. Supports
-  soft delete.
+  soft delete. Identity is `TaskId` (wraps a UUID). Editable state is
+  carried by `TaskEdit` (a record that excludes immutable fields `id`,
+  `service`, `createdAt`); mutation goes through `update(TaskEdit, Instant)`.
+  The `service` field is immutable for the task's lifetime. Timestamps are
+  supplied by the caller (application layer via `Clock`) so the entity
+  stays deterministic and testable.
 - **Schedule** — the "when" rule. A single task can have multiple
   schedules (e.g. weekdays and weekends as separate rules with different
   cron expressions). Pausing works at the level of a single schedule, not
@@ -103,7 +108,80 @@ coupling to the run write) are still open — see `database.md`.
 - `tasks.deleted_at` — soft delete; the task is excluded from all normal
   reads but never physically removed.
 
-## 7. API — V1 Scope (Task CRUD)
+**Soft-delete invariant (M1, implemented):** once `deletedAt` is set on
+a `Task` entity, the entity is frozen — any call to `update()` throws
+`TaskAlreadyDeletedException` (extends `DomainException`). The predicate
+`isDeleted()` exposes the current state. The application layer is
+responsible for calling the soft-delete operation; the domain only enforces
+the "no further mutations after deletion" rule.
+
+## 7. Application Layer — Use Cases (M1, implemented)
+
+The application layer orchestrates the domain via five use cases, all in
+`dev.kairos.domain.task.usecases`. Each use case receives its port(s) and a
+`java.time.Clock` through its constructor — no field injection, no framework
+dependency. Timestamps are always sourced from the injected clock so tests
+can run with a fixed instant.
+
+### Repository ports
+
+**`TaskRepository`** (`dev.kairos.domain.task`):
+- `save(Task)` — upsert: insert on first save, update thereafter. The entity
+  is the source of truth for every column including `createdAt`/`updatedAt`.
+- `findById(TaskId)` — returns the task **regardless of soft-delete state**.
+  Callers inspect `task.isDeleted()` and decide how to react (read → 404,
+  repeat-delete → 409).
+- `findAll(int limit, int offset)` — live (non-deleted) rows only, newest
+  first; used by `ListTasksUseCase`.
+- `softDelete(TaskId, Instant)` — stamps `deleted_at`; the 404/409 decision
+  is made by the caller before this is invoked.
+
+**`DestinationRepository`** (`dev.kairos.domain.destination`; read-only in M1):
+- `existsById(DestinationId)` — validates the destination FK before a task
+  is created or updated, surfacing a `ValidationException` instead of a raw
+  SQL foreign-key failure. A full Destinations API will grow this port in M2.
+
+### Use-case contracts
+
+| Use case | Inputs | Normal return | Domain exceptions |
+|---|---|---|---|
+| `CreateTaskUseCase` | `CreateTaskCommand`, `Clock` | `Task` | `ValidationException` (unknown destination or invalid field) |
+| `UpdateTaskUseCase` | `TaskId`, `UpdateTaskCommand`, `Clock` | `Task` | `TaskNotFoundException` (missing/deleted); `ValidationException` (unknown destination or invalid field) |
+| `GetTaskUseCase` | `TaskId` | `Task` | `TaskNotFoundException` (missing or soft-deleted) |
+| `ListTasksUseCase` | `Pagination` | `List<Task>` | — |
+| `SoftDeleteTaskUseCase` | `TaskId`, `Clock` | void | `TaskNotFoundException` (missing or soft-deleted) |
+
+**Soft-delete visibility rules:**
+- `GET`, `UPDATE`, `SOFT_DELETE` on a soft-deleted task all raise
+  `TaskNotFoundException` (→ HTTP 404). A repeat `DELETE` therefore also
+  returns 404, not 409. The domain method `Task.softDelete()` itself throws
+  `TaskAlreadyDeletedException` as an internal guard, but `SoftDeleteTaskUseCase`
+  pre-checks `isDeleted()` and raises `TaskNotFoundException` before reaching
+  that guard — making the 409 path unreachable through the use case.
+  **Contradiction with the API table in §8:** that table advertises 409 for
+  repeat-delete. Aligning the use case behavior with the intended 409 semantic
+  (by throwing `TaskAlreadyDeletedException` instead of `TaskNotFoundException`
+  in the already-deleted branch of `SoftDeleteTaskUseCase`) is deferred to
+  the controller / API layer milestone — a human should resolve this before
+  controllers are written.
+
+**Nullable boolean defaults:** `CreateTaskCommand` and `UpdateTaskCommand`
+carry `active` and `supportsRetry` as nullable `Boolean`. When null the use
+case falls back to the domain defaults: `active = true`,
+`supportsRetry = false`.
+
+**`service` immutability:** `CreateTaskCommand` includes `service`;
+`UpdateTaskCommand` intentionally omits it — a task's owning service cannot
+be changed after creation.
+
+### Commands (`dev.kairos.domain.task.commands`)
+
+`CreateTaskCommand` and `UpdateTaskCommand` are plain Java records carrying
+raw field values (no domain types). The API edge will map an incoming request
+DTO to a command; the use case turns command fields into domain types and lets
+the domain validate them.
+
+## 8. API — V1 Scope (Task CRUD)
 
 The first vertical slice covers Task only — no Schedule/Execution API yet
 (those land in M3+ per the development plan).
@@ -138,7 +216,7 @@ Errors: `400` — validation (e.g. missing `name` or a non-existent
 `destinationId`), `404` — task not found or already soft-deleted, `409` —
 attempting to delete an already-deleted task.
 
-## 8. Architecture: DDD + Hexagonal
+## 9. Architecture: DDD + Hexagonal
 
 Kairos deliberately pairs Domain-Driven Design (tactical patterns) with
 Hexagonal Architecture (Ports & Adapters) — partly as a learning exercise.
@@ -152,6 +230,23 @@ between teams) would be ceremony without payoff here. The tactical side —
 aggregates as consistency boundaries, value objects, invariants enforced
 inside entities — earns its keep because it solves concrete problems we
 already ran into, not because the domain itself is complex.
+
+**Domain exception hierarchy (implemented in `common`):**
+- `DomainException` (abstract) — base `RuntimeException` for all broken
+  invariants and invalid-state errors. Lets the API layer catch one type
+  and translate domain failures to HTTP responses.
+- `ValidationException extends DomainException` — thrown by the shared
+  `Validation` utility (`requireText`, `requirePositive`) when field-level
+  constraints are violated (e.g. blank name, non-positive `timeoutMs`).
+- `TaskAlreadyDeletedException extends DomainException` — thrown by
+  `Task.update()` when the task is already soft-deleted.
+
+The `Validation` utility class (`dev.kairos.common.util.helpers.Validation`)
+provides two static guards used across the domain:
+- `requireText(value, field, maxLength)` — rejects null/blank and values
+  exceeding `maxLength`; returns the validated value for inline assignment.
+- `requirePositive(value, field)` — rejects values `<= 0`; returns the
+  validated value.
 
 **Aggregate boundaries:**
 - `Destination` — its own aggregate; just connectivity config.
@@ -186,7 +281,7 @@ the first time a *second* adapter ships with zero changes to the domain or
 application layers. Treat that as a concrete checkpoint (see M7 in the
 development plan), not an assumption.
 
-## 9. Future Work (Explicitly Out of V1)
+## 10. Future Work (Explicitly Out of V1)
 
 - `execution_history.result` — the service's response to a delivered
   message. Will need a `correlation_id` attached by Kairos at delivery
@@ -196,7 +291,7 @@ development plan), not an assumption.
 - Multi-tenancy, Admin UI, metrics — unchanged from the original Roadmap
   (V4–V5 in the README).
 
-## 10. Related Documents
+## 11. Related Documents
 
 - `database.md` — exact table fields
 - `plan.md` — the development plan by slice, with M1 (Task

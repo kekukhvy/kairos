@@ -52,26 +52,63 @@ task registry.
 > generic field-by-field validator.
 
 ### Domain (pure Java, no framework dependencies)
-- [ ] `Task` entity (Builder pattern, per convention) — id, service, name,
+- [x] `Task` entity (Builder pattern, per convention) — id, service, name,
   description, active, destinationId, messageType, payload, timeoutMs,
   supportsRetry, createdAt, updatedAt, deletedAt
-- [ ] Value objects: `TaskId`, `DestinationId`
-- [ ] Domain validation: `name` required, `timeoutMs > 0`, etc.
-- [ ] `TaskRepository` port (interface): `save`, `findById`, `findAll`, `softDelete`
+- [x] Value objects: `TaskId`, `DestinationId`
+- [x] Domain validation: `name` required, `timeoutMs > 0`, etc. (via shared
+  `Validation.requireText` / `requirePositive` in `common`; invariants enforced
+  in the `Task` constructor and `update()`)
+- [x] `TaskRepository` port (interface): `save`, `findById`, `findAll`,
+  `softDelete` — `findById` returns the task regardless of soft-delete
+  state; callers inspect `isDeleted()` and decide how to react.
+  `findAll(limit, offset)` returns live (non-deleted) rows only, newest
+  first.
+- [x] `DestinationRepository` port (interface, read-only in M1):
+  `existsById(DestinationId)` — validates the destination FK before insert
+  or update; the full Destinations API is deferred to M2.
 
 ### Application
-- [ ] `CreateTaskUseCase`
-- [ ] `UpdateTaskUseCase`
-- [ ] `SoftDeleteTaskUseCase`
-- [ ] `GetTaskUseCase`
-- [ ] `ListTasksUseCase` (paginated, excludes `deleted_at IS NOT NULL`)
+- [x] `CreateTaskUseCase` — validates destination exists
+  (`DestinationRepository.existsById`), else `ValidationException`; assigns
+  `TaskId.newId()`; applies nullable `active`/`supportsRetry` defaults (true
+  / false); saves; returns `Task`.
+- [x] `UpdateTaskUseCase` — PUT (full replacement of editable fields);
+  `TaskNotFoundException` if missing or soft-deleted; validates destination
+  exists; builds `TaskEdit`; calls `task.update(edit, clock.instant())`;
+  saves; returns updated `Task`. `active`/`supportsRetry` null → defaults
+  (true / false).
+- [x] `SoftDeleteTaskUseCase` — `TaskNotFoundException` if missing or
+  already-deleted; else calls `task.softDelete(clock.instant())`.
+- [x] `GetTaskUseCase` — `findById`, throws `TaskNotFoundException` if
+  missing or soft-deleted.
+- [x] `ListTasksUseCase` (paginated, excludes soft-deleted) — delegates to
+  `TaskRepository.findAll`; defensively re-filters deleted rows in the use
+  case.
+
+All use cases receive their port(s) and a `java.time.Clock` via constructor
+(no field injection, no framework); timestamps are always sourced from the
+injected clock for determinism and testability.
+
+**Commands** (`dev.kairos.domain.task.commands`):
+- `CreateTaskCommand` — carries raw field values (no domain types) including
+  `service`; `active` and `supportsRetry` are nullable `Boolean`.
+- `UpdateTaskCommand` — same editable fields, `service` intentionally absent
+  (immutable); `active` and `supportsRetry` are nullable `Boolean`.
 
 ### Infrastructure
 - [x] Flyway: `V1__create_destinations_table.sql`, `V2__create_tasks_table.sql`
   (plus `V3`–`V6` — all six tables from `doc/database.md` are now created,
   not just the two named here; verified to apply cleanly on a fresh
   Postgres 16)
-- [ ] JOOQ codegen for the new tables
+- [x] JOOQ codegen wiring — `nu.studer.jooq` plugin pinned in
+  `pluginManagement` (version from `gradle.properties`); generated sources
+  at `kairos-api/src/main/generated` (package
+  `dev.kairos.infrastructure.generated`). JSONB columns (`tasks.payload`,
+  `destinations.config`, `execution_history.result`) are typed as
+  `org.jooq.JSONB`; conversion to/from `String` is handled in a mapper
+  (not yet present). DB connection resolves: env var → `local.properties`
+  (gitignored) → hardcoded local default.
 - [ ] `JooqTaskRepository implements TaskRepository`
 - [ ] Mapping between JOOQ records and the domain entity
 
