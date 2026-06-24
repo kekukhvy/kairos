@@ -1,16 +1,19 @@
 description = 'Kairos REST API (entry point)'
 
 dependencies {
+
+    implementation "com.zaxxer:HikariCP:${hikariVersion}"
+
+    implementation "org.flywaydb:flyway-core:${flywayVersion}"
+    implementation "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
+    implementation "org.postgresql:postgresql:${postgresDriverVersion}"
+
     testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
     testImplementation platform("org.testcontainers:testcontainers-bom:${testcontainersBomVersion}")
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:junit-jupiter'
-
-    testImplementation "org.flywaydb:flyway-core:${flywayVersion}"
-    testImplementation "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
-    testImplementation "org.postgresql:postgresql:${postgresDriverVersion}"
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

@@ -10,8 +10,9 @@ ext {
 
     junitBomVersion = '5.11.4'
     testcontainersBomVersion = '1.20.4'
-    flywayVersion = '11.1.1'
-    postgresDriverVersion = '42.7.4'
+    flywayVersion = '12.9.0'
+    postgresDriverVersion = '42.7.11'
+    hikariVersion = '7.1.0'
 }
 
 subprojects {
