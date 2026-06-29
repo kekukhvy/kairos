@@ -1,0 +1,140 @@
+/*
+ * Kairos Admin — Apple-style theme.
+ *
+ * The whole look is implemented by overriding Lumo design tokens, so all
+ * existing StyleConfig/Tokens code (which references var(--lumo-*)) inherits
+ * it automatically. Restraint over decoration: system font, soft depth,
+ * subtle gradients and translucency — no loud colors, no heavy shadows.
+ */
+
+html {
+  /* --- Typography: Apple system font stack --- */
+  --lumo-font-family: -apple-system, "SF Pro Text", "SF Pro Display",
+    system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Cleaner hierarchy: lighter headings, comfortable body size. */
+  --lumo-font-size-xxxl: 2.25rem;
+  --lumo-font-size-xxl: 1.75rem;
+  --lumo-font-size-xl: 1.375rem;
+  --lumo-font-size-l: 1.125rem;
+  --lumo-font-size-m: 0.9375rem;
+  --lumo-font-size-s: 0.8125rem;
+  --lumo-font-size-xs: 0.75rem;
+  --lumo-line-height-m: 1.5;
+
+  /* --- Accent: Apple system blue --- */
+  --lumo-primary-color: #007aff;
+  --lumo-primary-color-50pct: rgba(0, 122, 255, 0.5);
+  --lumo-primary-color-10pct: rgba(0, 122, 255, 0.1);
+  --lumo-primary-text-color: #007aff;
+
+  /* Apple semantic green / red. */
+  --lumo-success-color: #34c759;
+  --lumo-success-color-50pct: rgba(52, 199, 89, 0.5);
+  --lumo-success-color-10pct: rgba(52, 199, 89, 0.1);
+  --lumo-success-text-color: #248a3d;
+
+  --lumo-error-color: #ff3b30;
+  --lumo-error-color-50pct: rgba(255, 59, 48, 0.5);
+  --lumo-error-color-10pct: rgba(255, 59, 48, 0.1);
+  --lumo-error-text-color: #d70015;
+
+  /* --- Radii: large, soft corners --- */
+  --lumo-border-radius-s: 0.5rem;
+  --lumo-border-radius-m: 0.625rem;
+  --lumo-border-radius-l: 0.875rem;
+
+  /* --- Spacing: more air between blocks --- */
+  --lumo-space-xs: 0.3125rem;
+  --lumo-space-s: 0.625rem;
+  --lumo-space-m: 1.125rem;
+  --lumo-space-l: 1.75rem;
+  --lumo-space-xl: 2.75rem;
+
+  /* --- Shadows: soft, low-contrast, multi-layer elevation --- */
+  --lumo-box-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --lumo-box-shadow-s: 0 1px 2px 0 rgba(0, 0, 0, 0.04),
+    0 2px 8px -2px rgba(0, 0, 0, 0.08);
+  --lumo-box-shadow-m: 0 2px 6px -1px rgba(0, 0, 0, 0.06),
+    0 8px 24px -4px rgba(0, 0, 0, 0.1);
+  --lumo-box-shadow-l: 0 4px 12px -2px rgba(0, 0, 0, 0.08),
+    0 16px 48px -8px rgba(0, 0, 0, 0.14);
+
+  /* --- Restrained neutral surface palette --- */
+  --lumo-base-color: #ffffff;
+  --lumo-tint-5pct: #fafafc;
+  --lumo-contrast-5pct: rgba(60, 60, 67, 0.04);
+  --lumo-contrast-10pct: rgba(60, 60, 67, 0.09);
+  --lumo-body-text-color: rgba(0, 0, 0, 0.85);
+  --lumo-secondary-text-color: rgba(60, 60, 67, 0.6);
+
+  /* --- Kairos extensions (not part of Lumo) --- */
+  --kairos-glass-blur: 18px;
+  --kairos-surface-translucent: rgba(255, 255, 255, 0.72);
+  --kairos-gradient-primary: linear-gradient(180deg, #2f93ff 0%, #007aff 100%);
+  --kairos-gradient-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(250, 250, 252, 0.85) 100%
+  );
+  --kairos-transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[theme~="dark"] {
+  --lumo-primary-color: #0a84ff;
+  --lumo-primary-text-color: #409cff;
+  --lumo-success-color: #30d158;
+  --lumo-error-color: #ff453a;
+  --lumo-base-color: #1c1c1e;
+  --lumo-tint-5pct: #2c2c2e;
+
+  --kairos-surface-translucent: rgba(28, 28, 30, 0.72);
+  --kairos-gradient-primary: linear-gradient(180deg, #0a84ff 0%, #0060df 100%);
+  --kairos-gradient-surface: linear-gradient(
+    180deg,
+    rgba(44, 44, 46, 0.85) 0%,
+    rgba(28, 28, 30, 0.85) 100%
+  );
+}
+
+/* --- Subtle Apple details applied through component themes --- */
+
+/* Frosted-glass navbar. */
+vaadin-app-layout::part(navbar) {
+  background: var(--kairos-surface-translucent);
+  backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+}
+
+/* Frosted-glass, softly elevated dialogs. */
+vaadin-dialog-overlay::part(overlay) {
+  background: var(--kairos-surface-translucent);
+  backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  box-shadow: var(--lumo-box-shadow-l);
+}
+
+/* Primary buttons: faint vertical gradient + smooth hover. */
+vaadin-button[theme~="primary"] {
+  background-image: var(--kairos-gradient-primary);
+  transition: filter var(--kairos-transition),
+    box-shadow var(--kairos-transition);
+}
+
+vaadin-button[theme~="primary"]:hover {
+  filter: brightness(1.05);
+  box-shadow: var(--lumo-box-shadow-s);
+}
+
+/* All buttons ease their state changes. */
+vaadin-button {
+  transition: background-color var(--kairos-transition),
+    filter var(--kairos-transition);
+}
+
+/* Grid: separate rows with air and thin dividers, not heavy borders. */
+vaadin-grid {
+  border: none;
+  --lumo-contrast-10pct: rgba(60, 60, 67, 0.07);
+}

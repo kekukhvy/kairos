@@ -1,9 +1,7 @@
 package dev.kairos.admin.feature.task;
 
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -15,6 +13,8 @@ import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
+import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Notifications;
 import tools.jackson.databind.json.JsonMapper;
 
 @Route(value = TaskRoutes.TASKS, layout = MainLayout.class)
@@ -48,8 +48,7 @@ public class TaskView extends VerticalLayout {
     private HorizontalLayout buildToolbar() {
         H2 title = createTitle();
 
-        Button newTask = new Button(TaskText.NEW_TASK, e -> openForm());
-        newTask.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        Button newTask = Buttons.primary(TaskText.NEW_TASK, e -> openForm());
 
         HorizontalLayout toolbar = new HorizontalLayout(title, newTask);
         toolbar.setWidthFull();
@@ -76,10 +75,10 @@ public class TaskView extends VerticalLayout {
     private void createTask(CreateTaskRequest request) {
         try {
             taskService.create(request);
-            Notification.show(TaskText.NOTIFY_CREATED);
+            Notifications.success(TaskText.NOTIFY_CREATED);
             refresh();
         } catch (RuntimeException ex) {
-            Notification.show(TaskText.NOTIFY_CREATE_FAILED);
+            Notifications.error(TaskText.NOTIFY_CREATE_FAILED);
         }
     }
 }

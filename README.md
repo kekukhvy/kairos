@@ -290,3 +290,21 @@ This prevents two workers from picking the same job — safe for horizontal scal
 - Constants over string literals
 - Configuration via `.properties` files
 - Docker Compose for all infrastructure
+
+### Admin UI (kairos-admin)
+- The entire UI follows the Apple Human Interface Guidelines — clean, airy,
+  restrained, with soft depth: system font, a single accent, subtle gradients
+  and translucency ("frosted glass"). Restraint over decoration.
+- This look is implemented **on top of Lumo by overriding Lumo design tokens**
+  in a single global stylesheet (`src/main/resources/META-INF/resources/styles.css`,
+  loaded via `@StyleSheet` on `AppShell`), never by per-component CSS. Because
+  `StyleConfig`/`Tokens` reference `var(--lumo-*)`, they inherit the look
+  automatically.
+- **No inline CSS in components** — style only through `StyleConfig`/`Tokens`/the
+  theme. Tokens that don't exist in Lumo (glass blur, translucent surface,
+  gradients) live as named constants in `Tokens`.
+- **Shared helpers, no duplication** — build buttons, notifications, fields and
+  field validation only through the `shared/ui`, `shared/form` and `shared/util`
+  helpers (`Buttons`, `Notifications`, `Fields`, `FieldValidation`, `Strings`).
+  No ad-hoc `addThemeVariants` / `Notification.show` inside features.
+- UI text is English-only (no i18n) and lives in `*Text` constant classes.

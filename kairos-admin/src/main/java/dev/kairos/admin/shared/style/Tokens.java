@@ -41,12 +41,22 @@ public final class Tokens {
     // --- shadow ---
     public static final String SHADOW_S = "var(--lumo-box-shadow-s)";
     public static final String SHADOW_M = "var(--lumo-box-shadow-m)";
+    public static final String SHADOW_L = "var(--lumo-box-shadow-l)";
 
     // --- composed helpers ---
     public static final String BORDER_LIGHT = "1px solid var(--lumo-contrast-10pct)";
 
-    // shared/style/Tokens.java — добавить
+    // --- font weight ---
     public static final String FONT_WEIGHT_SEMIBOLD = "600";
     public static final String FONT_WEIGHT_BOLD = "700";
-    public static final String CREATE_TASK_DIALOG_WITH = "480";
+
+    // --- sizing ---
+    public static final String DIALOG_WIDTH_M = "480px";
+
+    // --- Apple-style extensions (not part of Lumo) ---
+    public static final String GLASS_BLUR = "var(--kairos-glass-blur)";
+    public static final String SURFACE_TRANSLUCENT = "var(--kairos-surface-translucent)";
+    public static final String GRADIENT_PRIMARY = "var(--kairos-gradient-primary)";
+    public static final String GRADIENT_SURFACE = "var(--kairos-gradient-surface)";
+    public static final String TRANSITION = "var(--kairos-transition)";
 }
