@@ -59,4 +59,6 @@ public final class Tokens {
     public static final String GRADIENT_PRIMARY = "var(--kairos-gradient-primary)";
     public static final String GRADIENT_SURFACE = "var(--kairos-gradient-surface)";
     public static final String TRANSITION = "var(--kairos-transition)";
+
+    public static final String THEME_DANGER_CONFIRM = "error primary";
 }

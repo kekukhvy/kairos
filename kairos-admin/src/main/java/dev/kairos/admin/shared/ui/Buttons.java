@@ -4,6 +4,7 @@ import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.icon.Icon;
 
 /**
  * Button factory. Features build buttons through here instead of constructing
@@ -33,6 +34,22 @@ public final class Buttons {
     /** Destructive action button. */
     public static Button danger(String text, ComponentEventListener<ClickEvent<Button>> onClick) {
         return build(text, onClick, ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_PRIMARY);
+    }
+
+    /** Compact icon-only button (e.g. grid row actions). */
+    public static Button icon(Icon icon, String tooltip, ComponentEventListener<ClickEvent<Button>> onClick) {
+        Button button = new Button(icon, onClick);
+        button.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_ICON);
+        button.setTooltipText(tooltip);
+        button.setAriaLabel(tooltip);
+        return button;
+    }
+
+    /** Destructive icon-only button. */
+    public static Button iconDanger(Icon icon, String tooltip, ComponentEventListener<ClickEvent<Button>> onClick) {
+        Button button = icon(icon, tooltip, onClick);
+        button.addThemeVariants(ButtonVariant.LUMO_ERROR);
+        return button;
     }
 
     private static Button build(

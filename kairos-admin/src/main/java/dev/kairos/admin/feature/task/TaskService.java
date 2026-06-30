@@ -9,9 +9,13 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class TaskService {
+
+    private static final String START_COMMAND = "start";
+    private static final String STOP_COMMAND = "stop";
 
     private final KairosApiClient client;
     private final ApiProperties apiProperties;
@@ -42,5 +46,29 @@ public class TaskService {
                 .body(request)
                 .retrieve()
                 .body(TaskDto.class);
+    }
+
+    public TaskDto start(UUID id) {
+        return setActive(id, START_COMMAND);
+    }
+
+    public TaskDto stop(UUID id) {
+        return setActive(id, STOP_COMMAND);
+    }
+
+    private TaskDto setActive(UUID id, String action) {
+        return client.rest()
+                .post()
+                .uri(apiProperties.taskEndpoint() + "/{id}/" + action, id)
+                .retrieve()
+                .body(TaskDto.class);
+    }
+
+    public void delete(UUID id) {
+        client.rest()
+                .delete()
+                .uri(apiProperties.taskEndpoint() + "/{id}", id)
+                .retrieve()
+                .toBodilessEntity();
     }
 }
