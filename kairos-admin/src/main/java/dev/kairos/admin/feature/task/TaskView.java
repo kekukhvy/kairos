@@ -8,6 +8,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
+import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
@@ -48,6 +49,7 @@ public class TaskView extends VerticalLayout {
 
         grid.setOnToggleActive(this::toggleActive);
         grid.setOnDelete(this::confirmDelete);
+        grid.setOnView(this::viewTask);
 
         refresh();
     }
@@ -100,6 +102,10 @@ public class TaskView extends VerticalLayout {
         return toolbar;
     }
 
+    private void viewTask(TaskDto task) {
+        new TaskDetails(jsonMapper, task).open();
+    }
+
     private H2 createTitle() {
         H2 title = new H2(TaskText.TITLE);
         return StyleConfig.create()
@@ -124,7 +130,6 @@ public class TaskView extends VerticalLayout {
             Notifications.error(TaskText.NOTIFY_CREATE_FAILED);
         }
     }
-
 
 
 }

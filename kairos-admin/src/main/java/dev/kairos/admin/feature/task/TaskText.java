@@ -49,4 +49,14 @@ public final class TaskText {
 
     public static final String NOTIFY_DELETED = "Task deleted";
     public static final String NOTIFY_DELETE_FAILED = "Failed to delete task";
+
+    public static final String DETAILS_TITLE = "Task details";
+    public static final String BTN_CLOSE = "Close";
+
+    public static final String DETAIL_ID = "ID";
+    public static final String DETAIL_CREATED = "Created";
+    public static final String DETAIL_UPDATED = "Updated";
+
+    public static final String BOOL_YES = "Yes";
+    public static final String BOOL_NO = "No";
 }

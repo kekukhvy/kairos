@@ -53,8 +53,9 @@ public class TaskForm extends Dialog {
                 service, name, description, destinationId,
                 messageType, timeoutMs, active, supportsRetry, payload
         );
-        layout.setColspan(description, 2);
-        layout.setColspan(payload, 2);
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setColspan(description, Tokens.FORM_COLSPAN_FULL);
+        layout.setColspan(payload, Tokens.FORM_COLSPAN_FULL);
         return layout;
     }
 

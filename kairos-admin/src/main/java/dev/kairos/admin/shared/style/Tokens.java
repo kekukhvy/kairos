@@ -52,6 +52,7 @@ public final class Tokens {
 
     // --- sizing ---
     public static final String DIALOG_WIDTH_M = "480px";
+    public static final String DIALOG_WIDTH_L = "900";
 
     // --- Apple-style extensions (not part of Lumo) ---
     public static final String GLASS_BLUR = "var(--kairos-glass-blur)";
@@ -61,4 +62,7 @@ public final class Tokens {
     public static final String TRANSITION = "var(--kairos-transition)";
 
     public static final String THEME_DANGER_CONFIRM = "error primary";
+
+    public static final int FORM_COLUMNS = 2;
+    public static final int FORM_COLSPAN_FULL = FORM_COLUMNS;
 }
