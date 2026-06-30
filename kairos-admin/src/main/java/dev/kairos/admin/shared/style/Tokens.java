@@ -65,4 +65,7 @@ public final class Tokens {
 
     public static final int FORM_COLUMNS = 2;
     public static final int FORM_COLSPAN_FULL = FORM_COLUMNS;
+
+    public static final String THEME_BADGE_SUCCESS = "badge success";
+    public static final String THEME_BADGE_CONTRAST = "badge contrast";
 }

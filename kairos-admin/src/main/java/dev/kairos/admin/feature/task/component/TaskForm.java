@@ -9,6 +9,8 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
+import dev.kairos.admin.feature.task.dto.TaskDto;
+import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
 import dev.kairos.admin.shared.form.FieldValidation;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
@@ -24,7 +26,11 @@ public class TaskForm extends Dialog {
     private static final int DEFAULT_TIMEOUT_MS = 30_000;
 
     private final JsonMapper jsonMapper;
-    private final Consumer<CreateTaskRequest> onSave;
+
+    private final TaskDto editing;                       // null → create mode
+    private final Consumer<CreateTaskRequest> onCreate;  // set in create mode
+    private final Consumer<UpdateTaskRequest> onEdit;    // set in edit mode
+
 
     private final TextField service = Fields.text(TaskText.COL_SERVICE);
     private final TextField name = Fields.text(TaskText.COL_NAME);
@@ -36,23 +42,43 @@ public class TaskForm extends Dialog {
     private final Checkbox supportsRetry = Fields.checkbox(TaskText.FIELD_SUPPORTS_RETRY, false);
     private final TextArea payload = Fields.textArea(TaskText.FIELD_PAYLOAD);
 
-    public TaskForm(JsonMapper jsonMapper, Consumer<CreateTaskRequest> onSave) {
+    private TaskForm(JsonMapper jsonMapper,
+                     TaskDto editing,
+                     Consumer<CreateTaskRequest> onCreate,
+                     Consumer<UpdateTaskRequest> onEdit) {
         this.jsonMapper = jsonMapper;
-        this.onSave = onSave;
+        this.editing = editing;
+        this.onCreate = onCreate;
+        this.onEdit = onEdit;
 
-        setHeaderTitle(TaskText.NEW_TASK);
-        setWidth(Tokens.DIALOG_WIDTH_M);
-        timeoutMs.setValue(DEFAULT_TIMEOUT_MS);
+        setHeaderTitle(editing == null ? TaskText.NEW_TASK : TaskText.EDIT_TASK);
+        setWidth(Tokens.DIALOG_WIDTH_L);
+
+        if (editing == null) {
+            timeoutMs.setValue(DEFAULT_TIMEOUT_MS);
+        } else {
+            prefill(editing);
+            service.setReadOnly(true); // service is immutable
+        }
 
         add(buildForm());
         getFooter().add(buildCancel(), buildSave());
     }
 
+    public static TaskForm forCreate(JsonMapper jsonMapper, Consumer<CreateTaskRequest> onCreate) {
+        return new TaskForm(jsonMapper, null, onCreate, null);
+    }
+
+    public static TaskForm forEdit(JsonMapper jsonMapper, TaskDto task, Consumer<UpdateTaskRequest> onEdit) {
+        return new TaskForm(jsonMapper, task, null, onEdit);
+    }
+
     private FormLayout buildForm() {
         FormLayout layout = new FormLayout(
-                service, name, description, destinationId,
-                messageType, timeoutMs, active, supportsRetry, payload
+                service, name, description, destinationId, messageType,
+                timeoutMs, payload, active, supportsRetry
         );
+
         layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
         layout.setColspan(description, Tokens.FORM_COLSPAN_FULL);
         layout.setColspan(payload, Tokens.FORM_COLSPAN_FULL);
@@ -82,17 +108,30 @@ public class TaskForm extends Dialog {
             return;
         }
 
-        onSave.accept(new CreateTaskRequest(
-                Strings.trimToNull(service.getValue()),
-                Strings.trimToNull(name.getValue()),
-                Strings.trimToNull(description.getValue()),
-                active.getValue(),
-                Strings.trimToNull(destinationId.getValue()),
-                Strings.trimToNull(messageType.getValue()),
-                parsedPayload,
-                timeoutMs.getValue(),
-                supportsRetry.getValue()
-        ));
+        if (editing == null) {
+            onCreate.accept(new CreateTaskRequest(
+                    Strings.trimToNull(service.getValue()),
+                    Strings.trimToNull(name.getValue()),
+                    Strings.trimToNull(description.getValue()),
+                    active.getValue(),
+                    Strings.trimToNull(destinationId.getValue()),
+                    Strings.trimToNull(messageType.getValue()),
+                    parsedPayload,
+                    timeoutMs.getValue(),
+                    supportsRetry.getValue()
+            ));
+        } else {
+            onEdit.accept(new UpdateTaskRequest(
+                    Strings.trimToNull(name.getValue()),
+                    Strings.trimToNull(description.getValue()),
+                    active.getValue(),
+                    Strings.trimToNull(destinationId.getValue()),
+                    Strings.trimToNull(messageType.getValue()),
+                    parsedPayload,
+                    timeoutMs.getValue(),
+                    supportsRetry.getValue()
+            ));
+        }
         close();
     }
 
@@ -111,5 +150,23 @@ public class TaskForm extends Dialog {
             return null;
         }
         return jsonMapper.readValue(raw, Object.class);
+    }
+
+    private void prefill(TaskDto task) {
+        service.setValue(safe(task.service()));
+        name.setValue(safe(task.name()));
+        description.setValue(safe(task.description()));
+        destinationId.setValue(safe(task.destinationId()));
+        messageType.setValue(safe(task.messageType()));
+        timeoutMs.setValue(task.timeoutMs());
+        active.setValue(task.active());
+        supportsRetry.setValue(task.supportsRetry());
+        if (task.payload() != null) {
+            payload.setValue(jsonMapper.writeValueAsString(task.payload()));
+        }
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
     }
 }

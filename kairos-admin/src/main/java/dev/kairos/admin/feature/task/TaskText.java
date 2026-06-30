@@ -59,4 +59,10 @@ public final class TaskText {
 
     public static final String BOOL_YES = "Yes";
     public static final String BOOL_NO = "No";
+
+    public static final String EDIT_TASK = "Edit task";
+    public static final String NOTIFY_UPDATED = "Task updated";
+
+    public static final String STATUS_ACTIVE = "Active";
+    public static final String STATUS_INACTIVE = "Inactive";
 }

@@ -1,11 +1,13 @@
 package dev.kairos.admin.feature.task.component;
 
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
+import dev.kairos.admin.shared.ui.Badges;
 import dev.kairos.admin.shared.ui.Buttons;
 
 import java.util.List;
@@ -31,7 +33,7 @@ public class TaskGrid extends Grid<TaskDto> {
         addColumn(TaskDto::name).setHeader(TaskText.COL_NAME).setAutoWidth(true);
         addColumn(TaskDto::destinationId).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true);
         addColumn(TaskDto::messageType).setHeader(TaskText.COL_MESSAGE_TYPE).setAutoWidth(true);
-        addColumn(TaskDto::active).setHeader(TaskText.COL_ACTIVE).setAutoWidth(true);
+        addComponentColumn(TaskGrid::statusBadge).setHeader(TaskText.COL_ACTIVE).setAutoWidth(true);
         addColumn(TaskDto::timeoutMs).setHeader(TaskText.COL_TIMEOUT).setAutoWidth(true);
 
         addComponentColumn(this::actions)
@@ -82,5 +84,11 @@ public class TaskGrid extends Grid<TaskDto> {
 
     public void setOnDelete(Consumer<TaskDto> onDelete) {
         this.onDelete = onDelete;
+    }
+
+    private static Span statusBadge(TaskDto task) {
+        return task.active()
+                ? Badges.success(TaskText.STATUS_ACTIVE)
+                : Badges.neutral(TaskText.STATUS_INACTIVE);
     }
 }

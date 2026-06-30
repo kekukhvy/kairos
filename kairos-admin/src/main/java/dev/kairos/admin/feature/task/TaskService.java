@@ -3,6 +3,7 @@ package dev.kairos.admin.feature.task;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.feature.task.dto.TaskPage;
+import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
 import dev.kairos.admin.shared.client.ApiProperties;
 import dev.kairos.admin.shared.client.KairosApiClient;
 import org.springframework.http.MediaType;
@@ -70,5 +71,15 @@ public class TaskService {
                 .uri(apiProperties.taskEndpoint() + "/{id}", id)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    public TaskDto update(UUID id, UpdateTaskRequest request) {
+        return client.rest()
+                .put()
+                .uri(apiProperties.taskEndpoint() + "/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(TaskDto.class);
     }
 }

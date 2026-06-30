@@ -13,6 +13,7 @@ import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.feature.task.dto.TaskDto;
+import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
@@ -50,23 +51,8 @@ public class TaskView extends VerticalLayout {
         grid.setOnToggleActive(this::toggleActive);
         grid.setOnDelete(this::confirmDelete);
         grid.setOnView(this::viewTask);
-
+        grid.setOnEdit(this::editTask);
         refresh();
-    }
-
-    private void toggleActive(TaskDto task) {
-        try {
-            if (task.active()) {
-                taskService.stop(task.id());
-                Notifications.success(TaskText.NOTIFY_STOPPED);
-            } else {
-                taskService.start(task.id());
-                Notifications.success(TaskText.NOTIFY_STARTED);
-            }
-            refresh();
-        } catch (RuntimeException ex) {
-            Notifications.error(TaskText.NOTIFY_UPDATE_FAILED);
-        }
     }
 
     private void confirmDelete(TaskDto task) {
@@ -80,15 +66,6 @@ public class TaskView extends VerticalLayout {
         dialog.open();
     }
 
-    private void deleteTask(TaskDto task) {
-        try {
-            taskService.delete(task.id());
-            Notifications.success(TaskText.NOTIFY_DELETED);
-            refresh();
-        } catch (RuntimeException ex) {
-            Notifications.error(TaskText.NOTIFY_DELETE_FAILED);
-        }
-    }
 
     private HorizontalLayout buildToolbar() {
         H2 title = createTitle();
@@ -118,18 +95,43 @@ public class TaskView extends VerticalLayout {
     }
 
     private void openForm() {
-        new TaskForm(jsonMapper, this::createTask).open();
+        TaskForm.forCreate(jsonMapper, this::createTask).open();
     }
 
+    private void editTask(TaskDto task) {
+        TaskForm.forEdit(jsonMapper, task, request -> updateTask(task, request)).open();
+    }
+
+    private void updateTask(TaskDto task, UpdateTaskRequest request) {
+        execute(() -> taskService.update(task.id(), request), TaskText.NOTIFY_UPDATED, TaskText.NOTIFY_UPDATE_FAILED);
+    }
+
+
     private void createTask(CreateTaskRequest request) {
-        try {
-            taskService.create(request);
-            Notifications.success(TaskText.NOTIFY_CREATED);
-            refresh();
-        } catch (RuntimeException ex) {
-            Notifications.error(TaskText.NOTIFY_CREATE_FAILED);
+        execute(() -> taskService.create(request), TaskText.NOTIFY_CREATED, TaskText.NOTIFY_CREATE_FAILED);
+    }
+
+    private void deleteTask(TaskDto task) {
+        execute(() -> taskService.delete(task.id()), TaskText.NOTIFY_DELETED, TaskText.NOTIFY_DELETE_FAILED);
+    }
+
+    private void toggleActive(TaskDto task) {
+        if (task.active()) {
+            execute(() -> taskService.stop(task.id()), TaskText.NOTIFY_STOPPED, TaskText.NOTIFY_UPDATE_FAILED);
+        } else {
+            execute(() -> taskService.start(task.id()), TaskText.NOTIFY_STARTED, TaskText.NOTIFY_UPDATE_FAILED);
         }
     }
 
+
+    private void execute(Runnable action, String successMessage, String failureMessage) {
+        try {
+            action.run();
+            Notifications.success(successMessage);
+            refresh();
+        } catch (RuntimeException ex) {
+            Notifications.error(failureMessage);
+        }
+    }
 
 }
