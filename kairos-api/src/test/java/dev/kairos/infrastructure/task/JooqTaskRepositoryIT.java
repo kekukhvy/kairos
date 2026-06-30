@@ -313,6 +313,35 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
         assertTrue(result.isEmpty());
     }
 
+    // ── existsByDestinationId ────────────────────────────────────────────────
+
+    @Test
+    void existsByDestinationId_whenTaskReferencesIt_returnsTrue() {
+        insertTask(fullTask(randomTaskId()));
+
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertTrue(result);
+    }
+
+    @Test
+    void existsByDestinationId_whenNoTaskReferencesIt_returnsFalse() {
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByDestinationId_softDeletedTaskStillCounts() {
+        TaskId id = randomTaskId();
+        insertTask(fullTask(id));
+        repository.softDelete(id, DELETED_AT);
+
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertTrue(result);
+    }
+
     // ── softDelete ───────────────────────────────────────────────────────────
 
     @Test

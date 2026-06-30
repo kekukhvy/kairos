@@ -54,6 +54,42 @@ class ValidationTest {
                 () -> Validation.requireText(OVER_MAX_LENGTH_TEXT, FIELD_NAME, MAX_LENGTH));
     }
 
+    // --- requireText (two-arg overload: no max-length check) ---
+
+    @Test
+    void requireText_twoArg_withValidValue_returnsValue() {
+        String result = Validation.requireText(VALID_TEXT, FIELD_NAME);
+
+        assertEquals(VALID_TEXT, result);
+    }
+
+    @Test
+    void requireText_twoArg_withNullValue_throwsValidationException() {
+        assertThrows(ValidationException.class,
+                () -> Validation.requireText(null, FIELD_NAME));
+    }
+
+    @Test
+    void requireText_twoArg_withEmptyString_throwsValidationException() {
+        assertThrows(ValidationException.class,
+                () -> Validation.requireText("", FIELD_NAME));
+    }
+
+    @Test
+    void requireText_twoArg_withBlankString_throwsValidationException() {
+        assertThrows(ValidationException.class,
+                () -> Validation.requireText("   ", FIELD_NAME));
+    }
+
+    @Test
+    void requireText_twoArg_withVeryLongValue_returnsValueWithoutLengthCheck() {
+        String longValue = "a".repeat(10_000);
+
+        String result = Validation.requireText(longValue, FIELD_NAME);
+
+        assertEquals(longValue, result);
+    }
+
     // --- requirePositive ---
 
     @Test

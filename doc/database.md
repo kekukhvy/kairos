@@ -257,7 +257,8 @@ mapping transparent.
   the mechanism is decided.
 - Materialization horizon thresholds by frequency — need real numbers
   based on expected load.
-- API for managing `destinations` — not yet designed.
+- REST endpoints for `destinations` — domain, application, and infrastructure
+  layers are implemented (M2); HTTP wiring is still pending.
 - `correlation_id` for the async `result` field — needed once that feature
   is built.
 - Maintenance of the denormalized run summary on `tasks` (`last_status`,

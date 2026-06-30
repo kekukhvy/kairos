@@ -1,5 +1,6 @@
 package dev.kairos.infrastructure.task;
 
+import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
 import dev.kairos.domain.task.TaskRepository;
@@ -84,5 +85,14 @@ public final class JooqTaskRepository implements TaskRepository {
                 .set(TASKS.DELETED_AT, deletedAt.atOffset(ZoneOffset.UTC))
                 .where(TASKS.ID.equal(id.value()))
                 .execute();
+    }
+
+    @Override
+    public boolean existsByDestinationId(DestinationId id) {
+        return dslContext.fetchExists(
+                dslContext.selectOne()
+                        .from(TASKS)
+                        .where(TASKS.DESTINATION_ID.equal(id.value()))
+        );
     }
 }

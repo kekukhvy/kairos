@@ -23,8 +23,6 @@ public final class ListTasksUseCase {
     public List<Task> execute(Pagination pagination) {
         Objects.requireNonNull(pagination);
 
-        return this.repository.findAll(pagination.limit(), pagination.offset())
-                .stream().filter(task -> !task.isDeleted())
-                .toList();
+        return this.repository.findAll(pagination.limit(), pagination.offset());
     }
 }

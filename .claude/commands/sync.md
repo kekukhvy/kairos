@@ -21,9 +21,17 @@ Steps:
      behavior changed → updates `doc/usage/`.
    - **test-author** — if domain logic, use cases, repositories, or endpoints
      changed → adds/updates unit + integration tests.
+   - **javadoc-writer** — if Java types/methods were added or changed and lack
+     Javadoc → adds Javadoc to public/protected types and members (skipping
+     trivial getters and noise).
+   - **logging-instrumenter** — if Java code outside `domain` was added or
+     changed → adds/tunes SLF4J logging at the right levels (DEBUG/INFO/WARN/
+     ERROR) for audit and analysis. Never touches `domain` (framework-free).
 4. Delegate to each relevant subagent via the Task tool, passing the changed
    files and the diff as context. Run independent delegations in parallel.
 5. Summarize what each subagent updated, and note anything skipped and why.
 
-A pure refactor with no API/schema/behavior change may only need test-author
-(or nothing) — don't invoke a subagent whose docs wouldn't change.
+A pure refactor with no API/schema/behavior change may still need javadoc-writer,
+logging-instrumenter, or test-author — but don't invoke a subagent whose output
+wouldn't change. javadoc-writer and logging-instrumenter apply to almost any
+Java change; spec-keeper and user-docs-writer only when contracts/docs move.

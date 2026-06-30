@@ -83,8 +83,9 @@ task registry.
 - [x] `GetTaskUseCase` — `findById`, throws `TaskNotFoundException` if
   missing or soft-deleted.
 - [x] `ListTasksUseCase` (paginated, excludes soft-deleted) — delegates to
-  `TaskRepository.findAll`; defensively re-filters deleted rows in the use
-  case.
+  `TaskRepository.findAll`; soft-deleted rows are excluded at the SQL level
+  (`WHERE deleted_at IS NULL` inside `JooqTaskRepository.findAll`); no
+  in-memory filtering is performed in the use case.
 
 All use cases receive their port(s) and a `java.time.Clock` via constructor
 (no field injection, no framework); timestamps are always sourced from the
@@ -117,7 +118,8 @@ injected clock for determinism and testability.
   between `TasksRecord` (jOOQ) and `Task` domain entity; JSONB↔String via
   `JSONB.data()` / `JSONB.valueOf()`; `OffsetDateTime`↔`Instant` via UTC offset.
 - [x] `JooqDestinationRepository implements DestinationRepository` —
-  `existsById` via `DSLContext.fetchExists`; full CRUD deferred to M2.
+  `existsById` via `DSLContext.fetchExists` (M1 scope); full CRUD implemented
+  in M2 (see below).
 - [x] `DSLContextFactory` — builds a shared `DSLContext` from a `DataSource`
   (`renderSchema = false`, `renderQuotedNames = NEVER`); injected into
   repositories at startup.
@@ -155,9 +157,36 @@ injected clock for determinism and testability.
 **Goal:** `task.destination_id` needs something real to point to.
 
 - [x] `destinations` table (already created as a prerequisite in M1 — `V1`)
-- [ ] `POST /api/v1/destinations`, `GET /api/v1/destinations`, `GET /api/v1/destinations/{id}`
-- [ ] Validate `type` (KAFKA/SQS/WEBHOOK/RABBITMQ) and basic `config` shape per type
-- [ ] Decide: forbid deleting a destination still referenced by active tasks, or handle separately
+- [x] `Destination` entity — `DestinationId` (human-readable `String`),
+  `DestinationType` enum (`KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ`), `config`
+  (JSONB string, mutable via `updateConfig`), `createdAt` (immutable).
+  Builder construction; equality by id only; `type` and `createdAt` immutable
+  after creation.
+- [x] `DestinationType` enum (was a stub class in M1)
+- [x] Destination exceptions (all in `dev.kairos.domain.destination.exceptions`):
+  `DestinationAlreadyExistsException`, `DestinationNotFoundException`,
+  `InvalidDestinationTypeException`, `DestinationInUseException`
+- [x] `DestinationRepository` port extended to full CRUD: `save` (upsert),
+  `findById`, `findAll(limit, offset)`, `deleteById`
+- [x] `TaskRepository` extended with `existsByDestinationId(DestinationId)` —
+  used to block deletion of destinations still referenced by tasks
+- [x] Five destination use cases: `CreateDestinationUseCase`,
+  `GetDestinationByIdUseCase`, `ListDestinationsUseCase`,
+  `UpdateDestinationUseCase`, `DeleteDestinationUseCase`
+- [x] `CreateDestinationCommand` record (`destinationId`, `destinationType`,
+  `config` — all raw `String`)
+- [x] `JooqDestinationRepository` — full CRUD implementation; `toDomain`
+  mapper; upsert `created_at` set on insert only
+- [x] Delete blocked while any task references the destination
+  (`DestinationInUseException`); delete is otherwise idempotent (no prior
+  existence check)
+- [x] `Validation.requireText(value, field)` two-argument overload added to
+  `common` (used by `Destination.validateConfig`)
+- [ ] `POST /api/v1/destinations`, `GET /api/v1/destinations`,
+  `GET /api/v1/destinations/{id}`, `PUT /api/v1/destinations/{id}`,
+  `DELETE /api/v1/destinations/{id}` — HTTP wiring not yet done
+- [ ] Validate basic `config` shape per type (currently any non-blank string is
+  accepted)
 
 ## M3 — Schedules
 

@@ -9,12 +9,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.deletedTask;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.liveTask;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.liveTaskWithId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ListTasksUseCaseTest {
 
@@ -33,7 +31,7 @@ class ListTasksUseCaseTest {
     // --- happy path ---
 
     @Test
-    void execute_withLiveTasks_returnsAllLiveTasks() {
+    void execute_withLiveTask_returnsItFromRepository() {
         taskRepository.seed(liveTask());
 
         List<Task> result = useCase.execute(new Pagination(PAGE_LIMIT, 0));
@@ -68,29 +66,23 @@ class ListTasksUseCaseTest {
         assertEquals(PAGE_OFFSET, taskRepository.lastFindAllOffset);
     }
 
-    // --- deleted tasks are filtered out ---
+    // --- use case returns whatever the repository returns (no app-layer filtering) ---
 
     @Test
-    void execute_whenRepositoryReturnsDeletedTask_filtersItOut() {
-        // Seed directly so the deleted task appears in findAll (bypassing the
-        // soft-delete filter that a real repo would apply in SQL).
-        taskRepository.seed(deletedTask());
+    void execute_delegatesCompletelyToRepository_returnsRepositoryResultUnmodified() {
+        // The use case no longer filters — soft-delete exclusion happens in the
+        // repository SQL (deleted_at IS NULL). The in-memory fake's findAll returns
+        // whatever was seeded; here we verify the use case passes that through intact.
+        TaskId firstId = new TaskId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        TaskId secondId = new TaskId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+        taskRepository.seed(liveTask());
+        taskRepository.seed(liveTaskWithId(secondId));
 
         List<Task> result = useCase.execute(new Pagination(PAGE_LIMIT, 0));
 
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void execute_withMixOfLiveAndDeletedTasks_returnsOnlyLiveTasks() {
-        TaskId otherId = new TaskId(UUID.fromString("00000000-0000-0000-0000-000000000099"));
-        taskRepository.seed(liveTaskWithId(otherId));
-        taskRepository.seed(deletedTask());
-
-        List<Task> result = useCase.execute(new Pagination(PAGE_LIMIT, 0));
-
-        assertEquals(1, result.size());
-        assertEquals(otherId, result.get(0).id());
+        assertEquals(2, result.size());
+        assertEquals(firstId, result.get(0).id());
+        assertEquals(secondId, result.get(1).id());
     }
 
     // --- null guard ---
