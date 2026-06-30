@@ -15,6 +15,7 @@ import dev.kairos.admin.shared.form.FieldValidation;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.util.JsonText;
 import dev.kairos.admin.shared.util.Strings;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
@@ -161,9 +162,7 @@ public class TaskForm extends Dialog {
         timeoutMs.setValue(task.timeoutMs());
         active.setValue(task.active());
         supportsRetry.setValue(task.supportsRetry());
-        if (task.payload() != null) {
-            payload.setValue(jsonMapper.writeValueAsString(task.payload()));
-        }
+        payload.setValue(JsonText.forDisplay(jsonMapper, task.payload()));
     }
 
     private static String safe(String value) {

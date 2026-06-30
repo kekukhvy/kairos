@@ -19,6 +19,9 @@ import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.Notifications;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
 import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
@@ -27,6 +30,8 @@ import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
 @RouteAlias(value = TaskRoutes.ROOT, layout = MainLayout.class)
 @PageTitle(TaskRoutes.PAGE_TITLE)
 public class TaskView extends VerticalLayout {
+
+    private static final Logger logger = LoggerFactory.getLogger(TaskView.class);
 
     private final JsonMapper jsonMapper;
     private final TaskService taskService;
@@ -129,7 +134,11 @@ public class TaskView extends VerticalLayout {
             action.run();
             Notifications.success(successMessage);
             refresh();
+        } catch (RestClientResponseException ex) {
+            logger.error("{} — API responded {}: {}", failureMessage, ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
+            Notifications.error(failureMessage);
         } catch (RuntimeException ex) {
+            logger.error("{} — request failed", failureMessage, ex);
             Notifications.error(failureMessage);
         }
     }

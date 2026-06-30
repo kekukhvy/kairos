@@ -12,8 +12,6 @@ import dev.kairos.admin.shared.style.Tokens;
 
 public class MainLayout extends AppLayout {
 
-    private static final String APP_NAME = "Kairos";
-
     public MainLayout() {
         setPrimarySection(Section.NAVBAR);
         addToNavbar(new DrawerToggle(), createTitle());

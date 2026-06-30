@@ -8,6 +8,7 @@ import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.util.JsonText;
 import tools.jackson.databind.json.JsonMapper;
 
 import static dev.kairos.admin.shared.style.Tokens.FORM_COLSPAN_FULL;
@@ -40,7 +41,7 @@ public class TaskDetails extends Dialog {
         TextArea payload = new TextArea();
         payload.setReadOnly(true);
         payload.setWidthFull();
-        payload.setValue(task.payload() == null ? "" : jsonMapper.writeValueAsString(task.payload()));
+        payload.setValue(JsonText.forDisplay(jsonMapper, task.payload()));
 
         layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
 

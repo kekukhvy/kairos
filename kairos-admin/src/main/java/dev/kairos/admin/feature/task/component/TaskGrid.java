@@ -10,7 +10,6 @@ import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.shared.ui.Badges;
 import dev.kairos.admin.shared.ui.Buttons;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public class TaskGrid extends Grid<TaskDto> {
@@ -64,10 +63,6 @@ public class TaskGrid extends Grid<TaskDto> {
         HorizontalLayout layout = new HorizontalLayout(view, edit, toggle, delete);
         layout.setSpacing(false);
         return layout;
-    }
-
-    public void setTasks(List<TaskDto> tasks) {
-        setItems(tasks);
     }
 
     public void setOnView(Consumer<TaskDto> onView) {

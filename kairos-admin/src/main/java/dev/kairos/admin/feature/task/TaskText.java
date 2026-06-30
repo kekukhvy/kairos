@@ -1,7 +1,5 @@
 package dev.kairos.admin.feature.task;
 
-import com.vaadin.flow.component.Component;
-
 public final class TaskText {
 
 

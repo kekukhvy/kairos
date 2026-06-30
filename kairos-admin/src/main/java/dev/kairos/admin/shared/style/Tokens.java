@@ -52,7 +52,7 @@ public final class Tokens {
 
     // --- sizing ---
     public static final String DIALOG_WIDTH_M = "480px";
-    public static final String DIALOG_WIDTH_L = "900";
+    public static final String DIALOG_WIDTH_L = "900px";
 
     // --- Apple-style extensions (not part of Lumo) ---
     public static final String GLASS_BLUR = "var(--kairos-glass-blur)";
