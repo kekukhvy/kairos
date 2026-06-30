@@ -52,7 +52,8 @@ final class ApplicationContext {
                 new UpdateTaskUseCase(taskRepository, destinationRepository, clock),
                 new SoftDeleteTaskUseCase(taskRepository, clock),
                 new GetTaskUseCase(taskRepository),
-                new ListTasksUseCase(taskRepository)
+                new ListTasksUseCase(taskRepository),
+                new SetTaskActiveUseCase(taskRepository, clock)
         );
 
         // ── HTTP ──────────────────────────────────────────────────────────────

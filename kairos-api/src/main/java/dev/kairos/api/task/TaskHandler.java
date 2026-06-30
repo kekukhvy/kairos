@@ -26,14 +26,16 @@ public final class TaskHandler {
     private final SoftDeleteTaskUseCase softDeleteTaskUseCase;
     private final GetTaskUseCase getTaskUseCase;
     private final ListTasksUseCase listTasksUseCase;
+    private final SetTaskActiveUseCase setTaskActiveUseCase;
 
-    public TaskHandler(ObjectMapper objectMapper, CreateTaskUseCase createTaskUseCase, UpdateTaskUseCase updateTaskUseCase, SoftDeleteTaskUseCase softDeleteTaskUseCase, GetTaskUseCase getTaskUseCase, ListTasksUseCase listTasksUseCase) {
+    public TaskHandler(ObjectMapper objectMapper, CreateTaskUseCase createTaskUseCase, UpdateTaskUseCase updateTaskUseCase, SoftDeleteTaskUseCase softDeleteTaskUseCase, GetTaskUseCase getTaskUseCase, ListTasksUseCase listTasksUseCase, SetTaskActiveUseCase setTaskActiveUseCase) {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper cannot be null");
         this.createTaskUseCase = Objects.requireNonNull(createTaskUseCase, "createTaskUseCase cannot be null");
         this.updateTaskUseCase = Objects.requireNonNull(updateTaskUseCase, "updateTaskUseCase cannot be null");
         this.softDeleteTaskUseCase = Objects.requireNonNull(softDeleteTaskUseCase, "softDeleteTaskUseCase cannot be null");
         this.getTaskUseCase = Objects.requireNonNull(getTaskUseCase, "getTaskUseCase cannot be null");
         this.listTasksUseCase = Objects.requireNonNull(listTasksUseCase, "listTasksUseCase cannot be null");
+        this.setTaskActiveUseCase = setTaskActiveUseCase;
     }
 
     /**
@@ -114,5 +116,23 @@ public final class TaskHandler {
         TaskId id = TaskId.fromString(ctx.pathParam("id"));
         softDeleteTaskUseCase.execute(id);
         ctx.status(204);
+    }
+
+    /**
+     * POST /api/v1/tasks/{id}/start → 200 + TaskResponse
+     */
+    public void start(Context ctx) {
+        TaskId id = TaskId.fromString(ctx.pathParam("id"));
+        Task task = setTaskActiveUseCase.execute(id, true);
+        ctx.json(TaskDtoMapper.toResponse(task, objectMapper));
+    }
+
+    /**
+     * POST /api/v1/tasks/{id}/stop → 200 + TaskResponse
+     */
+    public void stop(Context ctx) {
+        TaskId id = TaskId.fromString(ctx.pathParam("id"));
+        Task task = setTaskActiveUseCase.execute(id, false);
+        ctx.json(TaskDtoMapper.toResponse(task, objectMapper));
     }
 }
