@@ -1,5 +1,7 @@
 package dev.kairos.domain.destination;
 
+import org.jetbrains.annotations.NotNull;
+
 import static dev.kairos.common.util.helpers.Validation.requireText;
 
 public record DestinationId(String value) {
@@ -15,6 +17,7 @@ public record DestinationId(String value) {
         return new DestinationId(destinationId);
     }
 
+    @NotNull
     @Override
     public String toString() {
         return "DestinationId{" +

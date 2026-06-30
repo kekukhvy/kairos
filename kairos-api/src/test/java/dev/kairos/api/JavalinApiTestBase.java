@@ -54,7 +54,8 @@ abstract class JavalinApiTestBase {
                 new UpdateTaskUseCase(taskRepository, destinationRepository, FIXED_CLOCK),
                 new SoftDeleteTaskUseCase(taskRepository, FIXED_CLOCK),
                 new GetTaskUseCase(taskRepository),
-                new ListTasksUseCase(taskRepository)
+                new ListTasksUseCase(taskRepository),
+                new SetTaskActiveUseCase(taskRepository, FIXED_CLOCK)
         );
 
         app = Router.create(objectMapper);

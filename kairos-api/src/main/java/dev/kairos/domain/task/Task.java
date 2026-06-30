@@ -87,6 +87,15 @@ public final class Task {
         this.updatedAt = now;
     }
 
+    public void setActive(boolean active, Instant now) {
+        if (isDeleted()) {
+            throw new TaskNotFoundException(this.id);
+        }
+
+        this.active = active;
+        this.updatedAt = now;
+    }
+
     private void ensureNotDeleted() {
         if (isDeleted()) {
             throw new TaskAlreadyDeletedException(id);
