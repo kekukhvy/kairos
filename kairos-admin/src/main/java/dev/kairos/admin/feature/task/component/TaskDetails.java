@@ -8,6 +8,7 @@ import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.util.DateTimes;
 import dev.kairos.admin.shared.util.JsonText;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -35,8 +36,8 @@ public class TaskDetails extends Dialog {
         layout.addFormItem(text(bool(task.active())), TaskText.COL_ACTIVE);
         layout.addFormItem(text(bool(task.supportsRetry())), TaskText.FIELD_SUPPORTS_RETRY);
         layout.addFormItem(text(String.valueOf(task.timeoutMs())), TaskText.COL_TIMEOUT);
-        layout.addFormItem(text(String.valueOf(task.createdAt())), TaskText.DETAIL_CREATED);
-        layout.addFormItem(text(String.valueOf(task.updatedAt())), TaskText.DETAIL_UPDATED);
+        layout.addFormItem(text(DateTimes.forDisplay(task.createdAt())), TaskText.DETAIL_CREATED);
+        layout.addFormItem(text(DateTimes.forDisplay(task.updatedAt())), TaskText.DETAIL_UPDATED);
 
         TextArea payload = new TextArea();
         payload.setReadOnly(true);

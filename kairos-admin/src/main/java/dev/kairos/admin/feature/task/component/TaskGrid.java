@@ -28,12 +28,13 @@ public class TaskGrid extends Grid<TaskDto> {
     public TaskGrid() {
         super(TaskDto.class, false);
 
-        addColumn(TaskDto::service).setHeader(TaskText.COL_SERVICE).setAutoWidth(true);
-        addColumn(TaskDto::name).setHeader(TaskText.COL_NAME).setAutoWidth(true);
-        addColumn(TaskDto::destinationId).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true);
-        addColumn(TaskDto::messageType).setHeader(TaskText.COL_MESSAGE_TYPE).setAutoWidth(true);
-        addComponentColumn(TaskGrid::statusBadge).setHeader(TaskText.COL_ACTIVE).setAutoWidth(true);
-        addColumn(TaskDto::timeoutMs).setHeader(TaskText.COL_TIMEOUT).setAutoWidth(true);
+        addColumn(TaskDto::service).setHeader(TaskText.COL_SERVICE).setAutoWidth(true).setSortable(true);
+        addColumn(TaskDto::name).setHeader(TaskText.COL_NAME).setAutoWidth(true).setSortable(true);
+        addColumn(TaskDto::destinationId).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true).setSortable(true);
+        addColumn(TaskDto::messageType).setHeader(TaskText.COL_MESSAGE_TYPE).setAutoWidth(true).setSortable(true);
+        addComponentColumn(TaskGrid::statusBadge).setHeader(TaskText.COL_ACTIVE).setAutoWidth(true)
+                .setComparator(TaskDto::active);
+        addColumn(TaskDto::timeoutMs).setHeader(TaskText.COL_TIMEOUT).setAutoWidth(true).setSortable(true);
 
         addComponentColumn(this::actions)
                 .setHeader(TaskText.COL_ACTIONS)
