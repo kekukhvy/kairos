@@ -63,4 +63,7 @@ public final class TaskText {
 
     public static final String STATUS_ACTIVE = "Active";
     public static final String STATUS_INACTIVE = "Inactive";
+
+    public static final String FILTER_STATUS = "Status";
+    public static final String FILTER_DESTINATION = "Destination";
 }

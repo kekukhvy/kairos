@@ -4,20 +4,29 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.kairos.admin.feature.destination.component.DestinationForm;
 import dev.kairos.admin.feature.destination.component.DestinationGrid;
 import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
+import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.ui.FilterBar;
 import dev.kairos.admin.shared.ui.Notifications;
+import dev.kairos.admin.shared.ui.UiText;
+import dev.kairos.admin.shared.util.JsonText;
+import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.util.function.Predicate;
 
 /**
  * Admin UI view that lists all destinations registered in Kairos and lets an
@@ -33,6 +42,8 @@ public class DestinationView extends VerticalLayout {
     private final JsonMapper jsonMapper;
     private final DestinationService destinationService;
     private final DestinationGrid grid = new DestinationGrid();
+    private final FilterBar filterBar;
+    private final Select<String> typeFilter;
 
     /**
      * Constructs the view. Vaadin and Spring call this once per UI session.
@@ -45,6 +56,8 @@ public class DestinationView extends VerticalLayout {
     public DestinationView(JsonMapper jsonMapper, DestinationService destinationService) {
         this.jsonMapper = jsonMapper;
         this.destinationService = destinationService;
+        this.typeFilter = buildTypeFilter();
+        this.filterBar = buildFilterBar();
 
         setSizeFull();
         setSpacing(false);
@@ -55,12 +68,57 @@ public class DestinationView extends VerticalLayout {
                 .gap(Tokens.SPACE_M)
                 .applyTo(this);
 
-        add(buildToolbar(), grid);
+        add(buildToolbar(), filterBar, grid);
         refresh();
     }
 
     private void refresh() {
-        grid.setItems(destinationService.list());
+        grid.setRows(destinationService.list());
+        applyFilter();
+    }
+
+    private FilterBar buildFilterBar() {
+        return FilterBar.create()
+                .onChange(this::applyFilter)
+                .withFilter(typeFilter)
+                .build();
+    }
+
+    private Select<String> buildTypeFilter() {
+        Select<String> select = Fields.select(DestinationText.FILTER_TYPE,
+                DestinationText.TYPE_KAFKA, DestinationText.TYPE_SQS,
+                DestinationText.TYPE_WEBHOOK, DestinationText.TYPE_RABBITMQ);
+        select.setEmptySelectionAllowed(true);
+        select.setEmptySelectionCaption(UiText.FILTER_ALL);
+        select.setPlaceholder(UiText.FILTER_ALL);
+        return select;
+    }
+
+    private void applyFilter() {
+        grid.setFilter(buildPredicate());
+    }
+
+    private Predicate<DestinationDTO> buildPredicate() {
+        String term = filterBar.searchTerm();
+        String type = typeFilter.getValue();
+        return destination -> matchesType(destination, type) && matchesTerm(destination, term);
+    }
+
+    private boolean matchesType(DestinationDTO destination, String type) {
+        return Strings.isBlank(type) || type.equalsIgnoreCase(destination.destinationType());
+    }
+
+    private boolean matchesTerm(DestinationDTO destination, String term) {
+        if (term.isEmpty()) {
+            return true;
+        }
+        return contains(destination.destinationId(), term)
+                || contains(destination.destinationType(), term)
+                || contains(JsonText.forDisplay(jsonMapper, destination.config()), term);
+    }
+
+    private boolean contains(String value, String term) {
+        return value != null && value.toLowerCase().contains(term);
     }
 
     private HorizontalLayout buildToolbar() {

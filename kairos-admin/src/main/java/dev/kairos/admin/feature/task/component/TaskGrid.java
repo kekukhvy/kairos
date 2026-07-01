@@ -5,12 +5,16 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.shared.ui.Badges;
 import dev.kairos.admin.shared.ui.Buttons;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class TaskGrid extends Grid<TaskDto> {
 
@@ -23,6 +27,8 @@ public class TaskGrid extends Grid<TaskDto> {
     };
     private Consumer<TaskDto> onDelete = task -> {
     };
+
+    private final ListDataProvider<TaskDto> dataProvider = new ListDataProvider<>(new ArrayList<>());
 
 
     public TaskGrid() {
@@ -41,7 +47,20 @@ public class TaskGrid extends Grid<TaskDto> {
                 .setAutoWidth(true)
                 .setFlexGrow(0);
 
+        setItems(dataProvider);
         setSizeFull();
+    }
+
+    /** Replaces the rows shown, preserving any active filter. */
+    public void setRows(Collection<TaskDto> tasks) {
+        dataProvider.getItems().clear();
+        dataProvider.getItems().addAll(tasks);
+        dataProvider.refreshAll();
+    }
+
+    /** Applies a client-side filter predicate; {@code null} shows all rows. */
+    public void setFilter(Predicate<TaskDto> predicate) {
+        dataProvider.setFilter(predicate == null ? null : predicate::test);
     }
 
 

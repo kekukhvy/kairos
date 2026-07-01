@@ -37,4 +37,6 @@ public final class DestinationText {
     public static final String TYPE_SQS = "SQS";
     public static final String TYPE_WEBHOOK = "WEBHOOK";
     public static final String TYPE_RABBITMQ = "RABBITMQ";
+
+    public static final String FILTER_TYPE = "Type";
 }

@@ -1,10 +1,12 @@
 package dev.kairos.admin.feature.task;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
@@ -20,13 +22,18 @@ import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.ui.FilterBar;
 import dev.kairos.admin.shared.ui.Notifications;
+import dev.kairos.admin.shared.ui.UiText;
+import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
 
@@ -41,11 +48,17 @@ public class TaskView extends VerticalLayout {
     private final TaskService taskService;
     private final DestinationService destinationService;
     private final TaskGrid grid = new TaskGrid();
+    private final Select<String> statusFilter;
+    private final ComboBox<String> destinationFilter;
+    private final FilterBar filterBar;
 
     public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService) {
         this.jsonMapper = jsonMapper;
         this.taskService = taskService;
         this.destinationService = destinationService;
+        this.statusFilter = buildStatusFilter();
+        this.destinationFilter = buildDestinationFilter();
+        this.filterBar = buildFilterBar();
 
         setSizeFull();
         setSpacing(false);
@@ -57,13 +70,75 @@ public class TaskView extends VerticalLayout {
                 .gap(Tokens.SPACE_M)
                 .applyTo(this);
 
-        add(buildToolbar(), grid);
+        add(buildToolbar(), filterBar, grid);
 
         grid.setOnToggleActive(this::toggleActive);
         grid.setOnDelete(this::confirmDelete);
         grid.setOnView(this::viewTask);
         grid.setOnEdit(this::editTask);
         refresh();
+    }
+
+    private FilterBar buildFilterBar() {
+        return FilterBar.create()
+                .onChange(this::applyFilter)
+                .withFilter(statusFilter)
+                .withFilter(destinationFilter)
+                .build();
+    }
+
+    private Select<String> buildStatusFilter() {
+        Select<String> select = Fields.select(TaskText.FILTER_STATUS,
+                TaskText.STATUS_ACTIVE, TaskText.STATUS_INACTIVE);
+        select.setEmptySelectionAllowed(true);
+        select.setEmptySelectionCaption(UiText.FILTER_ALL);
+        select.setPlaceholder(UiText.FILTER_ALL);
+        return select;
+    }
+
+    private ComboBox<String> buildDestinationFilter() {
+        ComboBox<String> combo = Fields.combo(TaskText.FILTER_DESTINATION, List.of());
+        combo.setPlaceholder(UiText.FILTER_ALL);
+        return combo;
+    }
+
+    private void applyFilter() {
+        grid.setFilter(buildPredicate());
+    }
+
+    private Predicate<TaskDto> buildPredicate() {
+        String term = filterBar.searchTerm();
+        String status = statusFilter.getValue();
+        String destination = destinationFilter.getValue();
+        return task -> matchesStatus(task, status)
+                && matchesDestination(task, destination)
+                && matchesTerm(task, term);
+    }
+
+    private boolean matchesStatus(TaskDto task, String status) {
+        if (Strings.isBlank(status)) {
+            return true;
+        }
+        boolean wantActive = TaskText.STATUS_ACTIVE.equals(status);
+        return task.active() == wantActive;
+    }
+
+    private boolean matchesDestination(TaskDto task, String destination) {
+        return Strings.isBlank(destination) || destination.equals(task.destinationId());
+    }
+
+    private boolean matchesTerm(TaskDto task, String term) {
+        if (term.isEmpty()) {
+            return true;
+        }
+        return contains(task.service(), term)
+                || contains(task.name(), term)
+                || contains(task.destinationId(), term)
+                || contains(task.eventName(), term);
+    }
+
+    private boolean contains(String value, String term) {
+        return value != null && value.toLowerCase().contains(term);
     }
 
     private void confirmDelete(TaskDto task) {
@@ -102,7 +177,9 @@ public class TaskView extends VerticalLayout {
     }
 
     private void refresh() {
-        grid.setItems(taskService.list());
+        grid.setRows(taskService.list());
+        destinationFilter.setItems(destinationIds());
+        applyFilter();
     }
 
     private void openForm() {

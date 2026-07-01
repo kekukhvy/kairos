@@ -138,3 +138,26 @@ vaadin-grid {
   border: none;
   --lumo-contrast-10pct: rgba(60, 60, 67, 0.07);
 }
+
+/* Frosted-glass filter bar: translucent surface, soft corners, hairline edge. */
+.kairos-filter-bar {
+  background: var(--kairos-surface-translucent);
+  backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--kairos-glass-blur));
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-l);
+  box-shadow: var(--lumo-box-shadow-xs);
+  padding: var(--lumo-space-s) var(--lumo-space-m);
+  transition: box-shadow var(--kairos-transition);
+}
+
+.kairos-filter-bar:focus-within {
+  box-shadow: var(--lumo-box-shadow-s);
+}
+
+/* Filter inputs sit flush and compact inside the bar. */
+.kairos-filter-bar vaadin-text-field,
+.kairos-filter-bar vaadin-select,
+.kairos-filter-bar vaadin-combo-box {
+  --lumo-text-field-size: var(--lumo-size-s);
+}
