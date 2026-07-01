@@ -1,11 +1,13 @@
 package dev.kairos.admin.feature.destination;
 
+import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.DestinationPage;
 import dev.kairos.admin.shared.client.ApiProperties;
 import dev.kairos.admin.shared.client.KairosApiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -49,5 +51,23 @@ public class DestinationService {
 
         logger.debug("Fetched {} destination(s)", page.items().size());
         return page.items();
+    }
+
+    /**
+     * Creates a new destination via the kairos-api.
+     *
+     * @param request the destination to create
+     * @return the created destination as returned by the API
+     */
+    public DestinationDTO create(CreateDestinationRequest request) {
+        logger.debug("Creating destination {} of type {}", request.destinationId(), request.destinationType());
+
+        return client.rest()
+                .post()
+                .uri(apiProperties.destinationEndpoint())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(DestinationDTO.class);
     }
 }

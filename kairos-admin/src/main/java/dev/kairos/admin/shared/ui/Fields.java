@@ -1,6 +1,7 @@
 package dev.kairos.admin.shared.ui;
 
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
@@ -35,5 +36,14 @@ public final class Fields {
 
     public static Checkbox checkbox(String label, boolean value) {
         return new Checkbox(label, value);
+    }
+
+    /** Drop-down field pre-populated with a fixed, known set of {@code items}. */
+    @SafeVarargs
+    public static <T> Select<T> select(String label, T... items) {
+        Select<T> field = new Select<>();
+        field.setLabel(label);
+        field.setItems(items);
+        return field;
     }
 }

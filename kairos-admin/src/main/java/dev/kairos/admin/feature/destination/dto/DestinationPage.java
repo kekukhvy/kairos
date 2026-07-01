@@ -1,7 +1,5 @@
 package dev.kairos.admin.feature.destination.dto;
 
-import dev.kairos.admin.feature.task.dto.TaskDto;
-
 import java.util.List;
 
 /**
