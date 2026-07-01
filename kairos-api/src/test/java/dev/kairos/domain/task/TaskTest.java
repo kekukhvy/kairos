@@ -10,7 +10,7 @@ import java.util.UUID;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_CREATED_AT;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_DESTINATION_ID;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_ID;
-import static dev.kairos.domain.task.TaskBuilder.DEFAULT_MESSAGE_TYPE;
+import static dev.kairos.domain.task.TaskBuilder.DEFAULT_EVENT_NAME;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_NAME;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_SERVICE;
 import static dev.kairos.domain.task.TaskBuilder.DEFAULT_TIMEOUT_MS;
@@ -32,7 +32,7 @@ class TaskTest {
     private static final Instant DELETE_TIME = Instant.parse("2026-01-02T00:00:00Z");
     private static final String TOO_LONG_SERVICE = "a".repeat(Task.MAX_SERVICE_LENGTH + 1);
     private static final String TOO_LONG_NAME = "a".repeat(Task.MAX_NAME_LENGTH + 1);
-    private static final String TOO_LONG_MESSAGE_TYPE = "a".repeat(Task.MAX_MESSAGE_TYPE_LENGTH + 1);
+    private static final String TOO_LONG_EVENT_NAME = "a".repeat(Task.MAX_EVENT_NAME_LENGTH + 1);
     private static final int ZERO_TIMEOUT_MS = 0;
     private static final int NEGATIVE_TIMEOUT_MS = -1;
 
@@ -121,18 +121,18 @@ class TaskTest {
     }
 
     @Test
-    void build_withNullMessageType_throwsValidationException() {
-        assertThrows(ValidationException.class, () -> defaults().messageType(null).build());
+    void build_withNullEventName_throwsValidationException() {
+        assertThrows(ValidationException.class, () -> defaults().eventName(null).build());
     }
 
     @Test
-    void build_withBlankMessageType_throwsValidationException() {
-        assertThrows(ValidationException.class, () -> defaults().messageType("   ").build());
+    void build_withBlankEventName_throwsValidationException() {
+        assertThrows(ValidationException.class, () -> defaults().eventName("   ").build());
     }
 
     @Test
-    void build_withMessageTypeExceedingMaxLength_throwsValidationException() {
-        assertThrows(ValidationException.class, () -> defaults().messageType(TOO_LONG_MESSAGE_TYPE).build());
+    void build_withEventNameExceedingMaxLength_throwsValidationException() {
+        assertThrows(ValidationException.class, () -> defaults().eventName(TOO_LONG_EVENT_NAME).build());
     }
 
     @Test
@@ -174,7 +174,7 @@ class TaskTest {
         assertEquals(edit.description(), task.description());
         assertEquals(edit.active(), task.active());
         assertEquals(edit.destinationId(), task.destinationId());
-        assertEquals(edit.messageType(), task.messageType());
+        assertEquals(edit.eventName(), task.eventName());
         assertEquals(edit.payload(), task.payload());
         assertEquals(edit.timeoutMs(), task.timeoutMs());
         assertEquals(edit.supportsRetry(), task.supportsRetry());
@@ -210,7 +210,7 @@ class TaskTest {
                 null,
                 true,
                 DEFAULT_DESTINATION_ID,
-                DEFAULT_MESSAGE_TYPE,
+                DEFAULT_EVENT_NAME,
                 null,
                 DEFAULT_TIMEOUT_MS,
                 false
@@ -227,7 +227,7 @@ class TaskTest {
                 null,
                 true,
                 DEFAULT_DESTINATION_ID,
-                DEFAULT_MESSAGE_TYPE,
+                DEFAULT_EVENT_NAME,
                 null,
                 DEFAULT_TIMEOUT_MS,
                 false
@@ -237,7 +237,7 @@ class TaskTest {
     }
 
     @Test
-    void update_withBlankMessageType_throwsValidationException() {
+    void update_withBlankEventName_throwsValidationException() {
         Task task = buildDefault();
         TaskEdit editWithBlankMessageType = new TaskEdit(
                 DEFAULT_NAME,
@@ -261,7 +261,7 @@ class TaskTest {
                 null,
                 true,
                 DEFAULT_DESTINATION_ID,
-                DEFAULT_MESSAGE_TYPE,
+                DEFAULT_EVENT_NAME,
                 null,
                 ZERO_TIMEOUT_MS,
                 false
@@ -278,7 +278,7 @@ class TaskTest {
                 null,
                 true,
                 null,
-                DEFAULT_MESSAGE_TYPE,
+                DEFAULT_EVENT_NAME,
                 null,
                 DEFAULT_TIMEOUT_MS,
                 false

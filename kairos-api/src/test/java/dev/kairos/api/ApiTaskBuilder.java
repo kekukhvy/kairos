@@ -20,7 +20,7 @@ final class ApiTaskBuilder {
     static final String NAME = "send-receipt";
     static final String DESCRIPTION = "Sends a payment receipt";
     static final String DESTINATION_ID = "dest-kafka-1";
-    static final String MESSAGE_TYPE = "payment.receipt.send";
+    static final String EVENT_NAME = "payment.receipt.send";
     static final String PAYLOAD_JSON = "{\"orderId\":\"abc\"}";
     static final int TIMEOUT_MS = 5_000;
     static final Instant CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
@@ -38,7 +38,7 @@ final class ApiTaskBuilder {
                 .description(DESCRIPTION)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .payload(PAYLOAD_JSON)
                 .timeoutMs(TIMEOUT_MS)
                 .supportsRetry(false)
@@ -54,7 +54,7 @@ final class ApiTaskBuilder {
                 .service(SERVICE)
                 .name(NAME)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(UPDATED_AT)
@@ -69,7 +69,7 @@ final class ApiTaskBuilder {
                 .service(SERVICE)
                 .name(NAME)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(deletedAt)

@@ -39,7 +39,7 @@ public class TaskForm extends Dialog {
     private final TextField name = Fields.text(TaskText.COL_NAME);
     private final TextField description = Fields.text(TaskText.FIELD_DESCRIPTION);
     private final ComboBox<String> destinationId;
-    private final TextField messageType = Fields.text(TaskText.COL_MESSAGE_TYPE);
+    private final TextField eventName = Fields.text(TaskText.COL_EVENT_NAME);
     private final IntegerField timeoutMs = Fields.integer(TaskText.COL_TIMEOUT);
     private final Checkbox active = Fields.checkbox(TaskText.COL_ACTIVE, true);
     private final Checkbox supportsRetry = Fields.checkbox(TaskText.FIELD_SUPPORTS_RETRY, false);
@@ -85,7 +85,7 @@ public class TaskForm extends Dialog {
 
     private FormLayout buildForm() {
         FormLayout layout = new FormLayout(
-                service, name, description, destinationId, messageType,
+                service, name, description, destinationId, eventName,
                 timeoutMs, payload, active, supportsRetry
         );
 
@@ -125,7 +125,7 @@ public class TaskForm extends Dialog {
                     Strings.trimToNull(description.getValue()),
                     active.getValue(),
                     Strings.trimToNull(destinationId.getValue()),
-                    Strings.trimToNull(messageType.getValue()),
+                    Strings.trimToNull(eventName.getValue()),
                     parsedPayload,
                     timeoutMs.getValue(),
                     supportsRetry.getValue()
@@ -136,7 +136,7 @@ public class TaskForm extends Dialog {
                     Strings.trimToNull(description.getValue()),
                     active.getValue(),
                     Strings.trimToNull(destinationId.getValue()),
-                    Strings.trimToNull(messageType.getValue()),
+                    Strings.trimToNull(eventName.getValue()),
                     parsedPayload,
                     timeoutMs.getValue(),
                     supportsRetry.getValue()
@@ -149,7 +149,7 @@ public class TaskForm extends Dialog {
         boolean ok = FieldValidation.require(service, TaskText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(name, TaskText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(destinationId, TaskText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.require(messageType, TaskText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.require(eventName, TaskText.VALIDATION_REQUIRED);
         ok &= FieldValidation.requirePresent(timeoutMs, timeoutMs, TaskText.VALIDATION_REQUIRED);
         return ok;
     }
@@ -167,7 +167,7 @@ public class TaskForm extends Dialog {
         name.setValue(safe(task.name()));
         description.setValue(safe(task.description()));
         destinationId.setValue(task.destinationId());
-        messageType.setValue(safe(task.messageType()));
+        eventName.setValue(safe(task.eventName()));
         timeoutMs.setValue(task.timeoutMs());
         active.setValue(task.active());
         supportsRetry.setValue(task.supportsRetry());

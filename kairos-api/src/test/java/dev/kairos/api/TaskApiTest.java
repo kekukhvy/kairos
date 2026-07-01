@@ -46,7 +46,7 @@ class TaskApiTest extends JavalinApiTestBase {
     private static final String FIELD_DESCRIPTION = "description";
     private static final String FIELD_ACTIVE = "active";
     private static final String FIELD_DESTINATION_ID = "destinationId";
-    private static final String FIELD_MESSAGE_TYPE = "messageType";
+    private static final String FIELD_EVENT_NAME = "eventName";
     private static final String FIELD_PAYLOAD = "payload";
     private static final String FIELD_TIMEOUT_MS = "timeoutMs";
     private static final String FIELD_SUPPORTS_RETRY = "supportsRetry";
@@ -58,7 +58,7 @@ class TaskApiTest extends JavalinApiTestBase {
     private static final String FIELD_ORDER_ID = "orderId";
 
     private static final String UPDATED_NAME = "updated-task";
-    private static final String UPDATED_MESSAGE_TYPE = "payment.updated.v1";
+    private static final String UPDATED_EVENT_NAME = "payment.updated.v1";
     private static final int UPDATED_TIMEOUT_MS = 10_000;
 
     private static final String PAYLOAD_ORDER_VALUE = "abc";
@@ -96,7 +96,7 @@ class TaskApiTest extends JavalinApiTestBase {
         assertEquals(SERVICE, body.get(FIELD_SERVICE).asText());
         assertEquals(NAME, body.get(FIELD_NAME).asText());
         assertEquals(DESTINATION_ID, body.get(FIELD_DESTINATION_ID).asText());
-        assertEquals(MESSAGE_TYPE, body.get(FIELD_MESSAGE_TYPE).asText());
+        assertEquals(EVENT_NAME, body.get(FIELD_EVENT_NAME).asText());
         assertEquals(TIMEOUT_MS, body.get(FIELD_TIMEOUT_MS).asInt());
     }
 
@@ -107,10 +107,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -126,10 +126,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -145,11 +145,11 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d,
                   "active": false
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -165,11 +165,11 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d,
                   "supportsRetry": true
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -185,11 +185,11 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d,
                   "payload": {"orderId": "abc"}
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -206,10 +206,10 @@ class TaskApiTest extends JavalinApiTestBase {
                 {
                   "service": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -223,10 +223,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": 0
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -240,10 +240,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": -1
                 }
-                """.formatted(SERVICE, NAME, DESTINATION_ID, MESSAGE_TYPE);
+                """.formatted(SERVICE, NAME, DESTINATION_ID, EVENT_NAME);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -257,10 +257,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "service": "%s",
                   "name": "%s",
                   "destinationId": "does-not-exist",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, NAME, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -273,10 +273,10 @@ class TaskApiTest extends JavalinApiTestBase {
                 {
                   "service": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
 
         HttpResponse<String> response = post(BASE_PATH, body);
 
@@ -359,7 +359,7 @@ class TaskApiTest extends JavalinApiTestBase {
 
         JsonNode body = objectMapper.readTree(response.body());
         assertEquals(UPDATED_NAME, body.get(FIELD_NAME).asText());
-        assertEquals(UPDATED_MESSAGE_TYPE, body.get(FIELD_MESSAGE_TYPE).asText());
+        assertEquals(UPDATED_EVENT_NAME, body.get(FIELD_EVENT_NAME).asText());
         assertEquals(UPDATED_TIMEOUT_MS, body.get(FIELD_TIMEOUT_MS).asInt());
     }
 
@@ -528,10 +528,10 @@ class TaskApiTest extends JavalinApiTestBase {
                   "name": "%s",
                   "description": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(SERVICE, NAME, DESCRIPTION, DESTINATION_ID, MESSAGE_TYPE, TIMEOUT_MS);
+                """.formatted(SERVICE, NAME, DESCRIPTION, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS);
     }
 
     private static String validUpdateBody() {
@@ -539,9 +539,9 @@ class TaskApiTest extends JavalinApiTestBase {
                 {
                   "name": "%s",
                   "destinationId": "%s",
-                  "messageType": "%s",
+                  "eventName": "%s",
                   "timeoutMs": %d
                 }
-                """.formatted(UPDATED_NAME, DESTINATION_ID, UPDATED_MESSAGE_TYPE, UPDATED_TIMEOUT_MS);
+                """.formatted(UPDATED_NAME, DESTINATION_ID, UPDATED_EVENT_NAME, UPDATED_TIMEOUT_MS);
     }
 }

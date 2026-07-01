@@ -17,7 +17,7 @@ public record TaskResponse(
         String description,
         boolean active,
         String destinationId,
-        String messageType,
+        String eventName,
         JsonNode payload,
         int timeoutMs,
         boolean supportsRetry,

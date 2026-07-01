@@ -46,7 +46,7 @@ public class UpdateTaskUseCase {
                 command.description(),
                 command.active() == null || command.active(),
                 destinationId,
-                command.messageType(),
+                command.eventName(),
                 command.payload(),
                 command.timeoutMs(),
                 command.supportsRetry() != null && command.supportsRetry()

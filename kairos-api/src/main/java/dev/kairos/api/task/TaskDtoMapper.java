@@ -26,7 +26,7 @@ final class TaskDtoMapper {
                 task.description(),
                 task.active(),
                 task.destinationId().value(),
-                task.messageType(),
+                task.eventName(),
                 parseJson(task.payload(), objectMapper),
                 task.timeoutMs(),
                 task.supportsRetry(),

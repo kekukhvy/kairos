@@ -36,7 +36,7 @@ final class TaskMapper {
                 .description(r.getDescription())
                 .active(r.getActive())
                 .destinationId(DestinationId.of(r.getDestinationId()))
-                .messageType(r.getMessageType())
+                .eventName(r.getEventName())
                 .payload(fromJsonb(r.getPayload()))
                 .timeoutMs(r.getTimeoutMs())
                 .supportsRetry(r.getSupportsRetry())
@@ -53,7 +53,7 @@ final class TaskMapper {
         r.setDescription(task.description());
         r.setActive(task.active());
         r.setDestinationId(task.destinationId().value());
-        r.setMessageType(task.messageType());
+        r.setEventName(task.eventName());
         r.setPayload(toJsonb(task.payload()));
         r.setTimeoutMs(task.timeoutMs());
         r.setSupportsRetry(task.supportsRetry());

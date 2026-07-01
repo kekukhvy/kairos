@@ -19,7 +19,7 @@ final class UseCaseTaskBuilder {
     static final String DESTINATION_ID = "dest-kafka-1";
     static final String SERVICE = "payment-service";
     static final String NAME = "send-receipt";
-    static final String MESSAGE_TYPE = "payment.receipt.send";
+    static final String EVENT_NAME = "payment.receipt.send";
     static final int TIMEOUT_MS = 5_000;
     static final Instant CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
     static final Instant FIXED_NOW = Instant.parse("2026-06-01T12:00:00Z");
@@ -33,7 +33,7 @@ final class UseCaseTaskBuilder {
                 .service(SERVICE)
                 .name(NAME)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(CREATED_AT)
@@ -47,7 +47,7 @@ final class UseCaseTaskBuilder {
                 .service(SERVICE)
                 .name(NAME)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(CREATED_AT)
@@ -62,7 +62,7 @@ final class UseCaseTaskBuilder {
                 .service(SERVICE)
                 .name(NAME)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(deletedAt)

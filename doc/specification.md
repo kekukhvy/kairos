@@ -294,7 +294,7 @@ with a human-readable message.
 | `description` | `String` | nullable |
 | `active` | `Boolean` | nullable → domain default `true` |
 | `destinationId` | `String` | must reference an existing destination |
-| `messageType` | `String` | required |
+| `eventName` | `String` | required; machine-readable, versioned event identifier used by the consumer for routing/handler selection (e.g. `booking.expire.v1`); deliberately distinct from the human-readable `name` |
 | `payload` | `JsonNode` | any valid JSON value; nullable → stored as JSONB |
 | `timeoutMs` | `int` | must be > 0 |
 | `supportsRetry` | `Boolean` | nullable → domain default `false` |
@@ -315,7 +315,7 @@ same defaults.
 | `description` | `String` | nullable |
 | `active` | `boolean` | |
 | `destinationId` | `String` | |
-| `messageType` | `String` | |
+| `eventName` | `String` | machine-readable, versioned event identifier for consumer routing (e.g. `booking.expire.v1`) |
 | `payload` | `JsonNode` | embedded as a real JSON node, not an escaped string; null if not set |
 | `timeoutMs` | `int` | |
 | `supportsRetry` | `boolean` | |

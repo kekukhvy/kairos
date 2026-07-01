@@ -38,7 +38,7 @@ public final class CreateTaskUseCase {
                 .service(command.service())
                 .description(command.description())
                 .destinationId(destinationId)
-                .messageType(command.messageType())
+                .eventName(command.eventName())
                 .payload(command.payload())
                 .timeoutMs(command.timeoutMs())
                 .createdAt(now)

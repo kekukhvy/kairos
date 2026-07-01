@@ -15,7 +15,7 @@ public record CreateTaskRequest(
         String description,
         Boolean active,
         String destinationId,
-        String messageType,
+        String eventName,
         JsonNode payload,
         int timeoutMs,
         Boolean supportsRetry

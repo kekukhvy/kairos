@@ -53,7 +53,7 @@ task registry.
 
 ### Domain (pure Java, no framework dependencies)
 - [x] `Task` entity (Builder pattern, per convention) — id, service, name,
-  description, active, destinationId, messageType, payload, timeoutMs,
+  description, active, destinationId, eventName, payload, timeoutMs,
   supportsRetry, createdAt, updatedAt, deletedAt
 - [x] Value objects: `TaskId`, `DestinationId`
 - [x] Domain validation: `name` required, `timeoutMs > 0`, etc. (via shared

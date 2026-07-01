@@ -76,7 +76,7 @@ Content-Type: application/json
   "name": "expire-booking",
   "description": "Cancels a reservation after the hold window expires",
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
+  "eventName": "booking.expire.v1",
   "payload": {
     "bookingId": "abc-123",
     "reason": "hold_expired"
@@ -94,7 +94,7 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
     "name": "expire-booking",
     "description": "Cancels a reservation after the hold window expires",
     "destinationId": "booking-kafka",
-    "messageType": "booking.expire.v1",
+    "eventName": "booking.expire.v1",
     "payload": {"bookingId": "abc-123", "reason": "hold_expired"},
     "timeoutMs": 5000,
     "supportsRetry": true
@@ -111,7 +111,7 @@ Kairos responds with `201 Created` and the full task including its server-assign
   "description": "Cancels a reservation after the hold window expires",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
+  "eventName": "booking.expire.v1",
   "payload": { "bookingId": "abc-123", "reason": "hold_expired" },
   "timeoutMs": 5000,
   "supportsRetry": true,
@@ -192,7 +192,7 @@ curl -s -X PUT http://localhost:8080/api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2
     "description": "Updated description after retry policy change",
     "active": true,
     "destinationId": "booking-kafka",
-    "messageType": "booking.expire.v2",
+    "eventName": "booking.expire.v2",
     "payload": {"bookingId": "abc-123", "reason": "hold_expired", "version": 2},
     "timeoutMs": 10000,
     "supportsRetry": true
@@ -209,7 +209,7 @@ Returns `200 OK` with the updated task. Notice `updatedAt` has advanced:
   "description": "Updated description after retry policy change",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v2",
+  "eventName": "booking.expire.v2",
   "payload": { "bookingId": "abc-123", "reason": "hold_expired", "version": 2 },
   "timeoutMs": 10000,
   "supportsRetry": true,

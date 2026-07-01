@@ -60,7 +60,7 @@ All task endpoints that return a body use this structure.
 | `description` | string | Optional description. |
 | `active` | boolean | Whether the task is active. |
 | `destinationId` | string | ID of the destination to deliver to. |
-| `messageType` | string | Application-level event type (e.g. `booking.expire.v1`). |
+| `eventName` | string | Machine-readable, versioned event type the consumer uses to route handling (e.g. `booking.expire.v1`). Distinct from the human-readable task name. |
 | `payload` | any JSON or `null` | Arbitrary JSON value delivered with the message. |
 | `timeoutMs` | integer | Maximum delivery time in milliseconds. |
 | `supportsRetry` | boolean | Whether failed deliveries should be retried. |
@@ -86,7 +86,7 @@ Creates a new task. Returns the created task with its server-assigned `id` and t
 | `description` | string | no | `null` | — |
 | `active` | boolean | no | `true` | Omit or send `null` to accept the default. |
 | `destinationId` | string | yes | — | Must reference an existing destination row. |
-| `messageType` | string | yes | — | Non-blank. Application-defined event type string. |
+| `eventName` | string | yes | — | Non-blank. Machine-readable, versioned event type the consumer uses to route handling (e.g. `booking.expire.v1`). Distinct from the human-readable task name. |
 | `payload` | any JSON | no | `null` | Any valid JSON value (object, array, string, number, etc.). Stored as JSONB. |
 | `timeoutMs` | integer | yes | — | Must be `> 0`. |
 | `supportsRetry` | boolean | no | `false` | Omit or send `null` to accept the default. |
@@ -111,7 +111,7 @@ Content-Type: application/json
   "description": "Cancels a reservation after the hold window expires",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
+  "eventName": "booking.expire.v1",
   "payload": {
     "bookingId": "abc-123",
     "reason": "hold_expired"
@@ -132,7 +132,7 @@ Content-Type: application/json
   "description": "Cancels a reservation after the hold window expires",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
+  "eventName": "booking.expire.v1",
   "payload": {
     "bookingId": "abc-123",
     "reason": "hold_expired"
@@ -183,7 +183,7 @@ Content-Type: application/json
       "description": "Cancels a reservation after the hold window expires",
       "active": true,
       "destinationId": "booking-kafka",
-      "messageType": "booking.expire.v1",
+      "eventName": "booking.expire.v1",
       "payload": { "bookingId": "abc-123", "reason": "hold_expired" },
       "timeoutMs": 5000,
       "supportsRetry": true,
@@ -253,7 +253,7 @@ Content-Type: application/json
   "description": "Cancels a reservation after the hold window expires",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v1",
+  "eventName": "booking.expire.v1",
   "payload": { "bookingId": "abc-123", "reason": "hold_expired" },
   "timeoutMs": 5000,
   "supportsRetry": true,
@@ -312,7 +312,7 @@ and must not be included in the request body.
 | `description` | string | no | `null` | — |
 | `active` | boolean | no | `true` | Omit or send `null` to accept the default. |
 | `destinationId` | string | yes | — | Must reference an existing destination row. |
-| `messageType` | string | yes | — | Non-blank. |
+| `eventName` | string | yes | — | Non-blank. Machine-readable, versioned event type the consumer uses to route handling (e.g. `booking.expire.v1`). Distinct from the human-readable task name. |
 | `payload` | any JSON | no | `null` | Any valid JSON value. Send `null` explicitly to clear. |
 | `timeoutMs` | integer | yes | — | Must be `> 0`. |
 | `supportsRetry` | boolean | no | `false` | Omit or send `null` to accept the default. |
@@ -337,7 +337,7 @@ Content-Type: application/json
   "description": "Updated description after retry policy change",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v2",
+  "eventName": "booking.expire.v2",
   "payload": {
     "bookingId": "abc-123",
     "reason": "hold_expired",
@@ -359,7 +359,7 @@ Content-Type: application/json
   "description": "Updated description after retry policy change",
   "active": true,
   "destinationId": "booking-kafka",
-  "messageType": "booking.expire.v2",
+  "eventName": "booking.expire.v2",
   "payload": {
     "bookingId": "abc-123",
     "reason": "hold_expired",

@@ -32,7 +32,7 @@ public class TaskDetails extends Dialog {
         layout.addFormItem(text(task.name()), TaskText.COL_NAME);
         layout.addFormItem(text(task.description()), TaskText.FIELD_DESCRIPTION);
         layout.addFormItem(text(task.destinationId()), TaskText.COL_DESTINATION);
-        layout.addFormItem(text(task.messageType()), TaskText.COL_MESSAGE_TYPE);
+        layout.addFormItem(text(task.eventName()), TaskText.COL_EVENT_NAME);
         layout.addFormItem(text(bool(task.active())), TaskText.COL_ACTIVE);
         layout.addFormItem(text(bool(task.supportsRetry())), TaskText.FIELD_SUPPORTS_RETRY);
         layout.addFormItem(text(String.valueOf(task.timeoutMs())), TaskText.COL_TIMEOUT);

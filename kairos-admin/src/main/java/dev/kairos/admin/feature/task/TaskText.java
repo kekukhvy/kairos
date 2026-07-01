@@ -12,7 +12,7 @@ public final class TaskText {
     public static final String COL_SERVICE = "Service";
     public static final String COL_NAME = "Name";
     public static final String COL_DESTINATION = "Destination";
-    public static final String COL_MESSAGE_TYPE = "Message type";
+    public static final String COL_EVENT_NAME = "Event name";
     public static final String COL_ACTIVE = "Active";
     public static final String COL_TIMEOUT = "Timeout (ms)";
 

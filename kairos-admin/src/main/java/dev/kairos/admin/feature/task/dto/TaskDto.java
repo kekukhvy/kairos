@@ -10,7 +10,7 @@ public record TaskDto(
         String description,
         boolean active,
         String destinationId,
-        String messageType,
+        String eventName,
         Object payload,
         int timeoutMs,
         boolean supportsRetry,

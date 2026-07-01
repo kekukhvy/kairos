@@ -98,9 +98,9 @@ public class Tasks extends TableImpl<TasksRecord> {
     public final TableField<TasksRecord, String> DESTINATION_ID = createField(DSL.name("destination_id"), SQLDataType.VARCHAR(128).nullable(false), this, "");
 
     /**
-     * The column <code>public.tasks.message_type</code>.
+     * The column <code>public.tasks.event_name</code>.
      */
-    public final TableField<TasksRecord, String> MESSAGE_TYPE = createField(DSL.name("message_type"), SQLDataType.VARCHAR(255).nullable(false), this, "");
+    public final TableField<TasksRecord, String> EVENT_NAME = createField(DSL.name("event_name"), SQLDataType.VARCHAR(255).nullable(false), this, "");
 
     /**
      * The column <code>public.tasks.payload</code>.

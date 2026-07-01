@@ -32,7 +32,7 @@ class TaskDtoMapperTest {
     private static final String NAME = "send-receipt";
     private static final String DESCRIPTION = "Sends a payment receipt";
     private static final String DESTINATION_ID = "dest-kafka-1";
-    private static final String MESSAGE_TYPE = "payment.receipt.send";
+    private static final String EVENT_NAME = "payment.receipt.send";
     private static final int TIMEOUT_MS = 5_000;
     private static final Instant CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
     private static final Instant UPDATED_AT = Instant.parse("2026-01-01T00:00:00Z");
@@ -106,12 +106,12 @@ class TaskDtoMapperTest {
     }
 
     @Test
-    void toResponse_mapsMessageTypeCorrectly() {
+    void toResponse_mapsEventNameCorrectly() {
         Task task = taskWithPayload(null);
 
         TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
 
-        assertEquals(MESSAGE_TYPE, response.messageType());
+        assertEquals(EVENT_NAME, response.eventName());
     }
 
     @Test
@@ -195,7 +195,7 @@ class TaskDtoMapperTest {
                 .description(DESCRIPTION)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .payload(payload)
                 .timeoutMs(TIMEOUT_MS)
                 .supportsRetry(false)

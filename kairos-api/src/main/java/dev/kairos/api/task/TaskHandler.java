@@ -81,7 +81,7 @@ public final class TaskHandler {
                 request.description(),
                 request.active(),
                 request.destinationId(),
-                request.messageType(),
+                request.eventName(),
                 jsonToString(request.payload(), objectMapper),
                 request.timeoutMs(),
                 request.supportsRetry()
@@ -104,7 +104,7 @@ public final class TaskHandler {
                 req.description(),
                 req.active(),
                 req.destinationId(),
-                req.messageType(),
+                req.eventName(),
                 jsonToString(req.payload(), objectMapper),
                 req.timeoutMs(),
                 req.supportsRetry()

@@ -15,7 +15,7 @@ public record UpdateTaskCommand(
         String description,
         Boolean active,
         String destinationId,
-        String messageType,
+        String eventName,
         String payload,
         int timeoutMs,
         Boolean supportsRetry
