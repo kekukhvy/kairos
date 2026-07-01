@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.common.dto.task.TaskResponse;
 import dev.kairos.domain.task.Task;
 
+import static dev.kairos.common.util.helpers.JsonConverter.parseJson;
+
 /**
  * Maps a {@link dev.kairos.domain.task.Task} domain entity to a {@link dev.kairos.common.dto.task.TaskResponse} DTO. Handles the
  * {@code payload} String ↔ {@link tools.jackson.databind.JsonNode} conversion so the response embeds
@@ -25,27 +27,11 @@ final class TaskDtoMapper {
                 task.active(),
                 task.destinationId().value(),
                 task.messageType(),
-                parsePayload(task.payload(), objectMapper),
+                parseJson(task.payload(), objectMapper),
                 task.timeoutMs(),
                 task.supportsRetry(),
                 task.createdAt(),
                 task.updatedAt()
         );
-    }
-
-    /**
-     * Converts the stored JSON string back to a {@link JsonNode} for embedding in
-     * the response. Falls back to a text node if the string is somehow not valid
-     * JSON (guard against corrupt stored data).
-     */
-    private static JsonNode parsePayload(String payload, ObjectMapper objectMapper) {
-        if (payload == null) {
-            return null;
-        }
-        try {
-            return objectMapper.readTree(payload);
-        } catch (JsonProcessingException e) {
-            return objectMapper.getNodeFactory().textNode(payload);
-        }
     }
 }

@@ -182,9 +182,21 @@ injected clock for determinism and testability.
   existence check)
 - [x] `Validation.requireText(value, field)` two-argument overload added to
   `common` (used by `Destination.validateConfig`)
-- [ ] `POST /api/v1/destinations`, `GET /api/v1/destinations`,
-  `GET /api/v1/destinations/{id}`, `PUT /api/v1/destinations/{id}`,
-  `DELETE /api/v1/destinations/{id}` — HTTP wiring not yet done
+- [x] `POST /api/v1/destinations` (201 + `DestinationResponse`),
+  `GET /api/v1/destinations` (200 + `PageResponse<DestinationResponse>`, `hasNext` via over-fetch),
+  `GET /api/v1/destinations/{id}` (200 + `DestinationResponse`),
+  `PUT /api/v1/destinations/{id}` (200 + `DestinationResponse`; returns updated destination),
+  `DELETE /api/v1/destinations/{id}` (204 no body) — HTTP wiring done
+- [x] `DestinationHandler`, `DestinationDtoMapper` wired in `ApplicationContext` and `Router`
+- [x] `GlobalExceptionHandler` extended: 404 `DestinationNotFoundException`;
+  409 `DestinationAlreadyExistsException`, `DestinationInUseException`;
+  400 `InvalidDestinationTypeException`
+- [x] `UpdateDestinationUseCase.execute` returns `Destination` (was `void`) so
+  the handler can serialise the updated entity
+- [x] `PageResponse<T>` extended with `boolean hasNext`; over-fetch pattern
+  (`limit + 1`) applied in both `TaskHandler` and `DestinationHandler`
+- [x] Destination DTO contracts in `common`: `CreateDestinationRequest` (destinationId, destinationType, config JsonNode),
+  `UpdateDestinationRequest` (config JsonNode), `DestinationResponse` (destinationId, destinationType, config, createdAt)
 - [ ] Validate basic `config` shape per type (currently any non-blank string is
   accepted)
 

@@ -1,6 +1,10 @@
 package dev.kairos.api;
 
 import dev.kairos.common.dto.ErrorResponse;
+import dev.kairos.domain.destination.exceptions.DestinationAlreadyExistsException;
+import dev.kairos.domain.destination.exceptions.DestinationInUseException;
+import dev.kairos.domain.destination.exceptions.DestinationNotFoundException;
+import dev.kairos.domain.destination.exceptions.InvalidDestinationTypeException;
 import dev.kairos.domain.task.TaskAlreadyDeletedException;
 import io.javalin.Javalin;
 import org.slf4j.Logger;
@@ -14,9 +18,10 @@ import org.slf4j.LoggerFactory;
  * <p>Status mapping:
  * <ul>
  *   <li>400 — {@link dev.kairos.common.exceptions.ValidationException}, {@link IllegalArgumentException}
- *             (malformed path param / bad UUID)</li>
- *   <li>404 — {@link dev.kairos.domain.task.TaskNotFoundException}</li>
- *   <li>409 — {@link TaskAlreadyDeletedException}</li>
+ *             (malformed path param / bad UUID), {@link InvalidDestinationTypeException}</li>
+ *   <li>404 — {@link dev.kairos.domain.task.TaskNotFoundException}, {@link DestinationNotFoundException}</li>
+ *   <li>409 — {@link TaskAlreadyDeletedException}, {@link DestinationAlreadyExistsException},
+ *             {@link DestinationInUseException}</li>
  *   <li>500 — anything else (logged, opaque message to client)</li>
  * </ul>
  */
@@ -39,6 +44,20 @@ public final class GlobalExceptionHandler {
 
         app.exception(TaskAlreadyDeletedException.class, (e, ctx) ->
                 ctx.status(409).json(new ErrorResponse(e.getMessage())));
+
+
+        app.exception(DestinationNotFoundException.class, (e, ctx) ->
+                ctx.status(404).json(new ErrorResponse(e.getMessage())));
+
+        app.exception(DestinationAlreadyExistsException.class, (e, ctx) ->
+                ctx.status(409).json(new ErrorResponse(e.getMessage())));
+
+
+        app.exception(DestinationInUseException.class, (e, ctx) ->
+                ctx.status(409).json(new ErrorResponse(e.getMessage())));
+
+        app.exception(InvalidDestinationTypeException.class, (e, ctx) ->
+                ctx.status(400).json(new ErrorResponse(e.getMessage())));
 
         app.exception(Exception.class, (e, ctx) -> {
             log.error("Unhandled exception on {} {}", ctx.method(), ctx.path(), e);

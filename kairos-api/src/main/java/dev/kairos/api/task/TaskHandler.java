@@ -47,12 +47,17 @@ public final class TaskHandler {
                 ctx.queryParamAsClass("offset", Integer.class).allowNullable().get()
         );
 
-        List<TaskResponse> items = listTasksUseCase.execute(pagination)
-                .stream()
+        Pagination fetchPagination = Pagination.of(pagination.limit() + 1, pagination.offset());
+
+        List<Task> tasks = listTasksUseCase.execute(fetchPagination);
+        boolean hasNext = tasks.size() > pagination.limit();
+        List<Task> pageItems = hasNext ? tasks.subList(0, pagination.limit()) : tasks;
+
+        List<TaskResponse> items = pageItems.stream()
                 .map(task -> TaskDtoMapper.toResponse(task, objectMapper))
                 .toList();
 
-        ctx.json(new PageResponse<>(items, pagination.limit(), pagination.offset()));
+        ctx.json(new PageResponse<>(items, pagination.limit(), pagination.offset(), hasNext));
     }
 
 

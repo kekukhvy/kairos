@@ -53,6 +53,7 @@ class TaskApiTest extends JavalinApiTestBase {
     private static final String FIELD_ITEMS = "items";
     private static final String FIELD_LIMIT = "limit";
     private static final String FIELD_OFFSET = "offset";
+    private static final String FIELD_HAS_NEXT = "hasNext";
     private static final String FIELD_ERROR = "error";
     private static final String FIELD_ORDER_ID = "orderId";
 
@@ -493,6 +494,29 @@ class TaskApiTest extends JavalinApiTestBase {
         assertEquals(TASK_UUID.toString(), firstItem.get(FIELD_ID).asText());
         assertEquals(NAME, firstItem.get(FIELD_NAME).asText());
         assertEquals(SERVICE, firstItem.get(FIELD_SERVICE).asText());
+    }
+
+    @Test
+    void list_hasNextIsFalse_whenItemsDoNotExceedLimit() throws Exception {
+        taskRepository.seed(liveTask());
+
+        HttpResponse<String> response = get(BASE_PATH);
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertFalse(body.get(FIELD_HAS_NEXT).asBoolean(),
+                "hasNext must be false when total items fit within one page");
+    }
+
+    @Test
+    void list_hasNextIsTrue_whenMoreItemsExistThanPageLimit() throws Exception {
+        taskRepository.seed(liveTask());
+        taskRepository.seed(liveTaskWithId(randomTaskId()));
+
+        HttpResponse<String> response = get(BASE_PATH + "?limit=" + EXPLICIT_LIMIT + "&offset=" + DEFAULT_OFFSET);
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertTrue(body.get(FIELD_HAS_NEXT).asBoolean(),
+                "hasNext must be true when more items exist beyond the current page");
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

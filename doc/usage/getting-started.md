@@ -23,21 +23,46 @@ All examples use `curl`. The server runs on port `8080` by default.
    ```
 
 3. A **destination** must exist before you can create tasks. Tasks reference a
-   destination by `destinationId`, and the reference is enforced as a foreign
-   key. Creating a task with a `destinationId` that does not exist returns
+   destination by `destinationId`, and the reference is enforced at the API
+   level. Creating a task with a `destinationId` that does not exist returns
    `400 Bad Request`.
 
-   Insert a destination directly into the database for local development (a
-   Destinations API is planned for a future milestone):
-
-   ```sql
-   INSERT INTO destinations (id, type, config)
-   VALUES ('booking-kafka', 'KAFKA', '{"topic": "bookings"}');
-   ```
+   Register one using the Destinations API (see Step 1 below).
 
 ---
 
-## Step 1 — Create a task
+## Step 1 — Register a destination
+
+A destination tells Kairos where to deliver messages. Create one for the Kafka
+topic that the booking service listens on:
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/destinations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destinationId": "booking-kafka",
+    "destinationType": "KAFKA",
+    "config": {"topic": "bookings"}
+  }'
+```
+
+Kairos responds with `201 Created`:
+
+```json
+{
+  "destinationId": "booking-kafka",
+  "destinationType": "KAFKA",
+  "config": { "topic": "bookings" },
+  "createdAt": "2026-06-24T10:00:00.000000Z"
+}
+```
+
+The `destinationId` you chose (`"booking-kafka"`) is the value you will supply
+in every task that should deliver to this destination.
+
+---
+
+## Step 2 — Create a task
 
 A booking service wants Kairos to fire an event when a reservation hold window
 expires. It creates a task that describes what to send and where to send it.
@@ -104,7 +129,7 @@ Fields you did not supply:
 
 ---
 
-## Step 2 — Read the task back
+## Step 3 — Read the task back
 
 ```bash
 curl -s http://localhost:8080/api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479
@@ -114,7 +139,7 @@ Returns `200 OK` with the same `TaskResponse` body shown above.
 
 ---
 
-## Step 3 — List tasks
+## Step 4 — List tasks
 
 ```bash
 curl -s "http://localhost:8080/api/v1/tasks"
@@ -133,11 +158,13 @@ Returns `200 OK` with a paginated list:
     }
   ],
   "limit": 20,
-  "offset": 0
+  "offset": 0,
+  "hasNext": false
 }
 ```
 
-Use `limit` and `offset` to page through results:
+`hasNext` is `true` when there are more items beyond the current page. Use
+`limit` and `offset` to page through results:
 
 ```bash
 curl -s "http://localhost:8080/api/v1/tasks?limit=5&offset=0"
@@ -152,7 +179,7 @@ Deleted tasks are never included in the list.
 
 ---
 
-## Step 4 — Update the task
+## Step 5 — Update the task
 
 PUT replaces the full editable field set. `service` is immutable and must not
 be included in the request body.
@@ -193,7 +220,7 @@ Returns `200 OK` with the updated task. Notice `updatedAt` has advanced:
 
 ---
 
-## Step 5 — Delete the task
+## Step 6 — Delete the task
 
 ```bash
 curl -s -X DELETE http://localhost:8080/api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479
@@ -212,9 +239,13 @@ same `id` returns `404`. A second DELETE on the same `id` returns `409 Conflict`
 | Omitted a required field (e.g. `name`) | `400` | Validation message naming the missing field. |
 | Sent `timeoutMs: -1` | `400` | Validation message about `timeoutMs`. |
 | Used a `destinationId` that does not exist | `400` | Validation message about the unknown destination. |
-| Passed a non-UUID path param | `400` | Message identifying the bad value. |
+| Passed a non-UUID path param (tasks) | `400` | Message identifying the bad value. |
+| Supplied an unrecognized `destinationType` | `400` | Message identifying the unknown type. |
 | Task `id` does not exist or was deleted | `404` | Message identifying the task. |
+| Destination `id` does not exist | `404` | Message identifying the destination. |
 | Tried to delete an already-deleted task | `409` | Message identifying the task. |
+| Created a destination with a duplicate `destinationId` | `409` | Message identifying the duplicate id. |
+| Deleted a destination still referenced by tasks | `409` | Message identifying the destination. |
 
 All error responses use the same shape:
 

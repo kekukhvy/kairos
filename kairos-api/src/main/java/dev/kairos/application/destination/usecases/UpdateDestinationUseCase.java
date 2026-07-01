@@ -38,7 +38,7 @@ public final class UpdateDestinationUseCase {
      * @param config        new connectivity config (must be non-null and non-blank)
      * @throws DestinationNotFoundException if no destination exists for {@code destinationId}
      */
-    public void execute(DestinationId destinationId, String config) {
+    public Destination execute(DestinationId destinationId, String config) {
         Objects.requireNonNull(destinationId, "destinationId cannot be null!");
 
         logger.debug("Loading destination for config update: id='{}'", destinationId.value());
@@ -49,5 +49,7 @@ public final class UpdateDestinationUseCase {
         destination.updateConfig(config);
         destinationRepository.save(destination);
         logger.info("Destination config updated: id='{}'", destinationId.value());
+
+        return destination;
     }
 }
