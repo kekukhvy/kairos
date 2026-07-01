@@ -8,6 +8,7 @@ import dev.kairos.admin.shared.util.DateTimes;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -18,6 +19,9 @@ import java.util.function.Predicate;
 public class DestinationGrid extends Grid<DestinationDTO> {
 
     private final ListDataProvider<DestinationDTO> dataProvider = new ListDataProvider<>(new ArrayList<>());
+
+    private Consumer<DestinationDTO> onView = destination -> {
+    };
 
     public DestinationGrid() {
         super(DestinationDTO.class, false);
@@ -41,8 +45,15 @@ public class DestinationGrid extends Grid<DestinationDTO> {
                 .setAutoWidth(true)
                 .setComparator(DestinationDTO::createdAt);
 
+        addItemDoubleClickListener(event -> onView.accept(event.getItem()));
+
         setItems(dataProvider);
         setSizeFull();
+    }
+
+    /** Sets the callback invoked when a row is opened for view/edit. */
+    public void setOnView(Consumer<DestinationDTO> onView) {
+        this.onView = onView;
     }
 
     /** Replaces the rows shown, preserving any active filter. */

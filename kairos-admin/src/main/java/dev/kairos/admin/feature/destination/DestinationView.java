@@ -7,10 +7,12 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import dev.kairos.admin.feature.destination.component.DestinationDetails;
 import dev.kairos.admin.feature.destination.component.DestinationForm;
 import dev.kairos.admin.feature.destination.component.DestinationGrid;
 import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
+import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
@@ -23,6 +25,7 @@ import dev.kairos.admin.shared.util.JsonText;
 import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -69,7 +72,42 @@ public class DestinationView extends VerticalLayout {
                 .applyTo(this);
 
         add(buildToolbar(), filterBar, grid);
+
+        grid.setOnView(this::viewDestination);
         refresh();
+    }
+
+    private void viewDestination(DestinationDTO destination) {
+        DestinationDetails.of(jsonMapper, destination,
+                request -> update(destination, request),
+                this::delete).open();
+    }
+
+    private void update(DestinationDTO destination, UpdateDestinationRequest request) {
+        execute(() -> destinationService.update(destination.destinationId(), request),
+                DestinationText.NOTIFY_UPDATED, DestinationText.NOTIFY_UPDATE_FAILED);
+    }
+
+    private void delete(DestinationDTO destination) {
+        try {
+            destinationService.delete(destination.destinationId());
+            Notifications.success(DestinationText.NOTIFY_DELETED);
+            refresh();
+        } catch (RestClientResponseException ex) {
+            handleDeleteFailure(destination, ex);
+        } catch (RuntimeException ex) {
+            logger.error("{} — request failed", DestinationText.NOTIFY_DELETE_FAILED, ex);
+            Notifications.error(DestinationText.NOTIFY_DELETE_FAILED);
+        }
+    }
+
+    private void handleDeleteFailure(DestinationDTO destination, RestClientResponseException ex) {
+        logger.error("Failed to delete destination {} — API responded {}: {}",
+                destination.destinationId(), ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
+        boolean inUse = ex.getStatusCode().value() == HttpStatus.CONFLICT.value();
+        Notifications.error(inUse
+                ? DestinationText.NOTIFY_DELETE_IN_USE
+                : DestinationText.NOTIFY_DELETE_FAILED);
     }
 
     private void refresh() {

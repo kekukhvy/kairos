@@ -3,6 +3,7 @@ package dev.kairos.admin.feature.destination;
 import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.DestinationPage;
+import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
 import dev.kairos.admin.shared.client.ApiProperties;
 import dev.kairos.admin.shared.client.KairosApiClient;
 import org.slf4j.Logger;
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Fetches destination data from the kairos-api on behalf of the admin UI.
+ * Proxies destination CRUD operations to the kairos-api on behalf of the admin UI.
+ * Covers listing, creating, updating, and deleting destinations.
  */
 @Service
 public class DestinationService {
@@ -69,5 +71,41 @@ public class DestinationService {
                 .body(request)
                 .retrieve()
                 .body(DestinationDTO.class);
+    }
+
+    /**
+     * Updates an existing destination's config via the kairos-api.
+     * Only the {@code config} may change; id and type are immutable.
+     *
+     * @param destinationId the id of the destination to update
+     * @param request       the new config to apply
+     * @return the updated destination as returned by the API
+     */
+    public DestinationDTO update(String destinationId, UpdateDestinationRequest request) {
+        logger.debug("Updating destination {}", destinationId);
+
+        return client.rest()
+                .put()
+                .uri(apiProperties.destinationEndpoint() + "/{id}", destinationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .body(DestinationDTO.class);
+    }
+
+    /**
+     * Deletes a destination via the kairos-api. The API rejects deletion with
+     * 409 while any task still references the destination.
+     *
+     * @param destinationId the id of the destination to delete
+     */
+    public void delete(String destinationId) {
+        logger.debug("Deleting destination {}", destinationId);
+
+        client.rest()
+                .delete()
+                .uri(apiProperties.destinationEndpoint() + "/{id}", destinationId)
+                .retrieve()
+                .toBodilessEntity();
     }
 }
