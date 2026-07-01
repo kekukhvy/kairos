@@ -7,6 +7,7 @@ import java.time.Duration;
 @ConfigurationProperties("kairos.api")
 public record ApiProperties(String baseUrl,
                             String taskEndpoint,
+                            String destinationEndpoint,
                             Duration connectTimeout,
                             Duration readTimeout) {
 

@@ -6,6 +6,8 @@ import dev.kairos.admin.feature.task.dto.TaskPage;
 import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
 import dev.kairos.admin.shared.client.ApiProperties;
 import dev.kairos.admin.shared.client.KairosApiClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,8 @@ import java.util.UUID;
 
 @Service
 public class TaskService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
 
     private static final String START_COMMAND = "start";
     private static final String STOP_COMMAND = "stop";
@@ -27,6 +31,7 @@ public class TaskService {
     }
 
     public List<TaskDto> list() {
+        logger.debug("Fetching tasks from {}", apiProperties.taskEndpoint());
 
         TaskPage page = client.rest()
                 .get()
@@ -34,8 +39,13 @@ public class TaskService {
                 .retrieve()
                 .body(TaskPage.class);
 
+        if (page == null) {
+            logger.warn("Task list response body is null — returning empty list");
+            return List.of();
+        }
 
-        return page == null ? List.of() : page.items();
+        logger.debug("Fetched {} task(s)", page.items().size());
+        return page.items();
     }
 
 
