@@ -1,5 +1,6 @@
 package dev.kairos.api;
 
+import com.fasterxml.jackson.core.JacksonException;
 import dev.kairos.common.dto.ErrorResponse;
 import dev.kairos.domain.destination.exceptions.DestinationAlreadyExistsException;
 import dev.kairos.domain.destination.exceptions.DestinationInUseException;
@@ -18,7 +19,8 @@ import org.slf4j.LoggerFactory;
  * <p>Status mapping:
  * <ul>
  *   <li>400 — {@link dev.kairos.common.exceptions.ValidationException}, {@link IllegalArgumentException}
- *             (malformed path param / bad UUID), {@link InvalidDestinationTypeException}</li>
+ *             (malformed path param / bad UUID), {@link InvalidDestinationTypeException},
+ *             {@link JacksonException} (malformed / unparseable request body)</li>
  *   <li>404 — {@link dev.kairos.domain.task.TaskNotFoundException}, {@link DestinationNotFoundException}</li>
  *   <li>409 — {@link TaskAlreadyDeletedException}, {@link DestinationAlreadyExistsException},
  *             {@link DestinationInUseException}</li>
@@ -38,6 +40,9 @@ public final class GlobalExceptionHandler {
 
         app.exception(IllegalArgumentException.class, (e, ctx) ->
                 ctx.status(400).json(new ErrorResponse(e.getMessage())));
+
+        app.exception(JacksonException.class, (e, ctx) ->
+                ctx.status(400).json(new ErrorResponse("Malformed request body")));
 
         app.exception(dev.kairos.domain.task.TaskNotFoundException.class, (e, ctx) ->
                 ctx.status(404).json(new ErrorResponse(e.getMessage())));
