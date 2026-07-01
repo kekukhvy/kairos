@@ -56,6 +56,22 @@ public class DestinationService {
     }
 
     /**
+     * Fetches a single destination by id from the kairos-api.
+     *
+     * @param destinationId the id of the destination to fetch
+     * @return the destination as returned by the API
+     */
+    public DestinationDTO getById(String destinationId) {
+        logger.debug("Fetching destination {}", destinationId);
+
+        return client.rest()
+                .get()
+                .uri(apiProperties.destinationEndpoint() + "/{id}", destinationId)
+                .retrieve()
+                .body(DestinationDTO.class);
+    }
+
+    /**
      * Creates a new destination via the kairos-api.
      *
      * @param request the destination to create

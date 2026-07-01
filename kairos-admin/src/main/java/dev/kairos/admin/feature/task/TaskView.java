@@ -11,7 +11,10 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
 import dev.kairos.admin.feature.destination.DestinationService;
+import dev.kairos.admin.feature.destination.DestinationText;
+import dev.kairos.admin.feature.destination.component.DestinationDetails;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
+import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
 import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
@@ -76,7 +79,32 @@ public class TaskView extends VerticalLayout {
         grid.setOnDelete(this::confirmDelete);
         grid.setOnView(this::viewTask);
         grid.setOnEdit(this::editTask);
+        grid.setOnOpenDestination(this::openDestination);
         refresh();
+    }
+
+    private void openDestination(String destinationId) {
+        DestinationDTO destination;
+        try {
+            destination = destinationService.getById(destinationId);
+        } catch (RuntimeException ex) {
+            logger.error("Failed to load destination {}", destinationId, ex);
+            Notifications.error(DestinationText.NOTIFY_LOAD_FAILED);
+            return;
+        }
+        DestinationDetails.of(jsonMapper, destination,
+                request -> updateDestination(destinationId, request),
+                d -> deleteDestination(destinationId)).open();
+    }
+
+    private void updateDestination(String destinationId, UpdateDestinationRequest request) {
+        execute(() -> destinationService.update(destinationId, request),
+                DestinationText.NOTIFY_UPDATED, DestinationText.NOTIFY_UPDATE_FAILED);
+    }
+
+    private void deleteDestination(String destinationId) {
+        execute(() -> destinationService.delete(destinationId),
+                DestinationText.NOTIFY_DELETED, DestinationText.NOTIFY_DELETE_FAILED);
     }
 
     private FilterBar buildFilterBar() {

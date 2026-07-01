@@ -214,6 +214,47 @@ class DestinationServiceTest {
         mockServer.verify();
     }
 
+    // --- getById() ---
+
+    @Test
+    void getById_sendsGetToDestinationEndpointWithId_returnsDeserializedDto() {
+        String expectedUrl = BASE_URL + DESTINATION_ENDPOINT + "/" + DESTINATION_ID;
+
+        mockServer.expect(requestTo(expectedUrl))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(DESTINATION_JSON, MediaType.APPLICATION_JSON));
+
+        DestinationDTO result = destinationService.getById(DESTINATION_ID);
+
+        assertThat(result.destinationId()).isEqualTo(DESTINATION_ID);
+        assertThat(result.destinationType()).isEqualTo(DESTINATION_TYPE);
+        assertThat(result.createdAt()).isEqualTo(Instant.parse(CREATED_AT));
+        mockServer.verify();
+    }
+
+    @Test
+    void getById_differentDestinationId_targetsCorrectUrl() {
+        String otherId = "dest-webhook-2";
+        String expectedUrl = BASE_URL + DESTINATION_ENDPOINT + "/" + otherId;
+        String responseJson = """
+                {
+                  "destinationId": "%s",
+                  "destinationType": "WEBHOOK",
+                  "config": {"url": "https://example.com"},
+                  "createdAt": "%s"
+                }
+                """.formatted(otherId, CREATED_AT);
+
+        mockServer.expect(requestTo(expectedUrl))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        DestinationDTO result = destinationService.getById(otherId);
+
+        assertThat(result.destinationId()).isEqualTo(otherId);
+        mockServer.verify();
+    }
+
     // --- delete() ---
 
     @Test

@@ -1,5 +1,6 @@
 package dev.kairos.admin.feature.task.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
@@ -27,6 +28,8 @@ public class TaskGrid extends Grid<TaskDto> {
     };
     private Consumer<TaskDto> onDelete = task -> {
     };
+    private Consumer<String> onOpenDestination = destinationId -> {
+    };
 
     private final ListDataProvider<TaskDto> dataProvider = new ListDataProvider<>(new ArrayList<>());
 
@@ -36,7 +39,8 @@ public class TaskGrid extends Grid<TaskDto> {
 
         addColumn(TaskDto::service).setHeader(TaskText.COL_SERVICE).setAutoWidth(true).setSortable(true);
         addColumn(TaskDto::name).setHeader(TaskText.COL_NAME).setAutoWidth(true).setSortable(true);
-        addColumn(TaskDto::destinationId).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true).setSortable(true);
+        addComponentColumn(this::destinationLink).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true)
+                .setComparator(TaskDto::destinationId);
         addColumn(TaskDto::eventName).setHeader(TaskText.COL_EVENT_NAME).setAutoWidth(true).setSortable(true);
         addComponentColumn(TaskGrid::statusBadge).setHeader(TaskText.COL_ACTIVE).setAutoWidth(true)
                 .setComparator(TaskDto::active);
@@ -63,6 +67,14 @@ public class TaskGrid extends Grid<TaskDto> {
         dataProvider.setFilter(predicate == null ? null : predicate::test);
     }
 
+
+    private Component destinationLink(TaskDto task) {
+        String destinationId = task.destinationId();
+        if (destinationId == null || destinationId.isBlank()) {
+            return new Span();
+        }
+        return Buttons.link(destinationId, e -> onOpenDestination.accept(destinationId));
+    }
 
     private HorizontalLayout actions(TaskDto task) {
         var view = Buttons.icon(VaadinIcon.EYE.create(), TaskText.ACTION_VIEW,
@@ -99,6 +111,11 @@ public class TaskGrid extends Grid<TaskDto> {
 
     public void setOnDelete(Consumer<TaskDto> onDelete) {
         this.onDelete = onDelete;
+    }
+
+    /** Sets the callback invoked with the destination id when a destination link is clicked. */
+    public void setOnOpenDestination(Consumer<String> onOpenDestination) {
+        this.onOpenDestination = onOpenDestination;
     }
 
     private static Span statusBadge(TaskDto task) {

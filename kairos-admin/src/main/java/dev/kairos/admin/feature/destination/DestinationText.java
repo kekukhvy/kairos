@@ -34,6 +34,7 @@ public final class DestinationText {
     public static final String NOTIFY_CREATE_FAILED = "Failed to create destination";
     public static final String NOTIFY_UPDATED = "Destination updated";
     public static final String NOTIFY_UPDATE_FAILED = "Failed to update destination";
+    public static final String NOTIFY_LOAD_FAILED = "Failed to load destination";
     public static final String NOTIFY_DELETED = "Destination deleted";
     public static final String NOTIFY_DELETE_FAILED = "Failed to delete destination";
     public static final String NOTIFY_DELETE_IN_USE = "Can't delete: destination is still used by one or more tasks";
