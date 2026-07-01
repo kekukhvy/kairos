@@ -8,6 +8,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
+import dev.kairos.admin.feature.destination.DestinationService;
+import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
@@ -24,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.List;
+
 import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
 
 @Route(value = TaskRoutes.TASKS, layout = MainLayout.class)
@@ -35,11 +39,13 @@ public class TaskView extends VerticalLayout {
 
     private final JsonMapper jsonMapper;
     private final TaskService taskService;
+    private final DestinationService destinationService;
     private final TaskGrid grid = new TaskGrid();
 
-    public TaskView(JsonMapper jsonMapper, TaskService taskService) {
+    public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService) {
         this.jsonMapper = jsonMapper;
         this.taskService = taskService;
+        this.destinationService = destinationService;
 
         setSizeFull();
         setSpacing(false);
@@ -100,11 +106,17 @@ public class TaskView extends VerticalLayout {
     }
 
     private void openForm() {
-        TaskForm.forCreate(jsonMapper, this::createTask).open();
+        TaskForm.forCreate(jsonMapper, destinationIds(), this::createTask).open();
     }
 
     private void editTask(TaskDto task) {
-        TaskForm.forEdit(jsonMapper, task, request -> updateTask(task, request)).open();
+        TaskForm.forEdit(jsonMapper, destinationIds(), task, request -> updateTask(task, request)).open();
+    }
+
+    private List<String> destinationIds() {
+        return destinationService.list().stream()
+                .map(DestinationDTO::destinationId)
+                .toList();
     }
 
     private void updateTask(TaskDto task, UpdateTaskRequest request) {

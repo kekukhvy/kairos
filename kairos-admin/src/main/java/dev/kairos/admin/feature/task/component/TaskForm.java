@@ -2,6 +2,7 @@ package dev.kairos.admin.feature.task.component;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
@@ -20,6 +21,7 @@ import dev.kairos.admin.shared.util.Strings;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public class TaskForm extends Dialog {
@@ -36,7 +38,7 @@ public class TaskForm extends Dialog {
     private final TextField service = Fields.text(TaskText.COL_SERVICE);
     private final TextField name = Fields.text(TaskText.COL_NAME);
     private final TextField description = Fields.text(TaskText.FIELD_DESCRIPTION);
-    private final TextField destinationId = Fields.text(TaskText.COL_DESTINATION);
+    private final ComboBox<String> destinationId;
     private final TextField messageType = Fields.text(TaskText.COL_MESSAGE_TYPE);
     private final IntegerField timeoutMs = Fields.integer(TaskText.COL_TIMEOUT);
     private final Checkbox active = Fields.checkbox(TaskText.COL_ACTIVE, true);
@@ -44,6 +46,7 @@ public class TaskForm extends Dialog {
     private final TextArea payload = Fields.textArea(TaskText.FIELD_PAYLOAD);
 
     private TaskForm(JsonMapper jsonMapper,
+                     List<String> destinationIds,
                      TaskDto editing,
                      Consumer<CreateTaskRequest> onCreate,
                      Consumer<UpdateTaskRequest> onEdit) {
@@ -51,6 +54,7 @@ public class TaskForm extends Dialog {
         this.editing = editing;
         this.onCreate = onCreate;
         this.onEdit = onEdit;
+        this.destinationId = Fields.combo(TaskText.COL_DESTINATION, destinationIds);
 
         setHeaderTitle(editing == null ? TaskText.NEW_TASK : TaskText.EDIT_TASK);
         setWidth(Tokens.DIALOG_WIDTH_L);
@@ -66,12 +70,17 @@ public class TaskForm extends Dialog {
         getFooter().add(buildCancel(), buildSave());
     }
 
-    public static TaskForm forCreate(JsonMapper jsonMapper, Consumer<CreateTaskRequest> onCreate) {
-        return new TaskForm(jsonMapper, null, onCreate, null);
+    public static TaskForm forCreate(JsonMapper jsonMapper,
+                                     List<String> destinationIds,
+                                     Consumer<CreateTaskRequest> onCreate) {
+        return new TaskForm(jsonMapper, destinationIds, null, onCreate, null);
     }
 
-    public static TaskForm forEdit(JsonMapper jsonMapper, TaskDto task, Consumer<UpdateTaskRequest> onEdit) {
-        return new TaskForm(jsonMapper, task, null, onEdit);
+    public static TaskForm forEdit(JsonMapper jsonMapper,
+                                   List<String> destinationIds,
+                                   TaskDto task,
+                                   Consumer<UpdateTaskRequest> onEdit) {
+        return new TaskForm(jsonMapper, destinationIds, task, null, onEdit);
     }
 
     private FormLayout buildForm() {
@@ -157,7 +166,7 @@ public class TaskForm extends Dialog {
         service.setValue(safe(task.service()));
         name.setValue(safe(task.name()));
         description.setValue(safe(task.description()));
-        destinationId.setValue(safe(task.destinationId()));
+        destinationId.setValue(task.destinationId());
         messageType.setValue(safe(task.messageType()));
         timeoutMs.setValue(task.timeoutMs());
         active.setValue(task.active());
