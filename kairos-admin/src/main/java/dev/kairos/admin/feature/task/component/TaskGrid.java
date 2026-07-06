@@ -11,12 +11,19 @@ import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.shared.ui.Badges;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.UiText;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+/**
+ * Grid that lists task records in the admin UI. Columns are defined
+ * explicitly (auto-detection disabled) and sized to their content.
+ * Row actions (view, edit, toggle active, delete) are injected via
+ * callbacks so the grid stays decoupled from service and navigation logic.
+ */
 public class TaskGrid extends Grid<TaskDto> {
 
 
@@ -89,7 +96,7 @@ public class TaskGrid extends Grid<TaskDto> {
         var toggle = Buttons.icon(toggleIcon, toggleTooltip,
                 e -> onToggleActive.accept(task));
 
-        var delete = Buttons.iconDanger(VaadinIcon.TRASH.create(), TaskText.ACTION_DELETE,
+        var delete = Buttons.iconDanger(VaadinIcon.TRASH.create(), UiText.ACTION_DELETE,
                 e -> onDelete.accept(task));
 
         HorizontalLayout layout = new HorizontalLayout(view, edit, toggle, delete);

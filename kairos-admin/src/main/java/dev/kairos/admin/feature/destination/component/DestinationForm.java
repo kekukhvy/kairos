@@ -12,8 +12,8 @@ import dev.kairos.admin.shared.form.FieldValidation;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Consumer;
@@ -70,11 +70,11 @@ public class DestinationForm extends Dialog {
     }
 
     private Button buildSave() {
-        return Buttons.primary(DestinationText.BTN_SAVE, e -> save());
+        return Buttons.primary(UiText.BTN_SAVE, e -> save());
     }
 
     private Button buildCancel() {
-        return Buttons.tertiary(DestinationText.BTN_CANCEL, e -> close());
+        return Buttons.tertiary(UiText.BTN_CANCEL, e -> close());
     }
 
     private void save() {
@@ -82,35 +82,24 @@ public class DestinationForm extends Dialog {
             return;
         }
 
-        Object parsedConfig;
-        try {
-            parsedConfig = readConfig();
-            config.setInvalid(false);
-        } catch (JacksonException ex) {
-            config.setInvalid(true);
-            config.setErrorMessage(DestinationText.VALIDATION_INVALID_JSON);
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                config, jsonMapper, UiText.VALIDATION_INVALID_JSON);
+        if (!result.valid()) {
             return;
         }
 
         onCreate.accept(new CreateDestinationRequest(
                 Strings.trimToNull(destinationId.getValue()),
                 destinationType.getValue(),
-                parsedConfig
+                result.value()
         ));
         close();
     }
 
     private boolean validate() {
-        boolean ok = FieldValidation.require(destinationId, DestinationText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.requirePresent(destinationType, destinationType, DestinationText.VALIDATION_REQUIRED);
+        boolean ok = FieldValidation.require(destinationId, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.requirePresent(destinationType, destinationType, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.require(config, UiText.VALIDATION_REQUIRED);
         return ok;
-    }
-
-    private Object readConfig() {
-        String raw = config.getValue();
-        if (Strings.isBlank(raw)) {
-            return null;
-        }
-        return jsonMapper.readValue(raw, Object.class);
     }
 }

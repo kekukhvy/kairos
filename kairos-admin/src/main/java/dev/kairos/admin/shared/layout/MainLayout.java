@@ -26,7 +26,7 @@ public class MainLayout extends AppLayout {
                 .fontSize(Tokens.FONT_L)
                 .fontWeight(Tokens.FONT_WEIGHT_SEMIBOLD)
                 .color(Tokens.TEXT_BODY)
-                .marginInline(Tokens.SPACE_S)
+                .marginInlineStart(Tokens.SPACE_S)
                 .applyTo(title);
     }
 

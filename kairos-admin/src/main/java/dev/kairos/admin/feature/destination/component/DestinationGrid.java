@@ -5,6 +5,8 @@ import com.vaadin.flow.data.provider.ListDataProvider;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.shared.util.DateTimes;
+import dev.kairos.admin.shared.util.JsonText;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +25,7 @@ public class DestinationGrid extends Grid<DestinationDTO> {
     private Consumer<DestinationDTO> onView = destination -> {
     };
 
-    public DestinationGrid() {
+    public DestinationGrid(JsonMapper jsonMapper) {
         super(DestinationDTO.class, false);
 
         addColumn(DestinationDTO::destinationId)
@@ -36,7 +38,7 @@ public class DestinationGrid extends Grid<DestinationDTO> {
                 .setAutoWidth(true)
                 .setSortable(true);
 
-        addColumn(DestinationDTO::config)
+        addColumn(destination -> JsonText.forDisplay(jsonMapper, destination.config()))
                 .setHeader(DestinationText.COL_DESTINATION_CONFIG)
                 .setAutoWidth(true);
 

@@ -1,11 +1,12 @@
 package dev.kairos.admin.feature.destination.component;
 
+import com.vaadin.flow.component.textfield.TextArea;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
+import dev.kairos.admin.shared.form.FieldValidation;
 import dev.kairos.admin.shared.util.Strings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
@@ -15,18 +16,26 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * Tests the pure-Java logic that backs {@link DestinationDetails#save()} and
  * the delete confirmation path.
  *
  * <p>Vaadin UI components require a running VaadinSession and cannot be
- * constructed in a unit test. Instead, this class exercises the same pure-Java
- * logic that {@code save()} and {@code delete()} delegate to: parse the raw
- * config string with {@link JsonMapper}, reject invalid JSON, treat blank input
- * as {@code null}, propagate a parsed {@link Object} to the {@code onSave}
- * callback, and forward the destination to the {@code onDelete} callback.
+ * constructed in a unit test — except for simple input fields such as
+ * {@link TextArea}, which carry no session state at construction time.
+ *
+ * <p>This class exercises the same logic that {@code save()} delegates to:
+ * <ol>
+ *   <li>{@link FieldValidation#require} — rejects blank config before JSON
+ *       parsing is attempted.</li>
+ *   <li>{@link FieldValidation#parseJson} — parses non-blank config, marks the
+ *       field invalid on malformed JSON, and yields a {@link FieldValidation.JsonResult}.</li>
+ * </ol>
+ * The {@code onSave} callback is only invoked when both guards pass.
+ * The {@code onDelete} callback is always forwarded immediately (the subsequent
+ * {@code close()} is Vaadin-bound and cannot be exercised without a
+ * VaadinSession).
  */
 class DestinationDetailsSaveLogicTest {
 
@@ -43,65 +52,79 @@ class DestinationDetailsSaveLogicTest {
 
     private static final String TOPIC_KEY = "topic";
     private static final String TOPIC_VALUE = "invoices";
+    private static final String VALIDATION_ERROR_MESSAGE = "Invalid JSON";
 
     private JsonMapper jsonMapper;
+    private TextArea configField;
 
     @BeforeEach
     void setUp() {
         jsonMapper = JsonMapper.builder().build();
+        configField = new TextArea();
     }
 
-    // --- readConfig: valid JSON ---
+    // --- parseJson: valid JSON ---
 
     @Test
-    void readConfig_validJsonObject_parsesSuccessfully() {
-        Object result = readConfig(VALID_JSON_OBJECT);
+    void parseJson_validJsonObject_parsesSuccessfully() {
+        configField.setValue(VALID_JSON_OBJECT);
 
-        assertThat(result).isInstanceOf(Map.class);
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.value()).isInstanceOf(Map.class);
         @SuppressWarnings("unchecked")
-        Map<String, Object> map = (Map<String, Object>) result;
+        Map<String, Object> map = (Map<String, Object>) result.value();
         assertThat(map).containsEntry(TOPIC_KEY, TOPIC_VALUE);
     }
 
     @Test
-    void readConfig_validJsonArray_parsesSuccessfully() {
-        Object result = readConfig(VALID_JSON_ARRAY);
+    void parseJson_validJsonArray_parsesSuccessfully() {
+        configField.setValue(VALID_JSON_ARRAY);
 
-        assertThat(result).isInstanceOf(List.class);
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.value()).isInstanceOf(List.class);
     }
 
     @Test
-    void readConfig_validJsonScalar_parsesSuccessfully() {
-        Object result = readConfig(VALID_JSON_SCALAR);
+    void parseJson_validJsonScalar_parsesSuccessfully() {
+        configField.setValue(VALID_JSON_SCALAR);
 
-        assertThat(result).isEqualTo(42);
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.value()).isEqualTo(42);
     }
 
-    // --- readConfig: blank / null → null config ---
+    // --- parseJson: invalid JSON → invalid result, field marked invalid ---
 
     @Test
-    void readConfig_blankInput_returnsNull() {
-        Object result = readConfig(BLANK_INPUT);
+    void parseJson_invalidJson_returnsInvalidResult() {
+        configField.setValue(INVALID_JSON);
 
-        assertThat(result).isNull();
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.value()).isNull();
     }
 
     @Test
-    void readConfig_emptyInput_returnsNull() {
-        Object result = readConfig(EMPTY_INPUT);
+    void parseJson_invalidJson_marksFieldInvalid() {
+        configField.setValue(INVALID_JSON);
 
-        assertThat(result).isNull();
+        FieldValidation.parseJson(configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+
+        assertThat(configField.isInvalid()).isTrue();
+        assertThat(configField.getErrorMessage()).isEqualTo(VALIDATION_ERROR_MESSAGE);
     }
 
-    // --- readConfig: invalid JSON → JacksonException (save must not call onSave) ---
-
-    @Test
-    void readConfig_invalidJson_throwsJacksonException() {
-        assertThatExceptionOfType(JacksonException.class)
-                .isThrownBy(() -> readConfig(INVALID_JSON));
-    }
-
-    // --- save contract: valid JSON invokes onSave ---
+    // --- save contract: FieldValidation.require rejects blank before parseJson is reached ---
 
     @Test
     void save_validJsonConfig_invokesOnSaveWithParsedConfig() {
@@ -114,16 +137,22 @@ class DestinationDetailsSaveLogicTest {
     }
 
     @Test
-    void save_blankConfig_invokesOnSaveWithNullConfig() {
+    void save_blankConfig_doesNotInvokeOnSave() {
         List<UpdateDestinationRequest> captured = new ArrayList<>();
 
         simulateSave(BLANK_INPUT, captured::add);
 
-        assertThat(captured).hasSize(1);
-        assertThat(captured.getFirst().config()).isNull();
+        assertThat(captured).isEmpty();
     }
 
-    // --- save contract: invalid JSON does NOT invoke onSave ---
+    @Test
+    void save_emptyConfig_doesNotInvokeOnSave() {
+        List<UpdateDestinationRequest> captured = new ArrayList<>();
+
+        simulateSave(EMPTY_INPUT, captured::add);
+
+        assertThat(captured).isEmpty();
+    }
 
     @Test
     void save_invalidJsonConfig_doesNotInvokeOnSave() {
@@ -161,27 +190,25 @@ class DestinationDetailsSaveLogicTest {
     // --- helpers mirroring DestinationDetails internals ---
 
     /**
-     * Mirrors {@code DestinationDetails.readConfig()}: blank → null, else parse.
-     */
-    private Object readConfig(String raw) {
-        if (Strings.isBlank(raw)) {
-            return null;
-        }
-        return jsonMapper.readValue(raw, Object.class);
-    }
-
-    /**
-     * Mirrors {@code DestinationDetails.save()}: parse, swallow on error, call
-     * onSave only when parsing succeeds.
+     * Mirrors {@code DestinationDetails.save()}: blank config is rejected by
+     * {@link FieldValidation#require}, then malformed JSON is rejected by
+     * {@link FieldValidation#parseJson}, and {@code onSave} is called only when
+     * both guards pass.
      */
     private void simulateSave(String raw, Consumer<UpdateDestinationRequest> onSave) {
-        Object parsedConfig;
-        try {
-            parsedConfig = readConfig(raw);
-        } catch (JacksonException ex) {
+        configField.setValue(raw);
+
+        if (!FieldValidation.require(configField, VALIDATION_ERROR_MESSAGE)) {
             return;
         }
-        onSave.accept(new UpdateDestinationRequest(parsedConfig));
+
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                configField, jsonMapper, VALIDATION_ERROR_MESSAGE);
+        if (!result.valid()) {
+            return;
+        }
+
+        onSave.accept(new UpdateDestinationRequest(result.value()));
     }
 
     /**

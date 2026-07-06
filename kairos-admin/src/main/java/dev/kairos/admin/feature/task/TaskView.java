@@ -2,7 +2,6 @@ package dev.kairos.admin.feature.task;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -25,20 +24,19 @@ import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Dialogs;
 import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.FilterBar;
 import dev.kairos.admin.shared.ui.Notifications;
 import dev.kairos.admin.shared.ui.UiText;
+import dev.kairos.admin.shared.ui.ViewActions;
 import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.function.Predicate;
-
-import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
 
 @Route(value = TaskRoutes.TASKS, layout = MainLayout.class)
 @RouteAlias(value = TaskRoutes.ROOT, layout = MainLayout.class)
@@ -159,25 +157,15 @@ public class TaskView extends VerticalLayout {
         if (term.isEmpty()) {
             return true;
         }
-        return contains(task.service(), term)
-                || contains(task.name(), term)
-                || contains(task.destinationId(), term)
-                || contains(task.eventName(), term);
-    }
-
-    private boolean contains(String value, String term) {
-        return value != null && value.toLowerCase().contains(term);
+        return Strings.containsIgnoreCase(task.service(), term)
+                || Strings.containsIgnoreCase(task.name(), term)
+                || Strings.containsIgnoreCase(task.destinationId(), term)
+                || Strings.containsIgnoreCase(task.eventName(), term);
     }
 
     private void confirmDelete(TaskDto task) {
-        ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader(TaskText.CONFIRM_DELETE_TITLE);
-        dialog.setText(TaskText.CONFIRM_DELETE_TEXT);
-        dialog.setCancelable(true);
-        dialog.setConfirmText(TaskText.ACTION_DELETE);
-        dialog.setConfirmButtonTheme(THEME_DANGER_CONFIRM);
-        dialog.addConfirmListener(e -> deleteTask(task));
-        dialog.open();
+        Dialogs.confirmDelete(TaskText.CONFIRM_DELETE_TITLE, TaskText.CONFIRM_DELETE_TEXT,
+                UiText.ACTION_DELETE, () -> deleteTask(task));
     }
 
 
@@ -247,17 +235,7 @@ public class TaskView extends VerticalLayout {
 
 
     private void execute(Runnable action, String successMessage, String failureMessage) {
-        try {
-            action.run();
-            Notifications.success(successMessage);
-            refresh();
-        } catch (RestClientResponseException ex) {
-            logger.error("{} — API responded {}: {}", failureMessage, ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
-            Notifications.error(failureMessage);
-        } catch (RuntimeException ex) {
-            logger.error("{} — request failed", failureMessage, ex);
-            Notifications.error(failureMessage);
-        }
+        ViewActions.execute(action, successMessage, failureMessage, this::refresh, logger);
     }
 
 }

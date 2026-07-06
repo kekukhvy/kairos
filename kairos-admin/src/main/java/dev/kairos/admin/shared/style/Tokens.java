@@ -54,6 +54,9 @@ public final class Tokens {
     public static final String DIALOG_WIDTH_M = "480px";
     public static final String DIALOG_WIDTH_L = "900px";
 
+    /** CSS {@code auto} keyword, e.g. an auto margin that pushes siblings apart. */
+    public static final String AUTO = "auto";
+
     // --- Apple-style extensions (not part of Lumo) ---
     public static final String GLASS_BLUR = "var(--kairos-glass-blur)";
     public static final String SURFACE_TRANSLUCENT = "var(--kairos-surface-translucent)";

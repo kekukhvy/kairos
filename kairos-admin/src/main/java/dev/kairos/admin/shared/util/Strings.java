@@ -18,4 +18,12 @@ public final class Strings {
     public static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    /**
+     * Case-insensitive containment check that treats a {@code null} value as
+     * "no match". {@code term} is expected to be already lower-cased.
+     */
+    public static boolean containsIgnoreCase(String value, String term) {
+        return value != null && value.toLowerCase().contains(term);
+    }
 }

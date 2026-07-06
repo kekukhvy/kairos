@@ -1,5 +1,10 @@
 package dev.kairos.admin.feature.task;
 
+/**
+ * UI string constants for the Tasks feature — column headers, field labels,
+ * action labels, and notification messages. Centralised here so that literal
+ * strings do not scatter across view and grid classes.
+ */
 public final class TaskText {
 
 
@@ -20,12 +25,6 @@ public final class TaskText {
     public static final String FIELD_PAYLOAD = "Payload (JSON)";
     public static final String FIELD_SUPPORTS_RETRY = "Supports retry";
 
-    public static final String BTN_SAVE = "Save";
-    public static final String BTN_CANCEL = "Cancel";
-
-    public static final String VALIDATION_REQUIRED = "Required";
-    public static final String VALIDATION_INVALID_JSON = "Invalid JSON";
-
     public static final String NOTIFY_CREATED = "Task created";
     public static final String NOTIFY_CREATE_FAILED = "Failed to create task";
 
@@ -35,7 +34,6 @@ public final class TaskText {
     public static final String ACTION_EDIT = "Edit";
     public static final String ACTION_START = "Start";
     public static final String ACTION_STOP = "Stop";
-    public static final String ACTION_DELETE = "Delete";
 
 
     public static final String NOTIFY_STARTED = "Task started";
@@ -49,7 +47,6 @@ public final class TaskText {
     public static final String NOTIFY_DELETE_FAILED = "Failed to delete task";
 
     public static final String DETAILS_TITLE = "Task details";
-    public static final String BTN_CLOSE = "Close";
 
     public static final String DETAIL_ID = "ID";
     public static final String DETAIL_CREATED = "Created";

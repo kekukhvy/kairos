@@ -1,7 +1,6 @@
 package dev.kairos.admin.feature.destination.component;
 
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -10,18 +9,18 @@ import com.vaadin.flow.component.textfield.TextField;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
+import dev.kairos.admin.shared.form.FieldValidation;
+import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Dialogs;
 import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.DateTimes;
 import dev.kairos.admin.shared.util.JsonText;
-import dev.kairos.admin.shared.util.Strings;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Consumer;
-
-import static dev.kairos.admin.shared.style.Tokens.THEME_DANGER_CONFIRM;
 
 /**
  * Modal dialog that shows a single destination and lets an operator switch it
@@ -58,8 +57,8 @@ public class DestinationDetails extends Dialog {
 
         this.deleteButton = buildDeleteButton();
         this.editButton = Buttons.secondary(DestinationText.BTN_EDIT, e -> enterEditMode());
-        this.saveButton = Buttons.primary(DestinationText.BTN_SAVE, e -> save());
-        this.closeButton = Buttons.tertiary(DestinationText.BTN_CLOSE, e -> close());
+        this.saveButton = Buttons.primary(UiText.BTN_SAVE, e -> save());
+        this.closeButton = Buttons.tertiary(UiText.BTN_CLOSE, e -> close());
 
         setHeaderTitle(DestinationText.DETAILS_TITLE);
         setWidth(Tokens.DIALOG_WIDTH_M);
@@ -72,9 +71,8 @@ public class DestinationDetails extends Dialog {
 
     private Button buildDeleteButton() {
         Button button = Buttons.iconDanger(VaadinIcon.TRASH.create(),
-                DestinationText.ACTION_DELETE, e -> confirmDelete());
-        button.getStyle().set("margin-inline-end", "auto");
-        return button;
+                UiText.ACTION_DELETE, e -> confirmDelete());
+        return StyleConfig.create().marginInlineEnd(Tokens.AUTO).applyTo(button);
     }
 
     /**
@@ -123,14 +121,8 @@ public class DestinationDetails extends Dialog {
     }
 
     private void confirmDelete() {
-        ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader(DestinationText.CONFIRM_DELETE_TITLE);
-        dialog.setText(DestinationText.CONFIRM_DELETE_TEXT);
-        dialog.setCancelable(true);
-        dialog.setConfirmText(DestinationText.ACTION_DELETE);
-        dialog.setConfirmButtonTheme(THEME_DANGER_CONFIRM);
-        dialog.addConfirmListener(e -> delete());
-        dialog.open();
+        Dialogs.confirmDelete(DestinationText.CONFIRM_DELETE_TITLE,
+                DestinationText.CONFIRM_DELETE_TEXT, UiText.ACTION_DELETE, this::delete);
     }
 
     private void delete() {
@@ -139,26 +131,18 @@ public class DestinationDetails extends Dialog {
     }
 
     private void save() {
-        Object parsedConfig;
-        try {
-            parsedConfig = readConfig();
-            config.setInvalid(false);
-        } catch (JacksonException ex) {
-            config.setInvalid(true);
-            config.setErrorMessage(DestinationText.VALIDATION_INVALID_JSON);
+        if (!FieldValidation.require(config, UiText.VALIDATION_REQUIRED)) {
             return;
         }
 
-        onSave.accept(new UpdateDestinationRequest(parsedConfig));
-        close();
-    }
-
-    private Object readConfig() {
-        String raw = config.getValue();
-        if (Strings.isBlank(raw)) {
-            return null;
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                config, jsonMapper, UiText.VALIDATION_INVALID_JSON);
+        if (!result.valid()) {
+            return;
         }
-        return jsonMapper.readValue(raw, Object.class);
+
+        onSave.accept(new UpdateDestinationRequest(result.value()));
+        close();
     }
 
     private static String safe(String value) {

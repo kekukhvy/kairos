@@ -11,7 +11,6 @@ public final class DestinationRoutes {
     }
 
     public static final String DESTINATIONS = "destinations";
-    public static final String ROOT  = "";
     public static final String PAGE_TITLE = "Destinations · Kairos";
 
 

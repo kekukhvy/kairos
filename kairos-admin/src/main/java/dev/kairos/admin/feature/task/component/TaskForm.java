@@ -16,9 +16,9 @@ import dev.kairos.admin.shared.form.FieldValidation;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.Fields;
+import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.JsonText;
 import dev.kairos.admin.shared.util.Strings;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
@@ -96,11 +96,11 @@ public class TaskForm extends Dialog {
     }
 
     private Button buildSave() {
-        return Buttons.primary(TaskText.BTN_SAVE, e -> save());
+        return Buttons.primary(UiText.BTN_SAVE, e -> save());
     }
 
     private Button buildCancel() {
-        return Buttons.tertiary(TaskText.BTN_CANCEL, e -> close());
+        return Buttons.tertiary(UiText.BTN_CANCEL, e -> close());
     }
 
     private void save() {
@@ -108,13 +108,9 @@ public class TaskForm extends Dialog {
             return;
         }
 
-        Object parsedPayload;
-        try {
-            parsedPayload = readPayload();
-            payload.setInvalid(false);
-        } catch (JacksonException ex) {
-            payload.setInvalid(true);
-            payload.setErrorMessage(TaskText.VALIDATION_INVALID_JSON);
+        FieldValidation.JsonResult result = FieldValidation.parseJson(
+                payload, jsonMapper, UiText.VALIDATION_INVALID_JSON);
+        if (!result.valid()) {
             return;
         }
 
@@ -126,7 +122,7 @@ public class TaskForm extends Dialog {
                     active.getValue(),
                     Strings.trimToNull(destinationId.getValue()),
                     Strings.trimToNull(eventName.getValue()),
-                    parsedPayload,
+                    result.value(),
                     timeoutMs.getValue(),
                     supportsRetry.getValue()
             ));
@@ -137,7 +133,7 @@ public class TaskForm extends Dialog {
                     active.getValue(),
                     Strings.trimToNull(destinationId.getValue()),
                     Strings.trimToNull(eventName.getValue()),
-                    parsedPayload,
+                    result.value(),
                     timeoutMs.getValue(),
                     supportsRetry.getValue()
             ));
@@ -146,20 +142,12 @@ public class TaskForm extends Dialog {
     }
 
     private boolean validate() {
-        boolean ok = FieldValidation.require(service, TaskText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.require(name, TaskText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.require(destinationId, TaskText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.require(eventName, TaskText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.requirePresent(timeoutMs, timeoutMs, TaskText.VALIDATION_REQUIRED);
+        boolean ok = FieldValidation.require(service, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.require(name, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.require(destinationId, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.require(eventName, UiText.VALIDATION_REQUIRED);
+        ok &= FieldValidation.requirePresent(timeoutMs, timeoutMs, UiText.VALIDATION_REQUIRED);
         return ok;
-    }
-
-    private Object readPayload() {
-        String raw = payload.getValue();
-        if (Strings.isBlank(raw)) {
-            return null;
-        }
-        return jsonMapper.readValue(raw, Object.class);
     }
 
     private void prefill(TaskDto task) {

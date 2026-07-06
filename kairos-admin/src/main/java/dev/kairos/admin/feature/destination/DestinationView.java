@@ -21,6 +21,7 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.FilterBar;
 import dev.kairos.admin.shared.ui.Notifications;
 import dev.kairos.admin.shared.ui.UiText;
+import dev.kairos.admin.shared.ui.ViewActions;
 import dev.kairos.admin.shared.util.JsonText;
 import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
@@ -44,7 +45,7 @@ public class DestinationView extends VerticalLayout {
 
     private final JsonMapper jsonMapper;
     private final DestinationService destinationService;
-    private final DestinationGrid grid = new DestinationGrid();
+    private final DestinationGrid grid;
     private final FilterBar filterBar;
     private final Select<String> typeFilter;
 
@@ -59,6 +60,7 @@ public class DestinationView extends VerticalLayout {
     public DestinationView(JsonMapper jsonMapper, DestinationService destinationService) {
         this.jsonMapper = jsonMapper;
         this.destinationService = destinationService;
+        this.grid = new DestinationGrid(jsonMapper);
         this.typeFilter = buildTypeFilter();
         this.filterBar = buildFilterBar();
 
@@ -150,13 +152,9 @@ public class DestinationView extends VerticalLayout {
         if (term.isEmpty()) {
             return true;
         }
-        return contains(destination.destinationId(), term)
-                || contains(destination.destinationType(), term)
-                || contains(JsonText.forDisplay(jsonMapper, destination.config()), term);
-    }
-
-    private boolean contains(String value, String term) {
-        return value != null && value.toLowerCase().contains(term);
+        return Strings.containsIgnoreCase(destination.destinationId(), term)
+                || Strings.containsIgnoreCase(destination.destinationType(), term)
+                || Strings.containsIgnoreCase(JsonText.forDisplay(jsonMapper, destination.config()), term);
     }
 
     private HorizontalLayout buildToolbar() {
@@ -181,17 +179,7 @@ public class DestinationView extends VerticalLayout {
     }
 
     private void execute(Runnable action, String successMessage, String failureMessage) {
-        try {
-            action.run();
-            Notifications.success(successMessage);
-            refresh();
-        } catch (RestClientResponseException ex) {
-            logger.error("{} — API responded {}: {}", failureMessage, ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
-            Notifications.error(failureMessage);
-        } catch (RuntimeException ex) {
-            logger.error("{} — request failed", failureMessage, ex);
-            Notifications.error(failureMessage);
-        }
+        ViewActions.execute(action, successMessage, failureMessage, this::refresh, logger);
     }
 
     private H2 createTitle() {

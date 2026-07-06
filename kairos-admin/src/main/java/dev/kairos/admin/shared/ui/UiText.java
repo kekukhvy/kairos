@@ -13,4 +13,14 @@ public final class UiText {
     public static final String FILTER_SEARCH_PLACEHOLDER = "Search";
     public static final String FILTER_CLEAR = "Clear";
     public static final String FILTER_ALL = "All";
+
+    // --- generic validation messages ---
+    public static final String VALIDATION_REQUIRED = "Required";
+    public static final String VALIDATION_INVALID_JSON = "Invalid JSON";
+
+    // --- generic action labels ---
+    public static final String BTN_SAVE = "Save";
+    public static final String BTN_CANCEL = "Cancel";
+    public static final String BTN_CLOSE = "Close";
+    public static final String ACTION_DELETE = "Delete";
 }

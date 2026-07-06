@@ -54,4 +54,36 @@ class StringsTest {
     void isBlank_nonBlankString_returnsFalse() {
         assertThat(Strings.isBlank(NON_BLANK)).isFalse();
     }
+
+    // --- containsIgnoreCase ---
+
+    private static final String VALUE_WITH_MIXED_CASE = "Hello World";
+    private static final String TERM_LOWER = "hello";
+    private static final String TERM_NOT_PRESENT_LOWER = "xyz";
+    private static final String EMPTY_TERM = "";
+
+    @Test
+    void containsIgnoreCase_nullValue_returnsFalse() {
+        assertThat(Strings.containsIgnoreCase(null, TERM_LOWER)).isFalse();
+    }
+
+    @Test
+    void containsIgnoreCase_matchingTermSameCase_returnsTrue() {
+        assertThat(Strings.containsIgnoreCase(TERM_LOWER, TERM_LOWER)).isTrue();
+    }
+
+    @Test
+    void containsIgnoreCase_matchingTermUpperCaseValue_returnsTrue() {
+        assertThat(Strings.containsIgnoreCase(VALUE_WITH_MIXED_CASE, TERM_LOWER)).isTrue();
+    }
+
+    @Test
+    void containsIgnoreCase_termNotPresent_returnsFalse() {
+        assertThat(Strings.containsIgnoreCase(VALUE_WITH_MIXED_CASE, TERM_NOT_PRESENT_LOWER)).isFalse();
+    }
+
+    @Test
+    void containsIgnoreCase_emptyTerm_returnsTrue() {
+        assertThat(Strings.containsIgnoreCase(VALUE_WITH_MIXED_CASE, EMPTY_TERM)).isTrue();
+    }
 }

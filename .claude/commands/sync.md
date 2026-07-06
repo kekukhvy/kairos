@@ -27,11 +27,19 @@ Steps:
    - **logging-instrumenter** — if Java code outside `domain` was added or
      changed → adds/tunes SLF4J logging at the right levels (DEBUG/INFO/WARN/
      ERROR) for audit and analysis. Never touches `domain` (framework-free).
+   - **architecture-reviewer** — if Java code was added or changed → read-only
+     review for Clean Architecture + Clean Code (layer boundaries, SRP, DRY,
+     KISS, methods ≤40 lines, design patterns where they help). It reports
+     findings, it does not edit code.
 4. Delegate to each relevant subagent via the Task tool, passing the changed
    files and the diff as context. Run independent delegations in parallel.
 5. Summarize what each subagent updated, and note anything skipped and why.
+   For **architecture-reviewer**, surface its findings to the user (must-fix vs
+   suggestions) rather than acting on them silently — it is a reviewer, not a
+   writer; let the user decide what to fix.
 
 A pure refactor with no API/schema/behavior change may still need javadoc-writer,
-logging-instrumenter, or test-author — but don't invoke a subagent whose output
-wouldn't change. javadoc-writer and logging-instrumenter apply to almost any
-Java change; spec-keeper and user-docs-writer only when contracts/docs move.
+logging-instrumenter, test-author, or architecture-reviewer — but don't invoke a
+subagent whose output wouldn't change. javadoc-writer, logging-instrumenter, and
+architecture-reviewer apply to almost any Java change; spec-keeper and
+user-docs-writer only when contracts/docs move.
