@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r \".tool_input.file_path // empty\"); case \"$f\" in *.java|*.sql) jq -nc --arg f \"$f\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\",additionalContext:(\\\"Code file changed: \\\" + \\$f + \\\". Per project workflow, delegate follow-ups to the subagents: spec-keeper (update doc/ if domain/API/schema/lifecycle changed), user-docs-writer (update doc/usage/ if endpoints/DTO fields changed), test-author (add/adjust unit + integration tests). Skip any that do not apply.\\\")}}\" ;; esac",
+            "command": "f=$(jq -r \".tool_input.file_path // empty\"); case \"$f\" in *.java|*.sql) jq -nc --arg f \"$f\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\",additionalContext:(\\\"Code file changed: \\\" + \\$f + \\\". Per project workflow, delegate follow-ups to the subagents: spec-keeper (update doc/ if domain/API/schema/lifecycle changed), user-docs-writer (update doc/usage/ if endpoints/DTO fields changed), test-author (add/adjust unit + integration tests), javadoc-writer (add Javadoc to public/protected types/methods lacking it), logging-instrumenter (add/tune SLF4J logging at the right levels, never in domain). Skip any that do not apply.\\\")}}\" ;; esac",
             "statusMessage": "Checking if spec/docs/tests need updating"
           }
         ]

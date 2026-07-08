@@ -16,7 +16,11 @@ public final class Validation {
     /**
      * Requires a non-null, non-blank string no longer than {@code maxLength}.
      *
-     * @param field name of the field, used in the error message
+     * @param value     the string to validate
+     * @param field     name of the field, used in the error message
+     * @param maxLength maximum allowed length (inclusive)
+     * @return {@code value}, unchanged, when valid
+     * @throws ValidationException if {@code value} is null, blank, or longer than {@code maxLength}
      */
     public static String requireText(String value, String field, int maxLength) {
         if (value == null || value.isBlank()) {
@@ -26,6 +30,23 @@ public final class Validation {
             throw new ValidationException(
                     field + " must be at most " + maxLength + " characters");
         }
+        return value;
+    }
+
+
+    /**
+     * Requires a non-null, non-blank string (no length limit).
+     *
+     * @param value the string to validate
+     * @param field name of the field, used in the error message
+     * @return {@code value}, unchanged, when valid
+     * @throws ValidationException if {@code value} is null or blank
+     */
+    public static String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new ValidationException(field + " is required");
+        }
+
         return value;
     }
 

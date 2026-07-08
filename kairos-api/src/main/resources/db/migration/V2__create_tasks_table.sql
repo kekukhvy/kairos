@@ -7,7 +7,7 @@ CREATE TABLE tasks (
     description    TEXT,                            -- nullable
     active         BOOLEAN      NOT NULL DEFAULT true,  -- overall kill-switch for the whole task
     destination_id VARCHAR(128) NOT NULL REFERENCES destinations (id),
-    message_type   VARCHAR(255) NOT NULL,           -- e.g. 'booking.expire.v1'
+    event_name     VARCHAR(255) NOT NULL,           -- machine event id for consumer routing, e.g. 'booking.expire.v1'
     payload        JSONB,                           -- default payload
     timeout_ms     INT          NOT NULL,           -- delivery timeout
     supports_retry BOOLEAN      NOT NULL DEFAULT false,  -- if false, retry_policies is not used

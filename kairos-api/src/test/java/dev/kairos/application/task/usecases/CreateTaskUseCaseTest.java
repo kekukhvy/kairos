@@ -11,7 +11,7 @@ import java.time.ZoneOffset;
 
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.DESTINATION_ID;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.FIXED_NOW;
-import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.MESSAGE_TYPE;
+import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.EVENT_NAME;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.NAME;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.SERVICE;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.TIMEOUT_MS;
@@ -122,7 +122,7 @@ class CreateTaskUseCaseTest {
     void execute_withMissingDestination_throwsValidationException() {
         CreateTaskCommand command = new CreateTaskCommand(
                 SERVICE, NAME, null, null,
-                MISSING_DESTINATION_ID, MESSAGE_TYPE, null, TIMEOUT_MS, null);
+                MISSING_DESTINATION_ID, EVENT_NAME, null, TIMEOUT_MS, null);
 
         assertThrows(ValidationException.class, () -> useCase.execute(command));
     }
@@ -131,7 +131,7 @@ class CreateTaskUseCaseTest {
     void execute_withMissingDestination_doesNotSave() {
         CreateTaskCommand command = new CreateTaskCommand(
                 SERVICE, NAME, null, null,
-                MISSING_DESTINATION_ID, MESSAGE_TYPE, null, TIMEOUT_MS, null);
+                MISSING_DESTINATION_ID, EVENT_NAME, null, TIMEOUT_MS, null);
 
         try {
             useCase.execute(command);
@@ -153,12 +153,12 @@ class CreateTaskUseCaseTest {
     private static CreateTaskCommand validCommand() {
         return new CreateTaskCommand(
                 SERVICE, NAME, null, null,
-                DESTINATION_ID, MESSAGE_TYPE, null, TIMEOUT_MS, null);
+                DESTINATION_ID, EVENT_NAME, null, TIMEOUT_MS, null);
     }
 
     private static CreateTaskCommand commandWithNullableFlags(Boolean active, Boolean supportsRetry) {
         return new CreateTaskCommand(
                 SERVICE, NAME, null, active,
-                DESTINATION_ID, MESSAGE_TYPE, null, TIMEOUT_MS, supportsRetry);
+                DESTINATION_ID, EVENT_NAME, null, TIMEOUT_MS, supportsRetry);
     }
 }

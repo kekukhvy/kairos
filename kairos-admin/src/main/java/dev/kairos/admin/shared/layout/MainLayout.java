@@ -6,6 +6,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
+import dev.kairos.admin.feature.destination.DestinationView;
 import dev.kairos.admin.feature.task.TaskView;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
@@ -25,7 +26,7 @@ public class MainLayout extends AppLayout {
                 .fontSize(Tokens.FONT_L)
                 .fontWeight(Tokens.FONT_WEIGHT_SEMIBOLD)
                 .color(Tokens.TEXT_BODY)
-                .marginInline(Tokens.SPACE_S)
+                .marginInlineStart(Tokens.SPACE_S)
                 .applyTo(title);
     }
 
@@ -35,6 +36,12 @@ public class MainLayout extends AppLayout {
                 LayoutText.NAV_TASKS,
                 TaskView.class,
                 VaadinIcon.TASKS.create()
+        ));
+
+        nav.addItem(new SideNavItem(
+                LayoutText.NAV_DESTINATIONS,
+                DestinationView.class,
+                VaadinIcon.CONNECT.create()
         ));
         return nav;
     }

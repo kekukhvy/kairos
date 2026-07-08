@@ -16,7 +16,7 @@ final class TaskBuilder {
     static final String DEFAULT_SERVICE = "payment-service";
     static final String DEFAULT_NAME = "send-receipt";
     static final DestinationId DEFAULT_DESTINATION_ID = DestinationId.of("dest-kafka-1");
-    static final String DEFAULT_MESSAGE_TYPE = "payment.receipt.send";
+    static final String DEFAULT_EVENT_NAME = "payment.receipt.send";
     static final String DEFAULT_PAYLOAD = "{\"orderId\":\"abc\"}";
     static final int DEFAULT_TIMEOUT_MS = 5_000;
     static final Instant DEFAULT_CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
@@ -30,7 +30,7 @@ final class TaskBuilder {
                 .service(DEFAULT_SERVICE)
                 .name(DEFAULT_NAME)
                 .destinationId(DEFAULT_DESTINATION_ID)
-                .messageType(DEFAULT_MESSAGE_TYPE)
+                .eventName(DEFAULT_EVENT_NAME)
                 .payload(DEFAULT_PAYLOAD)
                 .timeoutMs(DEFAULT_TIMEOUT_MS)
                 .createdAt(DEFAULT_CREATED_AT)

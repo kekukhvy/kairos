@@ -72,7 +72,7 @@ destinations  1───* tasks  1───* retry_policies
 | description | TEXT | nullable |
 | active | BOOLEAN NOT NULL DEFAULT true | overall kill-switch for the whole task |
 | destination_id | VARCHAR(128) NOT NULL FK → destinations (id) | |
-| message_type | VARCHAR(255) NOT NULL | e.g. `booking.expire.v1` |
+| event_name | VARCHAR(255) NOT NULL | machine-readable, versioned event identifier used by the consumer for routing/handler selection (e.g. `booking.expire.v1`); distinct from the human-readable task `name` |
 | payload | JSONB | default payload — nullable |
 | timeout_ms | INT NOT NULL | delivery timeout |
 | supports_retry | BOOLEAN NOT NULL DEFAULT false | if false, retry_policies is not used for this task |
@@ -257,7 +257,8 @@ mapping transparent.
   the mechanism is decided.
 - Materialization horizon thresholds by frequency — need real numbers
   based on expected load.
-- API for managing `destinations` — not yet designed.
+- REST endpoints for `destinations` — domain, application, and infrastructure
+  layers are implemented (M2); HTTP wiring is still pending.
 - `correlation_id` for the async `result` field — needed once that feature
   is built.
 - Maintenance of the denormalized run summary on `tasks` (`last_status`,

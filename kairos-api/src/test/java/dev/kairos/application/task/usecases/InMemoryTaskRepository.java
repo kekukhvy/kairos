@@ -1,5 +1,6 @@
 package dev.kairos.application.task.usecases;
 
+import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
 import dev.kairos.domain.task.TaskRepository;
@@ -36,15 +37,23 @@ final class InMemoryTaskRepository implements TaskRepository {
     public List<Task> findAll(int limit, int offset) {
         lastFindAllLimit = limit;
         lastFindAllOffset = offset;
-        List<Task> all = new ArrayList<>(store.values());
-        int from = Math.min(offset, all.size());
-        int to = Math.min(from + limit, all.size());
-        return all.subList(from, to);
+        // Mirrors the production SQL contract: deleted_at IS NULL excludes soft-deleted rows.
+        List<Task> live = new ArrayList<>(store.values());
+        live.removeIf(Task::isDeleted);
+        int from = Math.min(offset, live.size());
+        int to = Math.min(from + limit, live.size());
+        return live.subList(from, to);
     }
 
     @Override
     public void softDelete(TaskId id, Instant deletedAt) {
         // not used by any use case under test — intentionally left as no-op
+    }
+
+    @Override
+    public boolean existsByDestinationId(DestinationId id) {
+        return store.values().stream()
+                .anyMatch(t -> t.destinationId().equals(id));
     }
 
     // --- test helpers -------------------------------------------------------

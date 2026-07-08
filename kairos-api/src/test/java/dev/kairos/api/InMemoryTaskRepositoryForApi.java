@@ -1,5 +1,6 @@
 package dev.kairos.api;
 
+import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
 import dev.kairos.domain.task.TaskRepository;
@@ -36,10 +37,13 @@ final class InMemoryTaskRepositoryForApi implements TaskRepository {
 
     @Override
     public List<Task> findAll(int limit, int offset) {
-        List<Task> all = new ArrayList<>(store.values());
-        int from = Math.min(offset, all.size());
-        int to = Math.min(from + limit, all.size());
-        return all.subList(from, to);
+        // Mirrors the production SQL contract: deleted_at IS NULL excludes soft-deleted rows.
+        List<Task> live = store.values().stream()
+                .filter(t -> !t.isDeleted())
+                .collect(java.util.stream.Collectors.toList());
+        int from = Math.min(offset, live.size());
+        int to = Math.min(from + limit, live.size());
+        return live.subList(from, to);
     }
 
     @Override
@@ -47,6 +51,12 @@ final class InMemoryTaskRepositoryForApi implements TaskRepository {
         // The production repository stamps deleted_at via SQL; the in-memory
         // store holds the already-mutated Task (softDelete was called on it by
         // the use case before reaching here), so no extra work is needed.
+    }
+
+    @Override
+    public boolean existsByDestinationId(DestinationId id) {
+        return store.values().stream()
+                .anyMatch(t -> t.destinationId().equals(id));
     }
 
     /** Seeds a task directly without going through save(), preserving deletedAt state. */

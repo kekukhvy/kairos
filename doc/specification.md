@@ -13,7 +13,15 @@ this way.
 
 - **Destination** — a delivery endpoint (Kafka / SQS / Webhook /
   RabbitMQ). Its config is stored separately from tasks so it isn't
-  duplicated.
+  duplicated. Identity is `DestinationId` (wraps a human-readable
+  `String`, e.g. `booking-kafka`); equality and hashing are by id only.
+  `type` (`DestinationType` enum: `KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ`)
+  and `createdAt` are immutable after creation — changing the delivery
+  mechanism is modelled as delete + re-create. `config` (a JSONB string)
+  is mutable via `updateConfig(String)`. The entity is constructed via a
+  `Builder`; `createdAt` is supplied by the application layer (via
+  `Clock`) so the entity stays deterministic and testable. No soft-delete
+  — destinations are hard-deleted.
 - **Task** — the definition of work: what to deliver, where, with what
   timeout and retry policy. A stable entity that changes rarely. Supports
   soft delete. Identity is `TaskId` (wraps a UUID). Editable state is
@@ -115,13 +123,14 @@ a `Task` entity, the entity is frozen — any call to `update()` throws
 responsible for calling the soft-delete operation; the domain only enforces
 the "no further mutations after deletion" rule.
 
-## 7. Application Layer — Use Cases (M1, implemented)
+## 7. Application Layer — Use Cases (M1 + M2, implemented)
 
-The application layer orchestrates the domain via five use cases, all in
-`dev.kairos.application.task.usecases`. Each use case receives its port(s) and a
-`java.time.Clock` through its constructor — no field injection, no framework
-dependency. Timestamps are always sourced from the injected clock so tests
-can run with a fixed instant.
+The application layer orchestrates the domain via use cases in
+`dev.kairos.application.task.usecases` (Task, M1) and
+`dev.kairos.application.destination.usecases` (Destination, M2). Each use
+case receives its port(s) and, where needed, a `java.time.Clock` through its
+constructor — no field injection, no framework dependency. Timestamps are
+always sourced from the injected clock so tests can run with a fixed instant.
 
 ### Repository ports
 
@@ -132,16 +141,31 @@ can run with a fixed instant.
   Callers inspect `task.isDeleted()` and decide how to react (read → 404,
   repeat-delete → 409).
 - `findAll(int limit, int offset)` — live (non-deleted) rows only, newest
-  first; used by `ListTasksUseCase`.
+  first. The filter is applied at the SQL level (`WHERE deleted_at IS NULL`)
+  inside `JooqTaskRepository`; `ListTasksUseCase` delegates directly to the
+  repository and performs no further in-memory filtering.
 - `softDelete(TaskId, Instant)` — stamps `deleted_at`; the 404/409 decision
   is made by the caller before this is invoked.
+- `existsByDestinationId(DestinationId)` — returns `true` if any task (including
+  soft-deleted ones) still holds a reference to the given destination. Used by
+  `DeleteDestinationUseCase` to enforce the referential-integrity guard.
 
-**`DestinationRepository`** (`dev.kairos.domain.destination`; read-only in M1):
+**`DestinationRepository`** (`dev.kairos.domain.destination`; full CRUD as of M2):
 - `existsById(DestinationId)` — validates the destination FK before a task
-  is created or updated, surfacing a `ValidationException` instead of a raw
-  SQL foreign-key failure. A full Destinations API will grow this port in M2.
+  is created or updated, surfacing a clean domain error instead of a raw
+  SQL foreign-key failure.
+- `save(Destination)` — upsert via `INSERT ... ON CONFLICT (id) DO UPDATE`.
+  `createdAt` is set only on insert and is never overwritten on conflict.
+- `findById(DestinationId)` — returns `Optional<Destination>`, empty if not found.
+- `findAll(int limit, int offset)` — returns all destinations, newest first
+  (ordered by `created_at DESC`). No soft-delete state — this always
+  reflects the full live set.
+- `deleteById(DestinationId)` — hard delete; removes the row permanently.
+  Referential-integrity (no tasks in use) is enforced by the caller, not here.
 
 ### Use-case contracts
+
+**Task use cases** (`dev.kairos.application.task.usecases`):
 
 | Use case | Inputs | Normal return | Domain exceptions |
 |---|---|---|---|
@@ -150,6 +174,31 @@ can run with a fixed instant.
 | `GetTaskUseCase` | `TaskId` | `Task` | `TaskNotFoundException` (missing or soft-deleted) |
 | `ListTasksUseCase` | `Pagination` | `List<Task>` | — |
 | `SoftDeleteTaskUseCase` | `TaskId`, `Clock` | void | `TaskNotFoundException` (task not found); `TaskAlreadyDeletedException` (task already soft-deleted) |
+
+**Destination use cases** (`dev.kairos.application.destination.usecases`):
+
+| Use case | Inputs | Normal return | Domain exceptions |
+|---|---|---|---|
+| `CreateDestinationUseCase` | `CreateDestinationCommand`, `Clock` | `Destination` | `DestinationAlreadyExistsException` (id already taken); `InvalidDestinationTypeException` (unrecognised `destinationType` string) |
+| `GetDestinationByIdUseCase` | `DestinationId` | `Destination` | `DestinationNotFoundException` (no row for the id) |
+| `ListDestinationsUseCase` | `Pagination` | `List<Destination>` | — |
+| `UpdateDestinationUseCase` | `DestinationId`, `String config` | `Destination` | `DestinationNotFoundException` (no row for the id) |
+| `DeleteDestinationUseCase` | `DestinationId` | void | `DestinationInUseException` (at least one task still references the destination) |
+
+**Destination creation details:** `destinationId` is caller-supplied (human-readable,
+e.g. `booking-kafka`) rather than auto-generated. A duplicate-id check via
+`existsById` runs before the row is written. `createdAt` is stamped from the
+injected `Clock`. The raw `destinationType` string from `CreateDestinationCommand`
+is parsed to `DestinationType` via `DestinationType.valueOf()`; an unknown value
+raises `InvalidDestinationTypeException`.
+
+**Destination deletion semantics:** deletion is idempotent — no existence check
+is performed before the `deleteById` call (single round trip, standard DELETE
+semantics). However, deletion is blocked while any task (including soft-deleted
+tasks) still references the destination; `TaskRepository.existsByDestinationId`
+queries `tasks.destination_id` without filtering on `deleted_at`, so a
+soft-deleted task is enough to block the delete. `DestinationInUseException` is
+raised if the check returns `true`.
 
 **Soft-delete visibility rules:**
 - `GET` and `UPDATE` on a soft-deleted task raise `TaskNotFoundException`
@@ -171,23 +220,33 @@ case falls back to the domain defaults: `active = true`,
 `UpdateTaskCommand` intentionally omits it — a task's owning service cannot
 be changed after creation.
 
-### Commands (`dev.kairos.application.task.commands`)
+### Commands
 
-`CreateTaskCommand` and `UpdateTaskCommand` are plain Java records carrying
-raw field values (no domain types). The API edge will map an incoming request
-DTO to a command; the use case turns command fields into domain types and lets
-the domain validate them.
+**`dev.kairos.application.task.commands`:** `CreateTaskCommand` and
+`UpdateTaskCommand` are plain Java records carrying raw field values (no domain
+types). The API edge maps an incoming request DTO to a command; the use case
+turns command fields into domain types and lets the domain validate them.
 
-## 8. API — V1 Scope (Task CRUD)
+**`dev.kairos.application.destination.commands`:** `CreateDestinationCommand`
+is a plain Java record with three `String` fields — `destinationId`,
+`destinationType`, and `config` — matching the same pattern: the API edge maps
+the request DTO to the command; the use case converts `destinationType` to
+`DestinationType` and `destinationId` to `DestinationId`.
 
-The first vertical slice covers Task only — no Schedule/Execution API yet
-(those land in M3+ per the development plan).
+## 8. API — V1 Scope (Task CRUD + Destination CRUD)
+
+The first two vertical slices cover Task and Destination CRUD — no
+Schedule/Execution API yet (those land in M3+ per the development plan). The
+Destination domain, application, and HTTP layers are all fully implemented as of
+M2: entities, use cases, repository port, and the five REST endpoints are live.
 
 **HTTP framework:** Javalin 6.4.0 (`io.javalin:javalin`). The server port
 is read from `server.port` in `application.properties` (default `8080`).
 A route overview is available at `/routes` (Javalin bundled plugin).
 
 ### Endpoints
+
+**Tasks:**
 
 | Method | Path | Success status | Description |
 |---|---|---|---|
@@ -197,14 +256,28 @@ A route overview is available at `/routes` (Javalin bundled plugin).
 | `PUT` | `/api/v1/tasks/{id}` | 200 | update (full replacement of editable fields) |
 | `DELETE` | `/api/v1/tasks/{id}` | 204 | soft delete — stamps `deleted_at`, no response body |
 
+**Destinations:**
+
+| Method | Path | Success status | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/destinations` | 201 | create a destination |
+| `GET` | `/api/v1/destinations/{id}` | 200 | fetch (404 if not found) |
+| `GET` | `/api/v1/destinations` | 200 | list all destinations, paginated |
+| `PUT` | `/api/v1/destinations/{id}` | 200 | update config (only field allowed to change) |
+| `DELETE` | `/api/v1/destinations/{id}` | 204 | hard delete — blocked if any task references the destination |
+
 ### Exception → HTTP status mapping (`GlobalExceptionHandler`)
 
 | Exception | HTTP status | Notes |
 |---|---|---|
 | `ValidationException` | 400 | field-level constraint violations |
 | `IllegalArgumentException` | 400 | malformed path param (e.g. non-UUID `{id}`) |
+| `InvalidDestinationTypeException` | 400 | unrecognised `destinationType` string on destination create |
 | `TaskNotFoundException` | 404 | task missing or already soft-deleted (GET/PUT) |
+| `DestinationNotFoundException` | 404 | destination not found (GET/PUT) |
 | `TaskAlreadyDeletedException` | 409 | repeat DELETE on an already-deleted task |
+| `DestinationAlreadyExistsException` | 409 | destination id already taken on create |
+| `DestinationInUseException` | 409 | at least one task still references the destination on delete |
 | any other `Exception` | 500 | logged server-side; body is `{"error":"Internal server error"}` |
 
 All error bodies use `ErrorResponse(String error)` — a single `error` field
@@ -221,7 +294,7 @@ with a human-readable message.
 | `description` | `String` | nullable |
 | `active` | `Boolean` | nullable → domain default `true` |
 | `destinationId` | `String` | must reference an existing destination |
-| `messageType` | `String` | required |
+| `eventName` | `String` | required; machine-readable, versioned event identifier used by the consumer for routing/handler selection (e.g. `booking.expire.v1`); deliberately distinct from the human-readable `name` |
 | `payload` | `JsonNode` | any valid JSON value; nullable → stored as JSONB |
 | `timeoutMs` | `int` | must be > 0 |
 | `supportsRetry` | `Boolean` | nullable → domain default `false` |
@@ -242,7 +315,7 @@ same defaults.
 | `description` | `String` | nullable |
 | `active` | `boolean` | |
 | `destinationId` | `String` | |
-| `messageType` | `String` | |
+| `eventName` | `String` | machine-readable, versioned event identifier for consumer routing (e.g. `booking.expire.v1`) |
 | `payload` | `JsonNode` | embedded as a real JSON node, not an escaped string; null if not set |
 | `timeoutMs` | `int` | |
 | `supportsRetry` | `boolean` | |
@@ -252,18 +325,47 @@ same defaults.
 `deletedAt` is intentionally absent — deleted tasks are never returned;
 callers receive 404 instead.
 
-**`PageResponse<T>`** — wrapper for `GET /api/v1/tasks`:
+**`PageResponse<T>`** — wrapper for all paginated list endpoints (`GET /api/v1/tasks`, `GET /api/v1/destinations`):
 
 ```json
 {
-  "items": [ ...TaskResponse... ],
+  "items": [ ...TaskResponse or DestinationResponse... ],
   "limit": 20,
-  "offset": 0
+  "offset": 0,
+  "hasNext": true
 }
 ```
 
 Query parameters: `limit` (nullable, default applied by `Pagination`) and
 `offset` (nullable, default `0`).
+
+`hasNext` is computed by over-fetching `limit + 1` rows from the repository.
+If the result set size exceeds `limit`, `hasNext` is `true` and the extra row
+is stripped before the response is serialised. This avoids a separate
+`COUNT(*)` query.
+
+**`CreateDestinationRequest`** — body for `POST /api/v1/destinations`:
+
+| Field | Java type | Notes |
+|---|---|---|
+| `destinationId` | `String` | caller-supplied human-readable id (e.g. `booking-kafka`); must be unique |
+| `destinationType` | `String` | case-sensitive enum name: `KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ` |
+| `config` | `JsonNode` | any valid JSON value; serialised to JSONB |
+
+**`UpdateDestinationRequest`** — body for `PUT /api/v1/destinations/{id}`:
+
+| Field | Java type | Notes |
+|---|---|---|
+| `config` | `JsonNode` | replacement connectivity config; only field allowed to change |
+
+**`DestinationResponse`** — body for all successful destination reads (200, 201):
+
+| Field | Java type | Notes |
+|---|---|---|
+| `destinationId` | `String` | human-readable id |
+| `destinationType` | `String` | enum name (`KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ`) |
+| `config` | `JsonNode` | embedded as a real JSON node, not an escaped string |
+| `createdAt` | `Instant` | ISO-8601 string; immutable |
 
 **`ErrorResponse`** — body for all 4xx/5xx:
 
@@ -274,7 +376,8 @@ Query parameters: `limit` (nullable, default applied by `Pagination`) and
 ### ObjectMapper configuration (`ObjectMapperFactory`)
 
 One shared `ObjectMapper` instance is created at startup and injected into
-both the Javalin JSON mapper (`JavalinJackson`) and `TaskHandler`/`TaskDtoMapper`:
+the Javalin JSON mapper (`JavalinJackson`) and all handlers/mappers
+(`TaskHandler`/`TaskDtoMapper`, `DestinationHandler`/`DestinationDtoMapper`):
 
 - `JavaTimeModule` registered — `Instant` serializes as an ISO-8601 string.
 - `WRITE_DATES_AS_TIMESTAMPS = false` — human-readable dates, not numeric arrays.
@@ -305,21 +408,35 @@ aggregates as consistency boundaries, value objects, invariants enforced
 inside entities — earns its keep because it solves concrete problems we
 already ran into, not because the domain itself is complex.
 
-**Domain exception hierarchy (implemented in `common`):**
-- `DomainException` (abstract) — base `RuntimeException` for all broken
-  invariants and invalid-state errors. Lets the API layer catch one type
-  and translate domain failures to HTTP responses.
-- `ValidationException extends DomainException` — thrown by the shared
-  `Validation` utility (`requireText`, `requirePositive`) when field-level
-  constraints are violated (e.g. blank name, non-positive `timeoutMs`).
+**Domain exception hierarchy (implemented in `common` and domain packages):**
+- `DomainException` (abstract, `common`) — base `RuntimeException` for all
+  broken invariants and invalid-state errors. Lets the API layer catch one
+  type and translate domain failures to HTTP responses.
+- `ValidationException extends DomainException` (`common`) — thrown by the
+  shared `Validation` utility (`requireText`, `requirePositive`) when
+  field-level constraints are violated (e.g. blank name, non-positive
+  `timeoutMs`).
 - `TaskAlreadyDeletedException extends DomainException` — thrown by
   `Task.update()` and `Task.softDelete()` when the task is already
   soft-deleted. Maps to HTTP 409 at the API layer.
+- Destination exceptions (all in `dev.kairos.domain.destination.exceptions`,
+  all extending `DomainException`):
+  - `DestinationAlreadyExistsException` — raised by `CreateDestinationUseCase`
+    when the caller-supplied id is already in use.
+  - `DestinationNotFoundException` — raised by `GetDestinationByIdUseCase` and
+    `UpdateDestinationUseCase` when no row exists for the given id.
+  - `InvalidDestinationTypeException` — raised by `CreateDestinationUseCase`
+    when `destinationType` does not match any `DestinationType` enum constant.
+  - `DestinationInUseException` — raised by `DeleteDestinationUseCase` when at
+    least one task still references the destination.
 
 The `Validation` utility class (`dev.kairos.common.util.helpers.Validation`)
-provides two static guards used across the domain:
+provides static guards used across the domain:
 - `requireText(value, field, maxLength)` — rejects null/blank and values
   exceeding `maxLength`; returns the validated value for inline assignment.
+- `requireText(value, field)` — two-argument overload (no length cap); rejects
+  null/blank only. Used by `Destination.validateConfig` to validate the
+  `config` field.
 - `requirePositive(value, field)` — rejects values `<= 0`; returns the
   validated value.
 
@@ -379,19 +496,25 @@ outermost ring, depending on the application layer but unknown to it:
   `jsonb.data()`; timestamps are converted between `OffsetDateTime` (jOOQ
   record) and `Instant` (domain entity) via UTC offset.
 - `JooqDestinationRepository` (`dev.kairos.infrastructure.destination`)
-  implements `DestinationRepository.existsById` via `DSLContext.fetchExists`.
+  implements the full `DestinationRepository` port: `existsById` via
+  `DSLContext.fetchExists`; `save` as an `INSERT ... ON CONFLICT (id) DO UPDATE`
+  that never overwrites `created_at`; `findById` and `findAll`
+  (`ORDER BY created_at DESC`); `deleteById` as a hard delete. A private
+  `toDomain(DestinationsRecord)` helper converts the jOOQ record to the domain
+  entity — `JSONB.data()` for the config column, `OffsetDateTime.toInstant()`
+  for timestamps, `DestinationType.valueOf(record.getType())` for the enum.
 - `DSLContextFactory` (`dev.kairos.infrastructure`) builds a shared
   `DSLContext` from a `DataSource` with `renderSchema = false` and
   `renderQuotedNames = NEVER`, and is injected into every repository at
   startup. Transaction management belongs to the application/API layer.
 - `ObjectMapperFactory` (`dev.kairos.infrastructure`) produces the single
-  shared `ObjectMapper` (see §8 for configuration). It is wired into both
-  the Javalin JSON mapper and `TaskHandler` at startup.
+  shared `ObjectMapper` (see §8 for configuration). It is wired into the
+  Javalin JSON mapper, `TaskHandler`, and `DestinationHandler` at startup.
 - `Router` (`dev.kairos.api`) creates the `Javalin` instance, registers the
-  `GlobalExceptionHandler`, and exposes `registerTaskRoutes` to attach
-  `TaskHandler` method references. Routes are registered as method references
-  (`taskHandler::list`, etc.), keeping `TaskHandler` free of Javalin types
-  except `io.javalin.http.Context`.
+  `GlobalExceptionHandler`, and exposes `registerTaskRoutes` and
+  `registerDestinationRoutes` to attach handler method references. Routes are
+  registered as method references (`taskHandler::list`, `destinationHandler::create`,
+  etc.), keeping handlers free of Javalin types except `io.javalin.http.Context`.
 - `TaskHandler` (`dev.kairos.api.task`) translates HTTP context to commands
   and delegates to the use cases. It holds a reference to `ObjectMapper`
   solely for `JsonConverter.jsonToString` (request → command) and
@@ -399,13 +522,25 @@ outermost ring, depending on the application layer but unknown to it:
 - `TaskDtoMapper` (`dev.kairos.api.task`, package-private) performs the
   `Task` → `TaskResponse` mapping, including the payload string → `JsonNode`
   conversion for the response.
+- `DestinationHandler` (`dev.kairos.api.destination`) translates HTTP context
+  to the five destination use-case calls. Holds an `ObjectMapper` reference
+  for `JsonConverter.jsonToString` (config `JsonNode` → `String` for the
+  command) and `DestinationDtoMapper.toResponse`. The `list` handler
+  over-fetches `limit + 1` rows, computes `hasNext`, strips the extra item,
+  and serialises a `PageResponse<DestinationResponse>`.
+- `DestinationDtoMapper` (`dev.kairos.api.destination`, package-private)
+  performs the `Destination` → `DestinationResponse` mapping, including the
+  config string → `JsonNode` conversion via `JsonConverter.parseJson`.
 - `JsonConverter` (`dev.kairos.common.util.helpers`) serializes an inbound
   `JsonNode` to a JSON string for the domain/storage layer. A null or
   JSON-null node returns null; a serialization failure throws
   `ValidationException`.
 - `ApplicationContext` (`dev.kairos`) wires every layer in order:
-  infrastructure → repositories → use cases → handlers → HTTP. The Javalin
-  server port is read from `config.getIntProperty("server.port", 8080)`.
+  infrastructure → repositories → use cases → handlers → HTTP. Both
+  `TaskHandler` and `DestinationHandler` are constructed here (each with its
+  five use cases and the shared `ObjectMapper`) and their routes are registered
+  via `Router.registerTaskRoutes` and `Router.registerDestinationRoutes`. The
+  Javalin server port is read from `config.getIntProperty("server.port", 8080)`.
   `KairosApplication.main` loads `AppConfig`, calls
   `ApplicationContext.build(config).start()`, and exits normally — the
   Javalin thread keeps the process alive.
@@ -415,8 +550,7 @@ outermost ring, depending on the application layer but unknown to it:
 - `execution_history.result` — the service's response to a delivered
   message. Will need a `correlation_id` attached by Kairos at delivery
   time, plus a way to match an async reply back to a specific execution.
-- A full API for `destinations`, `schedules`, `retry_policies` — per the
-  plan, M2–M4.
+- REST endpoints for `schedules`, `retry_policies` — per the plan, M3–M4.
 - Multi-tenancy, Admin UI, metrics — unchanged from the original Roadmap
   (V4–V5 in the README).
 

@@ -2,7 +2,10 @@ package dev.kairos.admin.shared.form;
 
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.HasValidation;
+import com.vaadin.flow.component.textfield.TextArea;
 import dev.kairos.admin.shared.util.Strings;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Reusable field-level validation. Error messages are passed in by the caller
@@ -16,6 +19,40 @@ import dev.kairos.admin.shared.util.Strings;
 public final class FieldValidation {
 
     private FieldValidation() {
+    }
+
+    /**
+     * Outcome of {@link #parseJson}: whether the field held valid JSON and, when
+     * it did, the parsed value ({@code null} for a blank field).
+     */
+    public record JsonResult(boolean valid, Object value) {
+    }
+
+    /**
+     * Parses a text area's content as JSON. A blank field is valid and yields a
+     * {@code null} value. On malformed JSON the field is marked invalid with
+     * {@code errorMessage} and the result is {@link JsonResult#valid() invalid}.
+     *
+     * @param field        the text area whose value is parsed
+     * @param mapper       Jackson mapper used to deserialise the raw JSON string
+     * @param errorMessage error message set on the field when the JSON is malformed
+     * @return a {@link JsonResult} indicating validity and, on success, the parsed value
+     */
+    public static JsonResult parseJson(TextArea field, JsonMapper mapper, String errorMessage) {
+        String raw = field.getValue();
+        if (Strings.isBlank(raw)) {
+            field.setInvalid(false);
+            return new JsonResult(true, null);
+        }
+        try {
+            Object parsed = mapper.readValue(raw, Object.class);
+            field.setInvalid(false);
+            return new JsonResult(true, parsed);
+        } catch (JacksonException ex) {
+            field.setInvalid(true);
+            field.setErrorMessage(errorMessage);
+            return new JsonResult(false, null);
+        }
     }
 
     /**

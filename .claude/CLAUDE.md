@@ -137,11 +137,21 @@ full happy path works end-to-end, and tests cover edge cases.
 
 ## Keeping spec / docs / tests in sync
 
-There are three subagents (`.claude/agents/`):
+There are six subagents (`.claude/agents/`):
 - **spec-keeper** — updates `doc/` when the domain model, API, schema, or
   execution lifecycle changes.
 - **user-docs-writer** — updates `doc/usage/` when endpoints or DTO fields change.
 - **test-author** — writes/updates unit + integration tests.
+- **javadoc-writer** — adds Javadoc to public/protected types and methods that
+  lack it (skips trivial getters and noise comments).
+- **logging-instrumenter** — adds/tunes SLF4J logging at the right levels
+  (DEBUG/INFO/WARN/ERROR) for audit and analysis. Never logs in `domain`
+  (it must stay framework-free).
+- **architecture-reviewer** — read-only review of changed code for Clean
+  Architecture + Clean Code (layer boundaries, SRP, DRY, KISS, methods ≤40
+  lines, design patterns where they help). Reports findings and fixes; never
+  edits code. Guards against over-engineering (no deep generics, no speculative
+  abstraction) — readability wins.
 
 **When *I* (Claude) change `.java`/`.sql` files**, a `PostToolUse` hook reminds
 me to delegate the relevant follow-ups to these subagents automatically.

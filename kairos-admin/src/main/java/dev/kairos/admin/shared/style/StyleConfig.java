@@ -120,8 +120,12 @@ public final class StyleConfig {
         return set("font-weight", value);
     }
 
-    public StyleConfig marginInline(String value) {
+    public StyleConfig marginInlineStart(String value) {
         return set("margin-inline-start", value);
+    }
+
+    public StyleConfig marginInlineEnd(String value) {
+        return set("margin-inline-end", value);
     }
 
     // --- generic escape hatch ---

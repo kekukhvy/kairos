@@ -16,7 +16,7 @@ public record TaskEdit(
         String description,
         boolean active,
         DestinationId destinationId,
-        String messageType,
+        String eventName,
         String payload,
         int timeoutMs,
         boolean supportsRetry

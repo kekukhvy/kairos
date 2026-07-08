@@ -1,6 +1,8 @@
 package dev.kairos.domain.task;
 
 
+import dev.kairos.domain.destination.DestinationId;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +41,13 @@ public interface TaskRepository {
      * performs the soft delete.
      */
     void softDelete(TaskId id, Instant deletedAt);
+
+    /**
+     * Returns {@code true} if at least one non-deleted task still references
+     * the given destination. Used by {@code DeleteDestinationUseCase} to block
+     * hard-deleting a destination while tasks depend on it.
+     */
+    boolean existsByDestinationId(DestinationId id);
 }
 
 

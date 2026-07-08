@@ -2,7 +2,9 @@ package dev.kairos;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.api.Router;
+import dev.kairos.api.destination.DestinationHandler;
 import dev.kairos.api.task.TaskHandler;
+import dev.kairos.application.destination.usecases.*;
 import dev.kairos.application.task.usecases.*;
 import dev.kairos.config.AppConfig;
 import dev.kairos.config.DataSourceFactory;
@@ -56,9 +58,19 @@ final class ApplicationContext {
                 new SetTaskActiveUseCase(taskRepository, clock)
         );
 
+        DestinationHandler destinationHandler = new DestinationHandler(
+                new CreateDestinationUseCase(destinationRepository, clock),
+                new UpdateDestinationUseCase(destinationRepository),
+                new DeleteDestinationUseCase(destinationRepository, taskRepository),
+                new ListDestinationsUseCase(destinationRepository),
+                new GetDestinationByIdUseCase(destinationRepository),
+                objectMapper
+        );
+
         // ── HTTP ──────────────────────────────────────────────────────────────
         Javalin app = Router.create(objectMapper);
         Router.registerTaskRoutes(app, taskHandler);
+        Router.registerDestinationRoutes(app, destinationHandler);
 
         return new ApplicationContext(app, config.getIntProperty("server.port", 8080));
     }

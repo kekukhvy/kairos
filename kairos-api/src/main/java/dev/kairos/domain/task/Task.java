@@ -26,7 +26,7 @@ public final class Task {
 
     public static final int MAX_SERVICE_LENGTH = 128;       // tasks.service VARCHAR(128)
     public static final int MAX_NAME_LENGTH = 255;          // tasks.name VARCHAR(255)
-    public static final int MAX_MESSAGE_TYPE_LENGTH = 255;  // tasks.message_type VARCHAR(255)
+    public static final int MAX_EVENT_NAME_LENGTH = 255;    // tasks.event_name VARCHAR(255)
 
     private final TaskId id;
     private final String service;   // owning service — immutable for the task's lifetime
@@ -34,7 +34,7 @@ public final class Task {
     private String description;      // nullable
     private boolean active;
     private DestinationId destinationId;
-    private String messageType;
+    private String eventName;
     private String payload;          // raw JSON, nullable, opaque to the domain
     private int timeoutMs;
     private boolean supportsRetry;
@@ -49,7 +49,7 @@ public final class Task {
         this.description = b.description;
         this.active = b.active;
         this.destinationId = Objects.requireNonNull(b.destinationId, "value must not be null");
-        this.messageType = requireText(b.messageType, "messageType", MAX_MESSAGE_TYPE_LENGTH);
+        this.eventName = requireText(b.eventName, "eventName", MAX_EVENT_NAME_LENGTH);
         this.payload = b.payload;
         this.timeoutMs = requirePositive(b.timeoutMs, "timeoutMs");
         this.supportsRetry = b.supportsRetry;
@@ -68,7 +68,7 @@ public final class Task {
         this.description = edit.description();
         this.active = edit.active();
         this.destinationId = Objects.requireNonNull(edit.destinationId(), "value must not be null");
-        this.messageType = requireText(edit.messageType(), "messageType", MAX_MESSAGE_TYPE_LENGTH);
+        this.eventName = requireText(edit.eventName(), "eventName", MAX_EVENT_NAME_LENGTH);
         this.payload = edit.payload();
         this.timeoutMs = requirePositive(edit.timeoutMs(), "timeoutMs");
         this.supportsRetry = edit.supportsRetry();
@@ -132,8 +132,8 @@ public final class Task {
         return destinationId;
     }
 
-    public String messageType() {
-        return messageType;
+    public String eventName() {
+        return eventName;
     }
 
     public String payload() {
@@ -173,7 +173,7 @@ public final class Task {
         private String description;
         private boolean active = true;          // tasks.active DEFAULT true
         private DestinationId destinationId;
-        private String messageType;
+        private String eventName;
         private String payload;
         private int timeoutMs;
         private boolean supportsRetry = false;  // tasks.supports_retry DEFAULT false
@@ -214,8 +214,8 @@ public final class Task {
             return this;
         }
 
-        public Builder messageType(String messageType) {
-            this.messageType = messageType;
+        public Builder eventName(String eventName) {
+            this.eventName = eventName;
             return this;
         }
 

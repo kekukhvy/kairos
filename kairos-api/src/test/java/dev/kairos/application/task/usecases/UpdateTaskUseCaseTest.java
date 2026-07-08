@@ -28,7 +28,7 @@ class UpdateTaskUseCaseTest {
     private static final String UPDATED_NAME = "updated-name";
     private static final String UPDATED_DESCRIPTION = "updated description";
     private static final String UPDATED_DESTINATION_ID = "dest-kafka-2";
-    private static final String UPDATED_MESSAGE_TYPE = "payment.receipt.updated";
+    private static final String UPDATED_EVENT_NAME = "payment.receipt.updated";
     private static final String UPDATED_PAYLOAD = "{\"updated\":true}";
     private static final int UPDATED_TIMEOUT_MS = 10_000;
     private static final String MISSING_DESTINATION_ID = "dest-does-not-exist";
@@ -84,7 +84,7 @@ class UpdateTaskUseCaseTest {
 
         assertEquals(UPDATED_NAME, result.name());
         assertEquals(UPDATED_DESCRIPTION, result.description());
-        assertEquals(UPDATED_MESSAGE_TYPE, result.messageType());
+        assertEquals(UPDATED_EVENT_NAME, result.eventName());
         assertEquals(UPDATED_PAYLOAD, result.payload());
         assertEquals(UPDATED_TIMEOUT_MS, result.timeoutMs());
     }
@@ -125,7 +125,7 @@ class UpdateTaskUseCaseTest {
         taskRepository.seed(liveTask());
         UpdateTaskCommand command = new UpdateTaskCommand(
                 UPDATED_NAME, UPDATED_DESCRIPTION, true,
-                MISSING_DESTINATION_ID, UPDATED_MESSAGE_TYPE,
+                MISSING_DESTINATION_ID, UPDATED_EVENT_NAME,
                 UPDATED_PAYLOAD, UPDATED_TIMEOUT_MS, false);
 
         assertThrows(ValidationException.class,
@@ -151,7 +151,7 @@ class UpdateTaskUseCaseTest {
     private static UpdateTaskCommand validUpdateCommand() {
         return new UpdateTaskCommand(
                 UPDATED_NAME, UPDATED_DESCRIPTION, true,
-                UPDATED_DESTINATION_ID, UPDATED_MESSAGE_TYPE,
+                UPDATED_DESTINATION_ID, UPDATED_EVENT_NAME,
                 UPDATED_PAYLOAD, UPDATED_TIMEOUT_MS, false);
     }
 }

@@ -113,17 +113,17 @@ public class TasksRecord extends UpdatableRecordImpl<TasksRecord> {
     }
 
     /**
-     * Setter for <code>public.tasks.message_type</code>.
+     * Setter for <code>public.tasks.event_name</code>.
      */
-    public TasksRecord setMessageType(String value) {
+    public TasksRecord setEventName(String value) {
         set(6, value);
         return this;
     }
 
     /**
-     * Getter for <code>public.tasks.message_type</code>.
+     * Getter for <code>public.tasks.event_name</code>.
      */
-    public String getMessageType() {
+    public String getEventName() {
         return (String) get(6);
     }
 
@@ -285,7 +285,7 @@ public class TasksRecord extends UpdatableRecordImpl<TasksRecord> {
     /**
      * Create a detached, initialised TasksRecord
      */
-    public TasksRecord(UUID id, String service, String name, String description, Boolean active, String destinationId, String messageType, JSONB payload, Integer timeoutMs, Boolean supportsRetry, OffsetDateTime createdAt, OffsetDateTime updatedAt, OffsetDateTime deletedAt, String lastStatus, OffsetDateTime lastRunAt, OffsetDateTime nextRunAt) {
+    public TasksRecord(UUID id, String service, String name, String description, Boolean active, String destinationId, String eventName, JSONB payload, Integer timeoutMs, Boolean supportsRetry, OffsetDateTime createdAt, OffsetDateTime updatedAt, OffsetDateTime deletedAt, String lastStatus, OffsetDateTime lastRunAt, OffsetDateTime nextRunAt) {
         super(Tasks.TASKS);
 
         setId(id);
@@ -294,7 +294,7 @@ public class TasksRecord extends UpdatableRecordImpl<TasksRecord> {
         setDescription(description);
         setActive(active);
         setDestinationId(destinationId);
-        setMessageType(messageType);
+        setEventName(eventName);
         setPayload(payload);
         setTimeoutMs(timeoutMs);
         setSupportsRetry(supportsRetry);

@@ -31,6 +31,11 @@ public final class Buttons {
         return build(text, onClick, ButtonVariant.LUMO_TERTIARY);
     }
 
+    /** Inline link-style button (e.g. a clickable value inside a grid cell). */
+    public static Button link(String text, ComponentEventListener<ClickEvent<Button>> onClick) {
+        return build(text, onClick, ButtonVariant.LUMO_TERTIARY_INLINE);
+    }
+
     /** Destructive action button. */
     public static Button danger(String text, ComponentEventListener<ClickEvent<Button>> onClick) {
         return build(text, onClick, ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_PRIMARY);

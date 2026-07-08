@@ -1,5 +1,6 @@
 package dev.kairos.infrastructure.task;
 
+import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
 import dev.kairos.domain.task.TaskRepository;
@@ -49,7 +50,7 @@ public final class JooqTaskRepository implements TaskRepository {
                 .set(TASKS.DESCRIPTION, record.getDescription())
                 .set(TASKS.ACTIVE, record.getActive())
                 .set(TASKS.DESTINATION_ID, record.getDestinationId())
-                .set(TASKS.MESSAGE_TYPE, record.getMessageType())
+                .set(TASKS.EVENT_NAME, record.getEventName())
                 .set(TASKS.PAYLOAD, record.getPayload())
                 .set(TASKS.TIMEOUT_MS, record.getTimeoutMs())
                 .set(TASKS.SUPPORTS_RETRY, record.getSupportsRetry())
@@ -84,5 +85,14 @@ public final class JooqTaskRepository implements TaskRepository {
                 .set(TASKS.DELETED_AT, deletedAt.atOffset(ZoneOffset.UTC))
                 .where(TASKS.ID.equal(id.value()))
                 .execute();
+    }
+
+    @Override
+    public boolean existsByDestinationId(DestinationId id) {
+        return dslContext.fetchExists(
+                dslContext.selectOne()
+                        .from(TASKS)
+                        .where(TASKS.DESTINATION_ID.equal(id.value()))
+        );
     }
 }

@@ -51,7 +51,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
     private static final String SERVICE = "it-service";
     private static final String NAME = "it-task";
     private static final String DESCRIPTION = "integration test task";
-    private static final String MESSAGE_TYPE = "it.task.v1";
+    private static final String EVENT_NAME = "it.task.v1";
     private static final String PAYLOAD_JSON = "{\"key\":\"value\"}";
     private static final int TIMEOUT_MS = 3_000;
 
@@ -113,7 +113,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
         assertEquals(DESCRIPTION, loaded.description());
         assertTrue(loaded.active());
         assertEquals(DESTINATION_ID_VALUE, loaded.destinationId().value());
-        assertEquals(MESSAGE_TYPE, loaded.messageType());
+        assertEquals(EVENT_NAME, loaded.eventName());
         assertEquals(TIMEOUT_MS, loaded.timeoutMs());
         assertFalse(loaded.supportsRetry());
     }
@@ -224,7 +224,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
         assertEquals(DESCRIPTION, loaded.description());
         assertTrue(loaded.active());
         assertEquals(DESTINATION_ID_VALUE, loaded.destinationId().value());
-        assertEquals(MESSAGE_TYPE, loaded.messageType());
+        assertEquals(EVENT_NAME, loaded.eventName());
         assertEquals(TIMEOUT_MS, loaded.timeoutMs());
         assertFalse(loaded.supportsRetry());
     }
@@ -313,6 +313,35 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
         assertTrue(result.isEmpty());
     }
 
+    // ── existsByDestinationId ────────────────────────────────────────────────
+
+    @Test
+    void existsByDestinationId_whenTaskReferencesIt_returnsTrue() {
+        insertTask(fullTask(randomTaskId()));
+
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertTrue(result);
+    }
+
+    @Test
+    void existsByDestinationId_whenNoTaskReferencesIt_returnsFalse() {
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByDestinationId_softDeletedTaskStillCounts() {
+        TaskId id = randomTaskId();
+        insertTask(fullTask(id));
+        repository.softDelete(id, DELETED_AT);
+
+        boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertTrue(result);
+    }
+
     // ── softDelete ───────────────────────────────────────────────────────────
 
     @Test
@@ -351,7 +380,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
                 .description(DESCRIPTION)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID_VALUE))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .payload(PAYLOAD_JSON)
                 .timeoutMs(TIMEOUT_MS)
                 .supportsRetry(false)
@@ -367,7 +396,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
                 .name(NAME)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID_VALUE))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(UPDATED_AT)
@@ -381,7 +410,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
                 .name(newName)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID_VALUE))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(CREATED_AT)
                 .updatedAt(UPDATED_AT)
@@ -395,7 +424,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
                 .name(NAME)
                 .active(true)
                 .destinationId(DestinationId.of(DESTINATION_ID_VALUE))
-                .messageType(MESSAGE_TYPE)
+                .eventName(EVENT_NAME)
                 .timeoutMs(TIMEOUT_MS)
                 .createdAt(createdAt)
                 .updatedAt(createdAt)
@@ -415,7 +444,7 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
                 .set(Tables.TASKS.DESCRIPTION, task.description())
                 .set(Tables.TASKS.ACTIVE, task.active())
                 .set(Tables.TASKS.DESTINATION_ID, task.destinationId().value())
-                .set(Tables.TASKS.MESSAGE_TYPE, task.messageType())
+                .set(Tables.TASKS.EVENT_NAME, task.eventName())
                 // Write the raw String into the TEXT json column (the H2 JSONB type
                 // would re-quote it); read-back via TaskMapper must match exactly.
                 .set(PAYLOAD_AS_TEXT, task.payload())

@@ -26,7 +26,7 @@ CREATE TABLE tasks (
     description    TEXT,
     active         BOOLEAN      NOT NULL DEFAULT true,
     destination_id VARCHAR(128) NOT NULL REFERENCES destinations (id),
-    message_type   VARCHAR(255) NOT NULL,
+    event_name     VARCHAR(255) NOT NULL,
     payload        TEXT,        -- TEXT not JSONB on H2; see destinations.config note
     timeout_ms     INT          NOT NULL,
     supports_retry BOOLEAN      NOT NULL DEFAULT false,

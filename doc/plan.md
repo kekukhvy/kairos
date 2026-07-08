@@ -53,7 +53,7 @@ task registry.
 
 ### Domain (pure Java, no framework dependencies)
 - [x] `Task` entity (Builder pattern, per convention) — id, service, name,
-  description, active, destinationId, messageType, payload, timeoutMs,
+  description, active, destinationId, eventName, payload, timeoutMs,
   supportsRetry, createdAt, updatedAt, deletedAt
 - [x] Value objects: `TaskId`, `DestinationId`
 - [x] Domain validation: `name` required, `timeoutMs > 0`, etc. (via shared
@@ -83,8 +83,9 @@ task registry.
 - [x] `GetTaskUseCase` — `findById`, throws `TaskNotFoundException` if
   missing or soft-deleted.
 - [x] `ListTasksUseCase` (paginated, excludes soft-deleted) — delegates to
-  `TaskRepository.findAll`; defensively re-filters deleted rows in the use
-  case.
+  `TaskRepository.findAll`; soft-deleted rows are excluded at the SQL level
+  (`WHERE deleted_at IS NULL` inside `JooqTaskRepository.findAll`); no
+  in-memory filtering is performed in the use case.
 
 All use cases receive their port(s) and a `java.time.Clock` via constructor
 (no field injection, no framework); timestamps are always sourced from the
@@ -117,7 +118,8 @@ injected clock for determinism and testability.
   between `TasksRecord` (jOOQ) and `Task` domain entity; JSONB↔String via
   `JSONB.data()` / `JSONB.valueOf()`; `OffsetDateTime`↔`Instant` via UTC offset.
 - [x] `JooqDestinationRepository implements DestinationRepository` —
-  `existsById` via `DSLContext.fetchExists`; full CRUD deferred to M2.
+  `existsById` via `DSLContext.fetchExists` (M1 scope); full CRUD implemented
+  in M2 (see below).
 - [x] `DSLContextFactory` — builds a shared `DSLContext` from a `DataSource`
   (`renderSchema = false`, `renderQuotedNames = NEVER`); injected into
   repositories at startup.
@@ -155,9 +157,48 @@ injected clock for determinism and testability.
 **Goal:** `task.destination_id` needs something real to point to.
 
 - [x] `destinations` table (already created as a prerequisite in M1 — `V1`)
-- [ ] `POST /api/v1/destinations`, `GET /api/v1/destinations`, `GET /api/v1/destinations/{id}`
-- [ ] Validate `type` (KAFKA/SQS/WEBHOOK/RABBITMQ) and basic `config` shape per type
-- [ ] Decide: forbid deleting a destination still referenced by active tasks, or handle separately
+- [x] `Destination` entity — `DestinationId` (human-readable `String`),
+  `DestinationType` enum (`KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ`), `config`
+  (JSONB string, mutable via `updateConfig`), `createdAt` (immutable).
+  Builder construction; equality by id only; `type` and `createdAt` immutable
+  after creation.
+- [x] `DestinationType` enum (was a stub class in M1)
+- [x] Destination exceptions (all in `dev.kairos.domain.destination.exceptions`):
+  `DestinationAlreadyExistsException`, `DestinationNotFoundException`,
+  `InvalidDestinationTypeException`, `DestinationInUseException`
+- [x] `DestinationRepository` port extended to full CRUD: `save` (upsert),
+  `findById`, `findAll(limit, offset)`, `deleteById`
+- [x] `TaskRepository` extended with `existsByDestinationId(DestinationId)` —
+  used to block deletion of destinations still referenced by tasks
+- [x] Five destination use cases: `CreateDestinationUseCase`,
+  `GetDestinationByIdUseCase`, `ListDestinationsUseCase`,
+  `UpdateDestinationUseCase`, `DeleteDestinationUseCase`
+- [x] `CreateDestinationCommand` record (`destinationId`, `destinationType`,
+  `config` — all raw `String`)
+- [x] `JooqDestinationRepository` — full CRUD implementation; `toDomain`
+  mapper; upsert `created_at` set on insert only
+- [x] Delete blocked while any task references the destination
+  (`DestinationInUseException`); delete is otherwise idempotent (no prior
+  existence check)
+- [x] `Validation.requireText(value, field)` two-argument overload added to
+  `common` (used by `Destination.validateConfig`)
+- [x] `POST /api/v1/destinations` (201 + `DestinationResponse`),
+  `GET /api/v1/destinations` (200 + `PageResponse<DestinationResponse>`, `hasNext` via over-fetch),
+  `GET /api/v1/destinations/{id}` (200 + `DestinationResponse`),
+  `PUT /api/v1/destinations/{id}` (200 + `DestinationResponse`; returns updated destination),
+  `DELETE /api/v1/destinations/{id}` (204 no body) — HTTP wiring done
+- [x] `DestinationHandler`, `DestinationDtoMapper` wired in `ApplicationContext` and `Router`
+- [x] `GlobalExceptionHandler` extended: 404 `DestinationNotFoundException`;
+  409 `DestinationAlreadyExistsException`, `DestinationInUseException`;
+  400 `InvalidDestinationTypeException`
+- [x] `UpdateDestinationUseCase.execute` returns `Destination` (was `void`) so
+  the handler can serialise the updated entity
+- [x] `PageResponse<T>` extended with `boolean hasNext`; over-fetch pattern
+  (`limit + 1`) applied in both `TaskHandler` and `DestinationHandler`
+- [x] Destination DTO contracts in `common`: `CreateDestinationRequest` (destinationId, destinationType, config JsonNode),
+  `UpdateDestinationRequest` (config JsonNode), `DestinationResponse` (destinationId, destinationType, config, createdAt)
+- [ ] Validate basic `config` shape per type (currently any non-blank string is
+  accepted)
 
 ## M3 — Schedules
 
