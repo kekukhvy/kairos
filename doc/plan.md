@@ -200,7 +200,7 @@ injected clock for determinism and testability.
 - [ ] Validate basic `config` shape per type (currently any non-blank string is
   accepted)
 
-## M3 — Schedules
+## M3 — Schedules ✅
 
 **Goal:** attach "when" to a task, supporting multiple rules per task.
 
@@ -212,11 +212,43 @@ injected clock for determinism and testability.
 
 - [x] `schedules` table (`V4` — includes the type-fields CHECK so an
   invalid combination, e.g. `ONCE` without `run_at`, is rejected at the DB level)
-- [ ] CRUD: `POST/GET/PUT/DELETE /api/v1/tasks/{taskId}/schedules`
-- [ ] Type-specific validation: `ONCE` → `run_at` required; `CRON` →
-  `cron_expression` + `timezone`; `FIXED` → `interval_seconds`
-- [ ] `PATCH .../schedules/{id}/pause` and `/resume` — pause a single rule
-- [ ] Cron expression parsing/validation (a Java library)
+- [x] `V7__tighten_schedules_fixed_interval.sql` — tightens
+  `schedules_type_fields_check` to add `interval_seconds <= 86400` for
+  `FIXED`, keeping the DB CHECK consistent with `Schedule.MAX_INTERVAL_SECONDS`
+- [x] `Schedule` domain aggregate — `ScheduleId`, `ScheduleType` enum
+  (`ONCE`/`CRON`/`FIXED`), `ScheduleEdit`, `ScheduleNotFoundException`,
+  `ScheduleRepository` port; factory methods `once/cron/fixed` enforce
+  type invariants; `update/pause/resume` behavior methods; `Builder` for
+  persistence rehydration
+- [x] Type-specific invariants enforced in domain (and DB CHECK):
+  `ONCE` → `runAt` required and future; `CRON` → non-blank
+  `cronExpression` + valid `ZoneId` timezone (cron syntax not parsed);
+  `FIXED` → `0 < intervalSeconds <= 86400`
+- [x] Six use cases: `CreateScheduleUseCase`, `GetScheduleByIdUseCase`,
+  `ListSchedulesByTaskUseCase`, `UpdateScheduleUseCase`,
+  `DeleteScheduleUseCase`, `SetScheduleActiveUseCase` (pause/resume)
+- [x] `CreateScheduleCommand` and `UpdateScheduleCommand` records in
+  `dev.kairos.application.schedule.commands`
+- [x] `JooqScheduleRepository implements ScheduleRepository` — upsert,
+  findById, findByTaskId (newest first), idempotent deleteById
+- [x] `ScheduleMapper` (package-private, infra layer) — `SchedulesRecord` ↔
+  `Schedule` domain entity
+- [x] Seven REST endpoints wired: `POST /api/v1/tasks/{taskId}/schedules`,
+  `GET /api/v1/tasks/{taskId}/schedules`, `GET /api/v1/schedules/{id}`,
+  `PUT /api/v1/schedules/{id}`, `DELETE /api/v1/schedules/{id}`,
+  `PATCH /api/v1/schedules/{id}/pause`, `PATCH /api/v1/schedules/{id}/resume`
+- [x] `ScheduleHandler`, `ScheduleDtoMapper` wired in `ApplicationContext`
+  and `Router.registerScheduleRoutes`
+- [x] `GlobalExceptionHandler` extended: 404 `ScheduleNotFoundException`
+- [x] Schedule DTO contracts in `common/dto/schedule`: `CreateScheduleRequest`,
+  `UpdateScheduleRequest`, `ScheduleResponse`
+- [ ] Cron expression parsing/validation (a Java library) — deferred to a
+  future dedicated cron builder issue
+- [ ] Unit tests for domain/use cases (no DB)
+- [ ] Integration tests for the repository (Testcontainers + Postgres)
+- [ ] API tests for all seven endpoints, including edge cases (400 for each
+  invalid "when" combination, 404 for missing task/schedule, past `ONCE`,
+  `FIXED` over one day)
 
 ## M4 — Retry Policy
 

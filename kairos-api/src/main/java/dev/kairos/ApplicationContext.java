@@ -3,17 +3,21 @@ package dev.kairos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.api.Router;
 import dev.kairos.api.destination.DestinationHandler;
+import dev.kairos.api.schedule.ScheduleHandler;
 import dev.kairos.api.task.TaskHandler;
 import dev.kairos.application.destination.usecases.*;
+import dev.kairos.application.schedule.usecases.*;
 import dev.kairos.application.task.usecases.*;
 import dev.kairos.config.AppConfig;
 import dev.kairos.config.DataSourceFactory;
 import dev.kairos.config.DatabaseMigrator;
 import dev.kairos.domain.destination.DestinationRepository;
+import dev.kairos.domain.schedule.ScheduleRepository;
 import dev.kairos.domain.task.TaskRepository;
 import dev.kairos.infrastructure.DSLContextFactory;
 import dev.kairos.infrastructure.ObjectMapperFactory;
 import dev.kairos.infrastructure.destination.JooqDestinationRepository;
+import dev.kairos.infrastructure.schedule.JooqScheduleRepository;
 import dev.kairos.infrastructure.task.JooqTaskRepository;
 import io.javalin.Javalin;
 import org.jooq.DSLContext;
@@ -46,6 +50,7 @@ final class ApplicationContext {
         // ── Repositories ──────────────────────────────────────────────────────
         TaskRepository taskRepository = new JooqTaskRepository(dsl);
         DestinationRepository destinationRepository = new JooqDestinationRepository(dsl);
+        ScheduleRepository scheduleRepository = new JooqScheduleRepository(dsl);
 
         // ── Use cases ─────────────────────────────────────────────────────────
         TaskHandler taskHandler = new TaskHandler(
@@ -67,10 +72,20 @@ final class ApplicationContext {
                 objectMapper
         );
 
+        ScheduleHandler scheduleHandler = new ScheduleHandler(
+                new CreateScheduleUseCase(scheduleRepository, taskRepository, clock),
+                new GetScheduleByIdUseCase(scheduleRepository),
+                new ListSchedulesByTaskUseCase(scheduleRepository),
+                new UpdateScheduleUseCase(scheduleRepository, clock),
+                new DeleteScheduleUseCase(scheduleRepository),
+                new SetScheduleActiveUseCase(scheduleRepository, clock)
+        );
+
         // ── HTTP ──────────────────────────────────────────────────────────────
         Javalin app = Router.create(objectMapper);
         Router.registerTaskRoutes(app, taskHandler);
         Router.registerDestinationRoutes(app, destinationHandler);
+        Router.registerScheduleRoutes(app, scheduleHandler);
 
         return new ApplicationContext(app, config.getIntProperty("server.port", 8080));
     }

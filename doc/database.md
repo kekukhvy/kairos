@@ -12,10 +12,12 @@
 > | `V4__create_schedules_table.sql` | `schedules` |
 > | `V5__create_executions_table.sql` | `executions` |
 > | `V6__create_execution_history_table.sql` | `execution_history` |
+> | `V7__tighten_schedules_fixed_interval.sql` | `schedules` (constraint update) |
 >
-> Verified on a fresh Postgres 16: all six apply cleanly (6 tables + 7
+> Verified on a fresh Postgres 16: all seven apply cleanly (6 tables + 7
 > FKs), and the CHECK constraints behave (an invalid destination `type` is
-> rejected, a `ONCE` schedule without `run_at` is rejected). The migration
+> rejected, a `ONCE` schedule without `run_at` is rejected, a `FIXED`
+> schedule with `interval_seconds > 86400` is rejected). The migration
 > files are the source of truth for exact column names, types, defaults,
 > and constraint names; this doc summarizes them and the rationale. Places
 > where a decision still hasn't been finalized are marked **TBD**.
@@ -152,15 +154,22 @@ Constraints:
 - `CONSTRAINT schedules_type_check CHECK (type IN ('ONCE', 'CRON',
   'FIXED'))`.
 - `CONSTRAINT schedules_type_fields_check` — each type requires **exactly
-  its own** "when" field and forbids the others:
+  its own** "when" field and forbids the others (tightened by `V7`):
     - `ONCE` → `run_at IS NOT NULL`, `cron_expression`/`interval_seconds` null;
     - `CRON` → `cron_expression IS NOT NULL`, `run_at`/`interval_seconds` null;
-    - `FIXED` → `interval_seconds IS NOT NULL AND interval_seconds > 0`,
-      `run_at`/`cron_expression` null.
+    - `FIXED` → `interval_seconds IS NOT NULL AND interval_seconds > 0
+      AND interval_seconds <= 86400`, `run_at`/`cron_expression` null.
 
-  This makes an invalid combination (e.g. `ONCE` without `run_at`)
-  impossible at the DB level, matching the `Schedule.once/cron/fixed(...)`
-  factory-method intent in the spec.
+  `V4` originally only enforced `interval_seconds > 0` for `FIXED`. `V7`
+  (`V7__tighten_schedules_fixed_interval.sql`) dropped and re-added the
+  constraint to add the upper bound of `<= 86400` (one day), keeping the
+  DB CHECK consistent with `Schedule.MAX_INTERVAL_SECONDS = 86_400` in the
+  domain. An interval longer than a day is a calendar concern and belongs to
+  `CRON`, not a plain interval.
+
+  This makes an invalid combination (e.g. `ONCE` without `run_at`, or a
+  `FIXED` interval exceeding one day) impossible at the DB level, matching
+  the `Schedule.once/cron/fixed(...)` factory-method invariants.
 
 **Indexes:**
 - `idx_schedules_task_id` on `(task_id)` — FK lookup index.
@@ -253,12 +262,10 @@ mapping transparent.
 
 - Exact self-healing mechanism for the planner itself (a lock/lease table
   such as `planner_runs`) — not finalized. No such table exists in the
-  current migrations (`V1`–`V6`); it will land in a later migration when
+  current migrations (`V1`–`V7`); it will land in a later migration when
   the mechanism is decided.
 - Materialization horizon thresholds by frequency — need real numbers
   based on expected load.
-- REST endpoints for `destinations` — domain, application, and infrastructure
-  layers are implemented (M2); HTTP wiring is still pending.
 - `correlation_id` for the async `result` field — needed once that feature
   is built.
 - Maintenance of the denormalized run summary on `tasks` (`last_status`,

@@ -61,6 +61,9 @@ public final class GlobalExceptionHandler {
         app.exception(DestinationInUseException.class, (e, ctx) ->
                 ctx.status(409).json(new ErrorResponse(e.getMessage())));
 
+        app.exception(dev.kairos.domain.schedule.ScheduleNotFoundException.class, (e, ctx) ->
+                ctx.status(404).json(new ErrorResponse(e.getMessage())));
+
         app.exception(InvalidDestinationTypeException.class, (e, ctx) ->
                 ctx.status(400).json(new ErrorResponse(e.getMessage())));
 
