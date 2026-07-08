@@ -45,3 +45,35 @@ CREATE TABLE tasks (
 
 CREATE INDEX idx_tasks_created_at ON tasks (created_at);
 CREATE INDEX idx_tasks_destination_id ON tasks (destination_id);
+
+-- schedules: mirrors V4 + V7 migrations (H2-compatible; no gen_random_uuid() default,
+-- no partial index on WHERE, no TIMESTAMPTZ alias — H2 uses TIMESTAMP WITH TIME ZONE).
+CREATE TABLE schedules (
+    id               UUID         PRIMARY KEY,
+    task_id          UUID         NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+    label            VARCHAR(128),
+    type             VARCHAR(16)  NOT NULL,
+    run_at           TIMESTAMP WITH TIME ZONE,
+    cron_expression  VARCHAR(128),
+    interval_seconds INT,
+    timezone         VARCHAR(64)  NOT NULL DEFAULT 'UTC',
+    active           BOOLEAN      NOT NULL DEFAULT true,
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+    CONSTRAINT schedules_type_check
+        CHECK (type IN ('ONCE', 'CRON', 'FIXED')),
+
+    -- V4 + V7 combined: FIXED upper-bound tightened to 86400.
+    CONSTRAINT schedules_type_fields_check CHECK (
+        (type = 'ONCE'  AND run_at IS NOT NULL
+                        AND cron_expression IS NULL AND interval_seconds IS NULL) OR
+        (type = 'CRON'  AND cron_expression IS NOT NULL
+                        AND run_at IS NULL AND interval_seconds IS NULL) OR
+        (type = 'FIXED' AND interval_seconds IS NOT NULL
+                        AND interval_seconds > 0 AND interval_seconds <= 86400
+                        AND run_at IS NULL AND cron_expression IS NULL)
+    )
+);
+
+CREATE INDEX idx_schedules_task_id ON schedules (task_id);

@@ -33,7 +33,19 @@ this way.
 - **Schedule** — the "when" rule. A single task can have multiple
   schedules (e.g. weekdays and weekends as separate rules with different
   cron expressions). Pausing works at the level of a single schedule, not
-  only the whole task.
+  only the whole task. Identity is `ScheduleId` (wraps a UUID). `type`
+  (`ScheduleType` enum: `ONCE`, `CRON`, `FIXED`) is immutable after
+  creation — changing schedule type requires delete + recreate. Editable
+  state is carried by `ScheduleEdit` (label, runAt, cronExpression,
+  intervalSeconds, timezone); mutation goes through `update(ScheduleEdit,
+  Instant)`, which applies only the "when" field belonging to the current
+  type. Construction is only possible through the three factory methods
+  `Schedule.once(...)`, `Schedule.cron(...)`, `Schedule.fixed(...)`, which
+  enforce type invariants (see §3). The `Builder` is exposed for the
+  persistence layer to rehydrate stored schedules; application code must
+  use the factory methods. `createdAt` and `updatedAt` are supplied by the
+  caller via `Clock`. References `Task` only by `TaskId` — it is never
+  loaded through `Task`.
 - **Retry Policy** — explicit retry steps at the task level
   (attempt → delay), stored as a separate table instead of a single JSON field.
 - **Execution (current)** — the current/upcoming work plan. A small, hot
@@ -49,6 +61,20 @@ this way.
 | `ONCE` | a single specific occurrence | `2026-06-15T10:00:00Z` | materialized as one row; no further executions once it has run |
 | `CRON` | a calendar-based rule | "every Saturday at 9am" | needs a cron parser, sensitive to timezone/DST |
 | `FIXED` | a plain interval | "every 90 seconds" | NOT a calendar rule — `next = last + interval`, timezone doesn't apply |
+
+### Type invariants (enforced in domain AND DB — M3, implemented)
+
+- **`ONCE`** — `runAt` required and must be strictly in the future at
+  creation/update time. `cronExpression` and `intervalSeconds` must be null.
+- **`CRON`** — non-blank `cronExpression` required; `timezone` must be a
+  valid `java.time.ZoneId` string (defaults to `UTC` if omitted). Cron
+  syntax is **not parsed** at this stage (deferred to a future cron builder).
+  `runAt` and `intervalSeconds` must be null.
+- **`FIXED`** — `intervalSeconds` required with `0 < intervalSeconds <=
+  86400` (one day maximum). An interval longer than a day is a calendar
+  concern and belongs to `CRON`, not a plain interval. `runAt` and
+  `cronExpression` must be null. `Schedule.MAX_INTERVAL_SECONDS = 86_400`
+  is the constant mirroring the DB CHECK added in `V7`.
 
 ## 4. Materialization (Planner)
 
@@ -123,11 +149,12 @@ a `Task` entity, the entity is frozen — any call to `update()` throws
 responsible for calling the soft-delete operation; the domain only enforces
 the "no further mutations after deletion" rule.
 
-## 7. Application Layer — Use Cases (M1 + M2, implemented)
+## 7. Application Layer — Use Cases (M1 + M2 + M3, implemented)
 
 The application layer orchestrates the domain via use cases in
-`dev.kairos.application.task.usecases` (Task, M1) and
-`dev.kairos.application.destination.usecases` (Destination, M2). Each use
+`dev.kairos.application.task.usecases` (Task, M1),
+`dev.kairos.application.destination.usecases` (Destination, M2), and
+`dev.kairos.application.schedule.usecases` (Schedule, M3). Each use
 case receives its port(s) and, where needed, a `java.time.Clock` through its
 constructor — no field injection, no framework dependency. Timestamps are
 always sourced from the injected clock so tests can run with a fixed instant.
@@ -163,6 +190,15 @@ always sourced from the injected clock so tests can run with a fixed instant.
 - `deleteById(DestinationId)` — hard delete; removes the row permanently.
   Referential-integrity (no tasks in use) is enforced by the caller, not here.
 
+**`ScheduleRepository`** (`dev.kairos.domain.schedule`):
+- `save(Schedule)` — upsert: insert on first save, update thereafter. The
+  entity is the source of truth for every column.
+- `findById(ScheduleId)` — returns `Optional<Schedule>`, empty if not found.
+- `findByTaskId(TaskId taskId, int limit, int offset)` — lists a task's
+  schedules, newest first, paginated.
+- `deleteById(ScheduleId)` — idempotent hard delete; deleting an absent
+  schedule is not an error (no prior existence check, single round trip).
+
 ### Use-case contracts
 
 **Task use cases** (`dev.kairos.application.task.usecases`):
@@ -184,6 +220,35 @@ always sourced from the injected clock so tests can run with a fixed instant.
 | `ListDestinationsUseCase` | `Pagination` | `List<Destination>` | — |
 | `UpdateDestinationUseCase` | `DestinationId`, `String config` | `Destination` | `DestinationNotFoundException` (no row for the id) |
 | `DeleteDestinationUseCase` | `DestinationId` | void | `DestinationInUseException` (at least one task still references the destination) |
+
+**Schedule use cases** (`dev.kairos.application.schedule.usecases`):
+
+| Use case | Inputs | Normal return | Domain exceptions |
+|---|---|---|---|
+| `CreateScheduleUseCase` | `CreateScheduleCommand`, `Clock` | `Schedule` | `TaskNotFoundException` (task missing or deleted); `ValidationException` (invalid type/field combination) |
+| `GetScheduleByIdUseCase` | `ScheduleId` | `Schedule` | `ScheduleNotFoundException` (no row for the id) |
+| `ListSchedulesByTaskUseCase` | `TaskId`, `Pagination` | `List<Schedule>` | — |
+| `UpdateScheduleUseCase` | `ScheduleId`, `UpdateScheduleCommand`, `Clock` | `Schedule` | `ScheduleNotFoundException` (no row for the id); `ValidationException` (invalid when-field for type) |
+| `DeleteScheduleUseCase` | `ScheduleId` | void | — (idempotent) |
+| `SetScheduleActiveUseCase` | `ScheduleId`, `boolean active`, `Clock` | `Schedule` | `ScheduleNotFoundException` (no row for the id) |
+
+**Schedule creation details:** `CreateScheduleUseCase` first verifies that
+the target task exists and is not soft-deleted (via `TaskRepository.findById`);
+a missing or deleted task raises `TaskNotFoundException`. The raw `type` string
+from `CreateScheduleCommand` is parsed by `ScheduleType.parse()`, which
+raises `ValidationException` for unknown or blank values. The matching factory
+method (`Schedule.once`, `Schedule.cron`, or `Schedule.fixed`) is then called,
+enforcing the type-specific field invariants.
+
+**Schedule update scope:** `UpdateScheduleUseCase` applies `ScheduleEdit` via
+`Schedule.update(edit, now)`. Only the "when" field belonging to the schedule's
+current type is changed (`runAt` for `ONCE`, `cronExpression` for `CRON`,
+`intervalSeconds` for `FIXED`); `label` and `timezone` are also updatable.
+`type` is immutable — changing type requires delete + recreate.
+
+**Pause/resume:** `SetScheduleActiveUseCase` delegates to `schedule.pause(now)`
+or `schedule.resume(now)` and saves the result. Both operations are independent
+of the task's own `active` flag.
 
 **Destination creation details:** `destinationId` is caller-supplied (human-readable,
 e.g. `booking-kafka`) rather than auto-generated. A duplicate-id check via
@@ -233,12 +298,25 @@ is a plain Java record with three `String` fields — `destinationId`,
 the request DTO to the command; the use case converts `destinationType` to
 `DestinationType` and `destinationId` to `DestinationId`.
 
-## 8. API — V1 Scope (Task CRUD + Destination CRUD)
+**`dev.kairos.application.schedule.commands`:**
+- `CreateScheduleCommand` — plain Java record with `taskId` (`String`),
+  `type` (`String`), `label` (`String`, nullable), `runAt` (`Instant`,
+  nullable), `cronExpression` (`String`, nullable), `intervalSeconds`
+  (`Integer`, nullable), and `timezone` (`String`, nullable). Only the
+  "when" field matching `type` is expected to be non-null; the use case
+  routes to the appropriate factory method.
+- `UpdateScheduleCommand` — plain Java record with `label`, `runAt`,
+  `cronExpression`, `intervalSeconds`, and `timezone`. `type` is absent
+  (immutable); the use case builds a `ScheduleEdit` from these fields and
+  delegates to `Schedule.update`.
 
-The first two vertical slices cover Task and Destination CRUD — no
-Schedule/Execution API yet (those land in M3+ per the development plan). The
-Destination domain, application, and HTTP layers are all fully implemented as of
-M2: entities, use cases, repository port, and the five REST endpoints are live.
+## 8. API — V1 Scope (Task CRUD + Destination CRUD + Schedule CRUD)
+
+The first three vertical slices cover Task, Destination, and Schedule CRUD.
+The Execution API is not yet exposed (M5+, per the development plan). The
+Schedule domain, application, and HTTP layers are all fully implemented as of
+M3: entity with factory methods, six use cases, repository port, and the seven
+REST endpoints are live.
 
 **HTTP framework:** Javalin 6.4.0 (`io.javalin:javalin`). The server port
 is read from `server.port` in `application.properties` (default `8080`).
@@ -266,15 +344,32 @@ A route overview is available at `/routes` (Javalin bundled plugin).
 | `PUT` | `/api/v1/destinations/{id}` | 200 | update config (only field allowed to change) |
 | `DELETE` | `/api/v1/destinations/{id}` | 204 | hard delete — blocked if any task references the destination |
 
+**Schedules:**
+
+Create and list are nested under a task; all other operations address a
+schedule directly by id.
+
+| Method | Path | Success status | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/tasks/{taskId}/schedules` | 201 | create a schedule for a task (404 if task missing or deleted) |
+| `GET` | `/api/v1/tasks/{taskId}/schedules` | 200 | list a task's schedules, paginated |
+| `GET` | `/api/v1/schedules/{id}` | 200 | fetch one schedule (404 if not found) |
+| `PUT` | `/api/v1/schedules/{id}` | 200 | update when-field + label + timezone; type immutable |
+| `DELETE` | `/api/v1/schedules/{id}` | 204 | hard delete — idempotent, no 404 on absent id |
+| `PATCH` | `/api/v1/schedules/{id}/pause` | 200 | set `active = false`; returns updated `ScheduleResponse` |
+| `PATCH` | `/api/v1/schedules/{id}/resume` | 200 | set `active = true`; returns updated `ScheduleResponse` |
+
 ### Exception → HTTP status mapping (`GlobalExceptionHandler`)
 
 | Exception | HTTP status | Notes |
 |---|---|---|
-| `ValidationException` | 400 | field-level constraint violations |
+| `ValidationException` | 400 | field-level constraint violations (blank name, invalid type, missing/forbidden when-field, past `runAt`, `intervalSeconds` out of bounds, invalid timezone) |
 | `IllegalArgumentException` | 400 | malformed path param (e.g. non-UUID `{id}`) |
 | `InvalidDestinationTypeException` | 400 | unrecognised `destinationType` string on destination create |
-| `TaskNotFoundException` | 404 | task missing or already soft-deleted (GET/PUT) |
+| `JacksonException` | 400 | malformed or unparseable request body |
+| `TaskNotFoundException` | 404 | task missing or already soft-deleted (GET/PUT on task; POST schedule to deleted/missing task) |
 | `DestinationNotFoundException` | 404 | destination not found (GET/PUT) |
+| `ScheduleNotFoundException` | 404 | schedule not found (GET/PUT/PATCH/DELETE on schedule) |
 | `TaskAlreadyDeletedException` | 409 | repeat DELETE on an already-deleted task |
 | `DestinationAlreadyExistsException` | 409 | destination id already taken on create |
 | `DestinationInUseException` | 409 | at least one task still references the destination on delete |
@@ -367,6 +462,46 @@ is stripped before the response is serialised. This avoids a separate
 | `config` | `JsonNode` | embedded as a real JSON node, not an escaped string |
 | `createdAt` | `Instant` | ISO-8601 string; immutable |
 
+**`CreateScheduleRequest`** — body for `POST /api/v1/tasks/{taskId}/schedules`
+(`dev.kairos.common.dto.schedule`):
+
+| Field | Java type | Notes |
+|---|---|---|
+| `type` | `String` | required; `ONCE`, `CRON`, or `FIXED` (case-sensitive enum name) |
+| `label` | `String` | optional human-readable name (e.g. `weekday-morning`) |
+| `runAt` | `Instant` | required for `ONCE`; must be in the future; null for other types |
+| `cronExpression` | `String` | required for `CRON`; null for other types |
+| `intervalSeconds` | `Integer` | required for `FIXED` (0 < n <= 86400); null for other types |
+| `timezone` | `String` | optional; any valid `ZoneId` string; defaults to `UTC` |
+
+**`UpdateScheduleRequest`** — body for `PUT /api/v1/schedules/{id}`
+(`dev.kairos.common.dto.schedule`):
+
+| Field | Java type | Notes |
+|---|---|---|
+| `label` | `String` | nullable |
+| `runAt` | `Instant` | applied only if schedule type is `ONCE` |
+| `cronExpression` | `String` | applied only if schedule type is `CRON` |
+| `intervalSeconds` | `Integer` | applied only if schedule type is `FIXED` |
+| `timezone` | `String` | any valid `ZoneId` string; required (validated) |
+
+**`ScheduleResponse`** — body for all successful schedule reads (200, 201)
+(`dev.kairos.common.dto.schedule`):
+
+| Field | Java type | Notes |
+|---|---|---|
+| `id` | `UUID` | |
+| `taskId` | `UUID` | owning task |
+| `type` | `String` | enum name: `ONCE`, `CRON`, or `FIXED` |
+| `label` | `String` | nullable |
+| `runAt` | `Instant` | non-null for `ONCE`; null for `CRON`/`FIXED` |
+| `cronExpression` | `String` | non-null for `CRON`; null for `ONCE`/`FIXED` |
+| `intervalSeconds` | `Integer` | non-null for `FIXED`; null for `ONCE`/`CRON` |
+| `timezone` | `String` | `ZoneId` string; always present (default `UTC`) |
+| `active` | `boolean` | whether this rule is currently active |
+| `createdAt` | `Instant` | ISO-8601 string |
+| `updatedAt` | `Instant` | ISO-8601 string |
+
 **`ErrorResponse`** — body for all 4xx/5xx:
 
 ```json
@@ -429,6 +564,10 @@ already ran into, not because the domain itself is complex.
     when `destinationType` does not match any `DestinationType` enum constant.
   - `DestinationInUseException` — raised by `DeleteDestinationUseCase` when at
     least one task still references the destination.
+- `ScheduleNotFoundException extends DomainException` (`dev.kairos.domain.schedule`)
+  — raised by `GetScheduleByIdUseCase`, `UpdateScheduleUseCase`, and
+  `SetScheduleActiveUseCase` when no schedule exists for the given id. Maps
+  to HTTP 404 at the API layer.
 
 The `Validation` utility class (`dev.kairos.common.util.helpers.Validation`)
 provides static guards used across the domain:
@@ -511,10 +650,12 @@ outermost ring, depending on the application layer but unknown to it:
   shared `ObjectMapper` (see §8 for configuration). It is wired into the
   Javalin JSON mapper, `TaskHandler`, and `DestinationHandler` at startup.
 - `Router` (`dev.kairos.api`) creates the `Javalin` instance, registers the
-  `GlobalExceptionHandler`, and exposes `registerTaskRoutes` and
-  `registerDestinationRoutes` to attach handler method references. Routes are
-  registered as method references (`taskHandler::list`, `destinationHandler::create`,
-  etc.), keeping handlers free of Javalin types except `io.javalin.http.Context`.
+  `GlobalExceptionHandler`, and exposes `registerTaskRoutes`,
+  `registerDestinationRoutes`, and `registerScheduleRoutes` to attach handler
+  method references. Routes are registered as method references
+  (`taskHandler::list`, `destinationHandler::create`, `scheduleHandler::create`,
+  etc.), keeping handlers free of Javalin types except
+  `io.javalin.http.Context`.
 - `TaskHandler` (`dev.kairos.api.task`) translates HTTP context to commands
   and delegates to the use cases. It holds a reference to `ObjectMapper`
   solely for `JsonConverter.jsonToString` (request → command) and
@@ -535,22 +676,38 @@ outermost ring, depending on the application layer but unknown to it:
   `JsonNode` to a JSON string for the domain/storage layer. A null or
   JSON-null node returns null; a serialization failure throws
   `ValidationException`.
+- `JooqScheduleRepository` (`dev.kairos.infrastructure.schedule`) implements
+  `ScheduleRepository` using jOOQ. `save()` is an upsert
+  (`INSERT ... ON CONFLICT (id) DO UPDATE`). `findByTaskId` orders by
+  `created_at DESC`. `deleteById` is a plain `DELETE` with no prior existence
+  check. `ScheduleMapper` (package-private, infra layer) converts between
+  `SchedulesRecord` (jOOQ-generated) and the `Schedule` domain entity via the
+  `Schedule.builder()`, mapping `OffsetDateTime` ↔ `Instant` via UTC offset
+  and `ScheduleType.valueOf(record.getType())` for the enum.
+- `ScheduleHandler` (`dev.kairos.api.schedule`) translates HTTP context to
+  the six schedule use-case calls. `ScheduleDtoMapper` (package-private,
+  API layer) performs the `Schedule` → `ScheduleResponse` mapping. Routes are
+  registered via `Router.registerScheduleRoutes`.
 - `ApplicationContext` (`dev.kairos`) wires every layer in order:
-  infrastructure → repositories → use cases → handlers → HTTP. Both
-  `TaskHandler` and `DestinationHandler` are constructed here (each with its
-  five use cases and the shared `ObjectMapper`) and their routes are registered
-  via `Router.registerTaskRoutes` and `Router.registerDestinationRoutes`. The
+  infrastructure → repositories → use cases → handlers → HTTP. `TaskHandler`,
+  `DestinationHandler`, and `ScheduleHandler` are constructed here and their
+  routes are registered via `Router.registerTaskRoutes`,
+  `Router.registerDestinationRoutes`, and `Router.registerScheduleRoutes`. The
   Javalin server port is read from `config.getIntProperty("server.port", 8080)`.
   `KairosApplication.main` loads `AppConfig`, calls
   `ApplicationContext.build(config).start()`, and exits normally — the
   Javalin thread keeps the process alive.
 
-## 10. Future Work (Explicitly Out of V1)
+## 10. Future Work (Explicitly Out of Current Scope)
 
 - `execution_history.result` — the service's response to a delivered
   message. Will need a `correlation_id` attached by Kairos at delivery
   time, plus a way to match an async reply back to a specific execution.
-- REST endpoints for `schedules`, `retry_policies` — per the plan, M3–M4.
+- REST endpoints for `retry_policies` — M4.
+- Cron expression parsing/validation — deferred to a dedicated cron builder
+  (follow-up issue); currently the `CRON` schedule type stores the expression
+  as-is after a non-blank check.
+- Planner / materialization into `executions` — M5.
 - Multi-tenancy, Admin UI, metrics — unchanged from the original Roadmap
   (V4–V5 in the README).
 
