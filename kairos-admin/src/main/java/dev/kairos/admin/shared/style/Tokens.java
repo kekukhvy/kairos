@@ -27,6 +27,8 @@ public final class Tokens {
     public static final String COLOR_CONTRAST_10 = "var(--lumo-contrast-10pct)";
     public static final String COLOR_ERROR = "var(--lumo-error-color)";
     public static final String COLOR_SUCCESS = "var(--lumo-success-color)";
+    public static final String COLOR_PRIMARY_10 = "var(--lumo-primary-color-10pct)";
+    public static final String COLOR_WARNING = "var(--lumo-warning-text-color)";
 
     // --- text ---
     public static final String TEXT_BODY = "var(--lumo-body-text-color)";
@@ -54,8 +56,29 @@ public final class Tokens {
     public static final String DIALOG_WIDTH_M = "480px";
     public static final String DIALOG_WIDTH_L = "900px";
 
+    /** Min width for an action button whose label must not wrap or clip. */
+    public static final String BUTTON_MIN_WIDTH = "6rem";
+
+    // --- typography families ---
+    public static final String FONT_MONOSPACE = "var(--lumo-font-family-monospace, monospace)";
+
     /** CSS {@code auto} keyword, e.g. an auto margin that pushes siblings apart. */
     public static final String AUTO = "auto";
+
+    /** CSS {@code block} display keyword. */
+    public static final String DISPLAY_BLOCK = "block";
+
+    /** CSS {@code grid} display keyword. */
+    public static final String DISPLAY_GRID = "grid";
+
+    /** Two equal-width grid columns, e.g. the cron next-runs preview. */
+    public static final String GRID_TWO_COLUMNS = "1fr 1fr";
+
+    /** Five grid rows for a column-first two-column preview (10 items). */
+    public static final String GRID_FIVE_ROWS = "repeat(5, auto)";
+
+    /** CSS {@code column} grid-auto-flow keyword (fill top-to-bottom first). */
+    public static final String GRID_FLOW_COLUMN = "column";
 
     // --- Apple-style extensions (not part of Lumo) ---
     public static final String GLASS_BLUR = "var(--kairos-glass-blur)";
@@ -68,6 +91,9 @@ public final class Tokens {
 
     public static final int FORM_COLUMNS = 2;
     public static final int FORM_COLSPAN_FULL = FORM_COLUMNS;
+
+    /** Vaadin responsive-step breakpoint meaning "apply from 0px up" (always). */
+    public static final String FORM_BREAKPOINT_ZERO = "0";
 
     public static final String THEME_BADGE_SUCCESS = "badge success";
     public static final String THEME_BADGE_CONTRAST = "badge contrast";

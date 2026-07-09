@@ -19,7 +19,7 @@ public class ScheduleDetails extends Dialog {
 
     public ScheduleDetails(ScheduleResponse schedule) {
         setHeaderTitle(ScheduleText.DETAILS_TITLE);
-        setWidth(Tokens.DIALOG_WIDTH_M);
+        setWidth(Tokens.DIALOG_WIDTH_L);
 
         add(buildContent(schedule));
         getFooter().add(Buttons.tertiary(UiText.BTN_CLOSE, e -> close()));
@@ -38,7 +38,7 @@ public class ScheduleDetails extends Dialog {
         layout.addFormItem(text(DateTimes.forDisplay(schedule.createdAt())), ScheduleText.DETAIL_CREATED);
         layout.addFormItem(text(DateTimes.forDisplay(schedule.updatedAt())), ScheduleText.DETAIL_UPDATED);
 
-        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
         return layout;
     }
 

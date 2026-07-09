@@ -89,7 +89,7 @@ public class TaskForm extends Dialog {
                 timeoutMs, payload, active, supportsRetry
         );
 
-        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
         layout.setColspan(description, Tokens.FORM_COLSPAN_FULL);
         layout.setColspan(payload, Tokens.FORM_COLSPAN_FULL);
         return layout;
@@ -151,18 +151,15 @@ public class TaskForm extends Dialog {
     }
 
     private void prefill(TaskDto task) {
-        service.setValue(safe(task.service()));
-        name.setValue(safe(task.name()));
-        description.setValue(safe(task.description()));
+        service.setValue(Strings.nullToEmpty(task.service()));
+        name.setValue(Strings.nullToEmpty(task.name()));
+        description.setValue(Strings.nullToEmpty(task.description()));
         destinationId.setValue(task.destinationId());
-        eventName.setValue(safe(task.eventName()));
+        eventName.setValue(Strings.nullToEmpty(task.eventName()));
         timeoutMs.setValue(task.timeoutMs());
         active.setValue(task.active());
         supportsRetry.setValue(task.supportsRetry());
         payload.setValue(JsonText.forDisplay(jsonMapper, task.payload()));
     }
 
-    private static String safe(String value) {
-        return value == null ? "" : value;
-    }
 }

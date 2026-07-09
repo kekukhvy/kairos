@@ -60,4 +60,19 @@ public final class Fields {
         field.setClearButtonVisible(true);
         return field;
     }
+
+    /**
+     * String {@link ComboBox} offering {@code options} as suggestions while also
+     * accepting free-form custom values, with {@code helper} text under the
+     * field. Suited to inputs where a curated shortlist covers the common cases
+     * but any value is valid, e.g. the cron builder's six fields.
+     */
+    public static ComboBox<String> comboCustom(String label, String helper, Collection<String> options) {
+        ComboBox<String> field = new ComboBox<>(label);
+        field.setItems(options);
+        field.setAllowCustomValue(true);
+        field.setHelperText(helper);
+        field.setClearButtonVisible(true);
+        return field;
+    }
 }

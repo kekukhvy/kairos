@@ -19,6 +19,11 @@ public final class Strings {
         return value == null || value.isBlank();
     }
 
+    /** Returns {@code value}, or an empty string when it is {@code null}. */
+    public static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
     /**
      * Case-insensitive containment check that treats a {@code null} value as
      * "no match". {@code term} is expected to be already lower-cased.
