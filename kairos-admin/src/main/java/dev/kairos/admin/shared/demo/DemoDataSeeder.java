@@ -71,6 +71,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private void seed() {
         String destinationId = ensureDestination();
         seedTaskWithTwoSchedules(destinationId);
+        seedTaskWithManySchedules(destinationId);
         seedOnceTask(destinationId);
         seedWeekdayCronTask(destinationId);
     }
@@ -95,6 +96,21 @@ public class DemoDataSeeder implements ApplicationRunner {
         UUID taskId = createTask(destinationId, "nightly-report", "reports.generated");
         schedules.create(taskId, cron("Every night at 02:00", "0 0 2 * * ?"));
         schedules.create(taskId, fixed("Every 5 minutes", 300));
+    }
+
+    /**
+     * Scenario: one task (same service, name, destination and event name)
+     * carrying several distinct schedules — only the timing differs. Covers all
+     * three types on a single task: ONCE, CRON and FIXED.
+     */
+    private void seedTaskWithManySchedules(String destinationId) {
+        UUID taskId = createTask(destinationId, "heartbeat", "heartbeat.tick");
+        schedules.create(taskId, new CreateScheduleRequest(
+                "ONCE", "Kick-off in 30 minutes",
+                Instant.now().plus(30, ChronoUnit.MINUTES), null, null, UTC));
+        schedules.create(taskId, cron("Every hour on the hour", "0 0 * * * ?"));
+        schedules.create(taskId, cron("Every 15 minutes", "0 */15 * * * ?"));
+        schedules.create(taskId, fixed("Every 90 seconds", 90));
     }
 
     /** Scenario: a task that fires exactly once, an hour from startup. */
