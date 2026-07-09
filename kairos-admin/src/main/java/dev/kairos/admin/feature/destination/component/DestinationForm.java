@@ -64,7 +64,7 @@ public class DestinationForm extends Dialog {
 
     private FormLayout buildForm() {
         FormLayout layout = new FormLayout(destinationId, destinationType, config);
-        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
         layout.setColspan(config, Tokens.FORM_COLSPAN_FULL);
         return layout;
     }

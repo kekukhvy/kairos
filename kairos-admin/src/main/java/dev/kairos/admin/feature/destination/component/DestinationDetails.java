@@ -18,6 +18,7 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.DateTimes;
 import dev.kairos.admin.shared.util.JsonText;
+import dev.kairos.admin.shared.util.Strings;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Consumer;
@@ -96,15 +97,15 @@ public class DestinationDetails extends Dialog {
         createdAt.setReadOnly(true);
 
         FormLayout layout = new FormLayout(destinationId, destinationType, createdAt, config);
-        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
         layout.setColspan(config, Tokens.FORM_COLSPAN_FULL);
         return layout;
     }
 
     private void prefill(DestinationDTO destination) {
-        destinationId.setValue(safe(destination.destinationId()));
-        destinationType.setValue(safe(destination.destinationType()));
-        createdAt.setValue(safe(DateTimes.forDisplay(destination.createdAt())));
+        destinationId.setValue(Strings.nullToEmpty(destination.destinationId()));
+        destinationType.setValue(Strings.nullToEmpty(destination.destinationType()));
+        createdAt.setValue(Strings.nullToEmpty(DateTimes.forDisplay(destination.createdAt())));
         config.setValue(JsonText.forDisplay(jsonMapper, destination.config()));
     }
 
@@ -143,9 +144,5 @@ public class DestinationDetails extends Dialog {
 
         onSave.accept(new UpdateDestinationRequest(result.value()));
         close();
-    }
-
-    private static String safe(String value) {
-        return value == null ? "" : value;
     }
 }

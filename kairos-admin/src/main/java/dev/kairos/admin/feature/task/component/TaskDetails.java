@@ -50,7 +50,7 @@ public class TaskDetails extends Dialog {
         payload.setWidthFull();
         payload.setValue(JsonText.forDisplay(jsonMapper, task.payload()));
 
-        layout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", Tokens.FORM_COLUMNS));
+        layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
 
         FormLayout.FormItem payloadItem = layout.addFormItem(payload, TaskText.FIELD_PAYLOAD);
         layout.setColspan(payloadItem, FORM_COLSPAN_FULL);
