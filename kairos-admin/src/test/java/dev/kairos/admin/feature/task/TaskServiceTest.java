@@ -34,6 +34,7 @@ class TaskServiceTest {
     private static final String BASE_URL = "http://localhost:8080";
     private static final String TASK_ENDPOINT = "/api/v1/tasks";
     private static final String DESTINATION_ENDPOINT = "/api/v1/destinations";
+    private static final String SCHEDULE_ENDPOINT = "/api/v1/schedules";
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
@@ -73,7 +74,7 @@ class TaskServiceTest {
 
     @BeforeEach
     void setUp() {
-        apiProperties = new ApiProperties(BASE_URL, TASK_ENDPOINT, DESTINATION_ENDPOINT, CONNECT_TIMEOUT, READ_TIMEOUT);
+        apiProperties = new ApiProperties(BASE_URL, TASK_ENDPOINT, DESTINATION_ENDPOINT, SCHEDULE_ENDPOINT, CONNECT_TIMEOUT, READ_TIMEOUT);
         restClientBuilder = RestClient.builder().baseUrl(BASE_URL);
         mockServer = MockRestServiceServer.createServer(restClientBuilder);
         RestClient restClient = restClientBuilder.build();

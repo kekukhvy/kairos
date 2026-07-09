@@ -8,6 +8,7 @@ import java.time.Duration;
 public record ApiProperties(String baseUrl,
                             String taskEndpoint,
                             String destinationEndpoint,
+                            String scheduleEndpoint,
                             Duration connectTimeout,
                             Duration readTimeout) {
 

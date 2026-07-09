@@ -33,8 +33,8 @@ dependencies {
     // Vaadin dev-mode server (Vite + hot reload). developmentOnly = не попадёт в bootJar.
     developmentOnly 'com.vaadin:vaadin-dev'
 
-    // shared models/contracts, if the admin reuses them instead of local DTOs
-    // implementation project(':common')
+    // shared models/contracts (request/response records) reused instead of local DTOs
+    implementation project(':common')
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 

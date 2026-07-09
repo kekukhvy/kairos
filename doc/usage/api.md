@@ -710,11 +710,459 @@ Content-Type: application/json
 
 ---
 
+## ScheduleResponse
+
+All schedule endpoints that return a body use this structure. Fields that do not
+apply to the schedule's `type` are `null`.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID string | Unique identifier assigned by Kairos. |
+| `taskId` | UUID string | The task this schedule belongs to. |
+| `type` | string | `ONCE`, `CRON`, or `FIXED`. Immutable after creation. |
+| `label` | string or `null` | Optional human-readable label (max 128 characters). |
+| `runAt` | ISO-8601 string or `null` | `ONCE` only: the single fire time (UTC). |
+| `cronExpression` | string or `null` | `CRON` only: the cron expression string (max 128 characters). Syntax is not validated by the server. |
+| `intervalSeconds` | integer or `null` | `FIXED` only: the repeat interval in seconds (`1–86400`). |
+| `timezone` | string | IANA timezone name used to evaluate `cronExpression`. Always `UTC` for `ONCE` and `FIXED` schedules. Defaults to `UTC`. |
+| `active` | boolean | Whether this schedule is currently active. `true` by default at creation. |
+| `createdAt` | ISO-8601 string | When the schedule was created. |
+| `updatedAt` | ISO-8601 string | When the schedule was last updated. |
+
+---
+
+### POST /api/v1/tasks/{taskId}/schedules — Create a schedule
+
+Creates a new schedule for an existing task. Returns the created schedule.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `taskId` | UUID string | The `id` of the task to schedule. Must exist and not be deleted. |
+
+**Request body**
+
+| Field | Type | Required | Default | Constraints |
+|---|---|---|---|---|
+| `type` | string | yes | — | `ONCE`, `CRON`, or `FIXED`. |
+| `label` | string | no | `null` | Optional. Max 128 characters. |
+| `runAt` | ISO-8601 string | `ONCE` only | — | Must be a future timestamp. Ignored for `CRON` and `FIXED`. |
+| `cronExpression` | string | `CRON` only | — | Non-blank, max 128 characters. Not syntax-validated by the server. Ignored for `ONCE` and `FIXED`. |
+| `intervalSeconds` | integer | `FIXED` only | — | `1–86400` (one second to one day). Ignored for `ONCE` and `CRON`. |
+| `timezone` | string | `CRON` only | `UTC` | Valid IANA timezone name (e.g. `Europe/Berlin`). Ignored for `ONCE` and `FIXED`. |
+
+Only send the "when" field that matches `type`; the others should be omitted (or `null`).
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `201 Created` | `ScheduleResponse` | Schedule created successfully. |
+| `400 Bad Request` | `ErrorResponse` | Missing or invalid `type`; missing required "when" field for the given type; `runAt` is in the past; `intervalSeconds` out of range; `timezone` is not a valid IANA zone id; malformed UUID path param. |
+| `404 Not Found` | `ErrorResponse` | Task with the given `taskId` does not exist or has been deleted. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example — ONCE schedule**
+
+```http
+POST /api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479/schedules
+Content-Type: application/json
+
+{
+  "type": "ONCE",
+  "label": "expire-hold-abc123",
+  "runAt": "2026-07-10T14:00:00Z"
+}
+```
+
+```json
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-111111111111",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "ONCE",
+  "label": "expire-hold-abc123",
+  "runAt": "2026-07-10T14:00:00Z",
+  "cronExpression": null,
+  "intervalSeconds": null,
+  "timezone": "UTC",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T09:00:00Z"
+}
+```
+
+**Example — CRON schedule**
+
+```http
+POST /api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479/schedules
+Content-Type: application/json
+
+{
+  "type": "CRON",
+  "label": "nightly-cleanup",
+  "cronExpression": "0 2 * * *",
+  "timezone": "Europe/Berlin"
+}
+```
+
+```json
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-222222222222",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "CRON",
+  "label": "nightly-cleanup",
+  "runAt": null,
+  "cronExpression": "0 2 * * *",
+  "intervalSeconds": null,
+  "timezone": "Europe/Berlin",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T09:00:00Z"
+}
+```
+
+**Example — FIXED schedule**
+
+```http
+POST /api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479/schedules
+Content-Type: application/json
+
+{
+  "type": "FIXED",
+  "label": "heartbeat",
+  "intervalSeconds": 300
+}
+```
+
+```json
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-333333333333",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "FIXED",
+  "label": "heartbeat",
+  "runAt": null,
+  "cronExpression": null,
+  "intervalSeconds": 300,
+  "timezone": "UTC",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T09:00:00Z"
+}
+```
+
+---
+
+### GET /api/v1/tasks/{taskId}/schedules — List schedules for a task
+
+Returns a paginated list of all schedules belonging to a task.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `taskId` | UUID string | The `id` of the task. |
+
+**Query parameters**
+
+| Parameter | Type | Required | Default | Constraints |
+|---|---|---|---|---|
+| `limit` | integer | no | `20` | Clamped to `1–100`. Values `<= 0` use the default. Values `> 100` are capped at `100`. |
+| `offset` | integer | no | `0` | Values `< 0` are treated as `0`. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `200 OK` | `PageResponse<ScheduleResponse>` | Always (empty `items` array if the task has no schedules). |
+| `400 Bad Request` | `ErrorResponse` | `taskId` is not a valid UUID. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example**
+
+```http
+GET /api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479/schedules
+```
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-111111111111",
+      "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "type": "ONCE",
+      "label": "expire-hold-abc123",
+      "runAt": "2026-07-10T14:00:00Z",
+      "cronExpression": null,
+      "intervalSeconds": null,
+      "timezone": "UTC",
+      "active": true,
+      "createdAt": "2026-07-09T09:00:00Z",
+      "updatedAt": "2026-07-09T09:00:00Z"
+    }
+  ],
+  "limit": 20,
+  "offset": 0,
+  "hasNext": false
+}
+```
+
+---
+
+### GET /api/v1/schedules/{id} — Get a schedule
+
+Returns a single schedule by its UUID.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID string | The schedule's `id` as returned at creation. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `200 OK` | `ScheduleResponse` | Schedule found. |
+| `400 Bad Request` | `ErrorResponse` | `id` is not a valid UUID. |
+| `404 Not Found` | `ErrorResponse` | Schedule does not exist. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example**
+
+```http
+GET /api/v1/schedules/a1b2c3d4-0000-0000-0000-111111111111
+```
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-111111111111",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "ONCE",
+  "label": "expire-hold-abc123",
+  "runAt": "2026-07-10T14:00:00Z",
+  "cronExpression": null,
+  "intervalSeconds": null,
+  "timezone": "UTC",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T09:00:00Z"
+}
+```
+
+---
+
+### PUT /api/v1/schedules/{id} — Update a schedule
+
+Updates the scheduling parameters of an existing schedule. `type` is immutable —
+to change schedule type, delete the schedule and create a new one. Only the
+"when" field matching the schedule's current `type` is applied; sending fields
+for other types has no effect.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID string | The schedule's `id`. |
+
+**Request body**
+
+| Field | Type | Required | Default | Constraints |
+|---|---|---|---|---|
+| `label` | string | no | `null` | Optional. Max 128 characters. |
+| `runAt` | ISO-8601 string | `ONCE` only | — | Must be a future timestamp. Ignored for other types. |
+| `cronExpression` | string | `CRON` only | — | Non-blank, max 128 characters. Ignored for other types. |
+| `intervalSeconds` | integer | `FIXED` only | — | `1–86400`. Ignored for other types. |
+| `timezone` | string | no | `UTC` | Valid IANA timezone name. Applied only for `CRON` schedules; ignored for `ONCE` and `FIXED`. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `200 OK` | `ScheduleResponse` | Schedule updated successfully. |
+| `400 Bad Request` | `ErrorResponse` | Missing required "when" field for the current type; `runAt` is in the past; `intervalSeconds` out of range; invalid timezone; malformed UUID path param. |
+| `404 Not Found` | `ErrorResponse` | Schedule does not exist. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example — update a ONCE schedule**
+
+```http
+PUT /api/v1/schedules/a1b2c3d4-0000-0000-0000-111111111111
+Content-Type: application/json
+
+{
+  "label": "expire-hold-abc123-rescheduled",
+  "runAt": "2026-07-11T10:00:00Z"
+}
+```
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-111111111111",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "ONCE",
+  "label": "expire-hold-abc123-rescheduled",
+  "runAt": "2026-07-11T10:00:00Z",
+  "cronExpression": null,
+  "intervalSeconds": null,
+  "timezone": "UTC",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T09:30:00Z"
+}
+```
+
+---
+
+### DELETE /api/v1/schedules/{id} — Delete a schedule
+
+Permanently deletes a schedule. The schedule will no longer fire and cannot be
+recovered.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID string | The schedule's `id`. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `204 No Content` | none | Schedule deleted successfully. |
+| `400 Bad Request` | `ErrorResponse` | `id` is not a valid UUID. |
+| `404 Not Found` | `ErrorResponse` | Schedule does not exist. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example**
+
+```http
+DELETE /api/v1/schedules/a1b2c3d4-0000-0000-0000-111111111111
+```
+
+```
+HTTP/1.1 204 No Content
+```
+
+---
+
+### PATCH /api/v1/schedules/{id}/pause — Pause a schedule
+
+Sets `active` to `false` on the schedule. The schedule stops firing until
+resumed. Has no effect on other schedules belonging to the same task.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID string | The schedule's `id`. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `200 OK` | `ScheduleResponse` | Schedule paused. `active` is `false` in the response. |
+| `400 Bad Request` | `ErrorResponse` | `id` is not a valid UUID. |
+| `404 Not Found` | `ErrorResponse` | Schedule does not exist. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example**
+
+```http
+PATCH /api/v1/schedules/a1b2c3d4-0000-0000-0000-111111111111/pause
+```
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-111111111111",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "ONCE",
+  "label": "expire-hold-abc123",
+  "runAt": "2026-07-10T14:00:00Z",
+  "cronExpression": null,
+  "intervalSeconds": null,
+  "timezone": "UTC",
+  "active": false,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T10:00:00Z"
+}
+```
+
+---
+
+### PATCH /api/v1/schedules/{id}/resume — Resume a schedule
+
+Sets `active` to `true` on a previously paused schedule. The schedule resumes
+firing according to its timing rule.
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID string | The schedule's `id`. |
+
+**Responses**
+
+| Status | Body | When |
+|---|---|---|
+| `200 OK` | `ScheduleResponse` | Schedule resumed. `active` is `true` in the response. |
+| `400 Bad Request` | `ErrorResponse` | `id` is not a valid UUID. |
+| `404 Not Found` | `ErrorResponse` | Schedule does not exist. |
+| `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
+
+**Example**
+
+```http
+PATCH /api/v1/schedules/a1b2c3d4-0000-0000-0000-111111111111/resume
+```
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "a1b2c3d4-0000-0000-0000-111111111111",
+  "taskId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "type": "ONCE",
+  "label": "expire-hold-abc123",
+  "runAt": "2026-07-10T14:00:00Z",
+  "cronExpression": null,
+  "intervalSeconds": null,
+  "timezone": "UTC",
+  "active": true,
+  "createdAt": "2026-07-09T09:00:00Z",
+  "updatedAt": "2026-07-09T10:05:00Z"
+}
+```
+
+---
+
 ## Error reference
 
 | HTTP Status | Condition |
 |---|---|
-| `400 Bad Request` | Missing required field; `timeoutMs <= 0`; path `id` is not a valid UUID (tasks); unrecognized `destinationType`; malformed JSON body. |
-| `404 Not Found` | Task or destination with the given `id` does not exist, or the task has been soft-deleted. |
+| `400 Bad Request` | Missing required field; `timeoutMs <= 0`; path `id` is not a valid UUID (tasks, schedules); unrecognized `destinationType` or `type`; `runAt` is not in the future; `intervalSeconds` out of range (`1–86400`); `timezone` is not a valid IANA zone id; `cronExpression` is blank; malformed JSON body. |
+| `404 Not Found` | Task or destination with the given `id` does not exist, or the task has been soft-deleted. Schedule with the given `id` does not exist. |
 | `409 Conflict` | Attempting to delete a task that is already deleted; creating a destination whose `destinationId` already exists; deleting a destination that is still referenced by one or more tasks. |
 | `500 Internal Server Error` | An unexpected error occurred. The response body contains `{ "error": "Internal server error" }`. No internal detail is exposed. |

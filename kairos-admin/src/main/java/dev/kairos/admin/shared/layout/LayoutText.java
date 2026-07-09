@@ -7,5 +7,6 @@ public final class LayoutText {
 
     public static final String APP_NAME = "Kairos";
     public static final String NAV_TASKS = "Tasks";
+    public static final String NAV_SCHEDULES = "Schedules";
     public static final String NAV_DESTINATIONS = "Destinations";
 }
