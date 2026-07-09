@@ -32,6 +32,11 @@ public class ScheduleService {
     private static final String PAUSE_COMMAND = "/pause";
     private static final String RESUME_COMMAND = "/resume";
 
+    /** Page size for paging through a task's schedules; matches the API's MAX_LIMIT. */
+    private static final int PAGE_SIZE = 100;
+    private static final String QUERY_LIMIT = "limit";
+    private static final String QUERY_OFFSET = "offset";
+
     private final KairosApiClient client;
     private final ApiProperties apiProperties;
 
@@ -41,9 +46,12 @@ public class ScheduleService {
     }
 
     /**
-     * Returns all schedules belonging to the given task.
-     * The endpoint is task-scoped ({@code {taskEndpoint}/{taskId}/schedules});
-     * a {@code null} response body is treated as an empty list.
+     * Returns all schedules belonging to the given task. The task-scoped list
+     * endpoint ({@code {taskEndpoint}/{taskId}/schedules}) is paginated, so this
+     * follows {@code hasNext} across pages (at {@link #PAGE_SIZE} per request)
+     * and concatenates them — otherwise tasks with more than one page of
+     * schedules would be silently truncated. A {@code null} page body ends the
+     * loop.
      *
      * @param taskId the task whose schedules to fetch
      * @return the task's schedules, never {@code null}
@@ -51,20 +59,34 @@ public class ScheduleService {
     public List<ScheduleResponse> listByTask(UUID taskId) {
         logger.debug("Fetching schedules for task {}", taskId);
 
-        PageResponse<ScheduleResponse> page = client.rest()
+        List<ScheduleResponse> all = new ArrayList<>();
+        int offset = 0;
+        PageResponse<ScheduleResponse> page;
+        do {
+            page = fetchPage(taskId, offset);
+            if (page == null) {
+                logger.warn("Schedule list response body is null — stopping at offset {}", offset);
+                break;
+            }
+            all.addAll(page.items());
+            offset += PAGE_SIZE;
+        } while (page.hasNext());
+
+        logger.debug("Fetched {} schedule(s) for task {}", all.size(), taskId);
+        return all;
+    }
+
+    private PageResponse<ScheduleResponse> fetchPage(UUID taskId, int offset) {
+        return client.rest()
                 .get()
-                .uri(apiProperties.taskEndpoint() + SCHEDULES_SUFFIX, taskId)
+                .uri(uriBuilder -> uriBuilder
+                        .path(apiProperties.taskEndpoint() + SCHEDULES_SUFFIX)
+                        .queryParam(QUERY_LIMIT, PAGE_SIZE)
+                        .queryParam(QUERY_OFFSET, offset)
+                        .build(taskId))
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {
                 });
-
-        if (page == null) {
-            logger.warn("Schedule list response body is null — returning empty list");
-            return List.of();
-        }
-
-        logger.debug("Fetched {} schedule(s) for task {}", page.items().size(), taskId);
-        return page.items();
     }
 
     /**

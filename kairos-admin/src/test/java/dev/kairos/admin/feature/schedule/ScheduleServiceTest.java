@@ -36,8 +36,10 @@ class ScheduleServiceTest {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
-    private static final String LIST_URL_TEMPLATE = BASE_URL + TASK_ENDPOINT + "/%s/schedules";
-    private static final String CREATE_URL_TEMPLATE = LIST_URL_TEMPLATE;
+    private static final String SCHEDULES_PATH = "/%s/schedules";
+    private static final String CREATE_URL_TEMPLATE = BASE_URL + TASK_ENDPOINT + SCHEDULES_PATH;
+    private static final String LIST_PAGE_URL_TEMPLATE =
+            BASE_URL + TASK_ENDPOINT + SCHEDULES_PATH + "?limit=100&offset=%d";
     private static final String BY_ID_URL_TEMPLATE = BASE_URL + SCHEDULE_ENDPOINT + "/%s";
     private static final String PAUSE_URL_TEMPLATE = BY_ID_URL_TEMPLATE + "/pause";
     private static final String RESUME_URL_TEMPLATE = BY_ID_URL_TEMPLATE + "/resume";
@@ -59,7 +61,11 @@ class ScheduleServiceTest {
             """;
 
     private static final String PAGE_JSON_TEMPLATE = """
-            {"items": [%s], "limit": 20, "offset": 0, "hasNext": false}
+            {"items": [%s], "limit": 100, "offset": 0, "hasNext": false}
+            """;
+
+    private static final String PAGE_JSON_TEMPLATE_HAS_NEXT = """
+            {"items": [%s], "limit": 100, "offset": 0, "hasNext": true}
             """;
 
     @Mock
@@ -85,7 +91,7 @@ class ScheduleServiceTest {
         UUID scheduleId = UUID.randomUUID();
         String pageJson = PAGE_JSON_TEMPLATE.formatted(SCHEDULE_JSON.formatted(scheduleId, taskId));
 
-        mockServer.expect(requestTo(LIST_URL_TEMPLATE.formatted(taskId)))
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskId, 0)))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(pageJson, MediaType.APPLICATION_JSON));
 
@@ -97,18 +103,39 @@ class ScheduleServiceTest {
     }
 
     @Test
+    void listByTask_hasNext_followsPagesUntilExhausted() {
+        UUID taskId = UUID.randomUUID();
+        UUID scheduleA = UUID.randomUUID();
+        UUID scheduleB = UUID.randomUUID();
+        String firstPage = PAGE_JSON_TEMPLATE_HAS_NEXT.formatted(SCHEDULE_JSON.formatted(scheduleA, taskId));
+        String secondPage = PAGE_JSON_TEMPLATE.formatted(SCHEDULE_JSON.formatted(scheduleB, taskId));
+
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskId, 0)))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(firstPage, MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskId, 100)))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(secondPage, MediaType.APPLICATION_JSON));
+
+        List<ScheduleResponse> result = scheduleService.listByTask(taskId);
+
+        assertThat(result).extracting(ScheduleResponse::id).containsExactly(scheduleA, scheduleB);
+        mockServer.verify();
+    }
+
+    @Test
     void listForTasks_fansOutPerTask_concatenatesResults() {
         UUID taskA = UUID.randomUUID();
         UUID taskB = UUID.randomUUID();
         UUID scheduleA = UUID.randomUUID();
         UUID scheduleB = UUID.randomUUID();
 
-        mockServer.expect(requestTo(LIST_URL_TEMPLATE.formatted(taskA)))
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskA, 0)))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(
                         PAGE_JSON_TEMPLATE.formatted(SCHEDULE_JSON.formatted(scheduleA, taskA)),
                         MediaType.APPLICATION_JSON));
-        mockServer.expect(requestTo(LIST_URL_TEMPLATE.formatted(taskB)))
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskB, 0)))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(
                         PAGE_JSON_TEMPLATE.formatted(SCHEDULE_JSON.formatted(scheduleB, taskB)),
@@ -124,10 +151,10 @@ class ScheduleServiceTest {
     void listByTask_apiReturnsEmptyItems_returnsEmptyList() {
         UUID taskId = UUID.randomUUID();
         String emptyPageJson = """
-                {"items": [], "limit": 20, "offset": 0, "hasNext": false}
+                {"items": [], "limit": 100, "offset": 0, "hasNext": false}
                 """;
 
-        mockServer.expect(requestTo(LIST_URL_TEMPLATE.formatted(taskId)))
+        mockServer.expect(requestTo(LIST_PAGE_URL_TEMPLATE.formatted(taskId, 0)))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(emptyPageJson, MediaType.APPLICATION_JSON));
 

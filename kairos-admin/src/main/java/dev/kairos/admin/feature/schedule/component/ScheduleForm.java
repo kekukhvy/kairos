@@ -21,9 +21,11 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -122,6 +124,9 @@ public class ScheduleForm extends Dialog {
         runAt.setVisible(selected == ScheduleType.ONCE);
         cronExpression.setVisible(selected == ScheduleType.CRON);
         intervalSeconds.setVisible(selected == ScheduleType.FIXED);
+        // timezone governs the ONCE wall-clock → instant conversion and the CRON
+        // expression; it is meaningless for FIXED (a plain interval).
+        timezone.setVisible(selected != ScheduleType.FIXED);
     }
 
     private Button buildSave() {
@@ -199,7 +204,24 @@ public class ScheduleForm extends Dialog {
 
     private Instant runAtInstant() {
         LocalDateTime value = runAt.getValue();
-        return value == null ? null : value.atZone(ZoneId.systemDefault()).toInstant();
+        return value == null ? null : value.atZone(selectedZone()).toInstant();
+    }
+
+    /**
+     * Resolves the timezone the user entered, so the ONCE wall-clock picker is
+     * interpreted in that zone rather than the admin JVM's system zone. Falls
+     * back to UTC when the field is blank or not a valid {@link ZoneId}.
+     */
+    private ZoneId selectedZone() {
+        String zone = Strings.trimToNull(timezone.getValue());
+        if (zone == null) {
+            return ZoneOffset.UTC;
+        }
+        try {
+            return ZoneId.of(zone);
+        } catch (DateTimeException ex) {
+            return ZoneOffset.UTC;
+        }
     }
 
     private void prefill(ScheduleResponse schedule) {
@@ -211,7 +233,7 @@ public class ScheduleForm extends Dialog {
             intervalSeconds.setValue(schedule.intervalSeconds());
         }
         if (schedule.runAt() != null) {
-            runAt.setValue(LocalDateTime.ofInstant(schedule.runAt(), ZoneId.systemDefault()));
+            runAt.setValue(LocalDateTime.ofInstant(schedule.runAt(), selectedZone()));
         }
     }
 
