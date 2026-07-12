@@ -198,6 +198,19 @@ command and agent, and how they chain, lives in
 → `/create-issue` → `/implement` → `/review-cycle` → `/verify-coverage` →
 `/create-pr` → `/review`, or `/ship` to run the slice end to end).
 
+**Keep the issue as the living record.** As the pipeline runs on a slice linked
+to a GitHub issue, mirror progress back to that issue (see
+[.claude/reviews/POSTING.md](./reviews/POSTING.md)):
+- Post the review, the fixes, and the acceptance evidence as **comments**
+  (history: review → fix → acceptance), summary on top + full report collapsed.
+- At the verify stage, **tick the acceptance-criteria checkboxes in the issue
+  body** for what's proven, noting any UI-mock/environment limits honestly.
+- If the code has diverged from the criteria (design changed / dropped), don't
+  leave stale criteria — **rewrite the issue body** so every criterion is valid
+  and matches what shipped (code-first, same call `spec-keeper` acts on).
+- All of this is outward-facing: show it and confirm before `gh issue comment` /
+  `gh issue edit`.
+
 ## Keeping spec / docs / tests in sync
 
 The **sync** subagents (`.claude/agents/`) keep artifacts aligned with the code:

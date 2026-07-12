@@ -43,6 +43,13 @@ command). It applies the selected findings (VALID-only by default, must-fix
 first), builds/tests the affected code, and records each finding's outcome in
 the document.
 
+## Step 3.5 — Post the review to the issue
+
+After validation (and fixes), post a **"Code review"** comment to the linked
+issue following `.claude/reviews/POSTING.md` (summary + collapsed full findings
+doc, ask before posting). This is the first of the three history comments
+(review → fix → acceptance).
+
 ## Step 4 — Final report
 
 Summarize the whole cycle end-to-end:

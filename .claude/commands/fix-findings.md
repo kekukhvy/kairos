@@ -55,7 +55,14 @@ Prefer the smallest edit that resolves the finding.
 - If a fix breaks the build or tests, fix-forward if it's small and obvious;
   otherwise revert that finding's change and mark it as needing manual work.
 
-## Step 5 — Record outcomes and report
+## Step 5 — Post the fixes to the issue
+
+Post a **"Fixes applied"** comment to the linked issue following
+`.claude/reviews/POSTING.md` (summary on top, full outcome list in a collapsed
+`<details>`, ask before posting). This continues the issue history after the
+"Code review" comment.
+
+## Step 6 — Record outcomes and report
 
 Update the findings document: set each processed finding's `Outcome:` to
 **fixed** | **skipped** (with reason) | **needs-manual**. Then report:

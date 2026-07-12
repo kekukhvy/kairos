@@ -27,3 +27,6 @@ replay_pid*
 /kairos-api/build/
 /build/
 /kairos-admin/src/main/frontend/generated/
+/kairos-admin/build/
+/kairos-admin/out/
+/kairos-admin/target/

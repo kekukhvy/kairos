@@ -68,6 +68,11 @@ NEEDS-HUMAN by the finding-validator.
 
 **Stop here.** Do **not** run `/fix-findings`.
 
+The `/verify-coverage` and `/review-all`+`/validate-findings` sub-steps post
+their result to the linked issue (per `.claude/reviews/POSTING.md`, with
+confirmation) — so the issue records the acceptance evidence and the review
+even though this command stops before fixing.
+
 ## Step 4 — Report and hand back control
 
 Summarize:

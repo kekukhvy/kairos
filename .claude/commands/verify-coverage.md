@@ -42,7 +42,14 @@ Integration/repository tests use Testcontainers + Postgres; if Docker isn't
 available the verifier records those as **not-run (environment)** rather than
 claiming PASS.
 
-## Step 3 — Report
+## Step 3 — Post the acceptance evidence to the issue
+
+Post an **"Acceptance evidence"** comment to the linked issue following
+`.claude/reviews/POSTING.md` (verdict `X/Y` + the coverage matrix on top, full
+evidence report in a collapsed `<details>`, ask before posting). This is the
+third and final history comment (review → fix → acceptance).
+
+## Step 4 — Report
 
 Surface the verifier's verdict: `X/Y criteria verified with passing tests`, the
 report path, and — importantly — any **gaps** (criteria with no test, or with a
