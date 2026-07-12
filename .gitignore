@@ -22,3 +22,11 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+/.gradle/
+/.idea/
+/kairos-api/build/
+/build/
+/kairos-admin/src/main/frontend/generated/
+/kairos-admin/build/
+/kairos-admin/out/
+/kairos-admin/target/

@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "${springBootVersion}"
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.vaadin' version "${vaadinVersion}"
+}
+
+// Per-module version: release-please maintains kairos-admin/version.txt from
+// Conventional Commits. Gradle reads it so the bootJar and Docker image carry
+// the same version release-please cut. Falls back to the root version if absent.
+def versionFile = file('version.txt')
+version = versionFile.exists() ? versionFile.text.trim() : rootProject.version
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(26)
+    }
+}
+
+repositories {
+    mavenCentral()
+    // pre-release Vaadin artifacts; safe to keep, harmless for stable versions
+    maven { url = 'https://maven.vaadin.com/vaadin-prereleases' }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "com.vaadin:vaadin-bom:${vaadinVersion}"
+    }
+}
+
+dependencies {
+    // Vaadin Flow + Spring integration (pulls in spring-boot-starter-web / embedded Tomcat)
+    implementation 'com.vaadin:vaadin-spring-boot-starter'
+
+    // RestClient for calling the Kairos REST API (/api/v1/tasks)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // Vaadin dev-mode server (Vite + hot reload). developmentOnly = не попадёт в bootJar.
+    developmentOnly 'com.vaadin:vaadin-dev'
+
+    // shared models/contracts (request/response records) reused instead of local DTOs
+    implementation project(':common')
+
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+// Production build: ./gradlew -Pvaadin.productionMode=true bootJar
+// (Vaadin's plugin wires the frontend build into the production profile)
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

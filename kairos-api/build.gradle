@@ -1,0 +1,94 @@
+plugins {
+    id 'nu.studer.jooq'  // version pinned in pluginManagement (settings.gradle)
+}
+
+description = 'Kairos REST API (entry point)'
+
+// ── jOOQ codegen DB connection ─────────────────────────────────────────────────
+// Resolution order: env var -> local.properties (gitignored) -> hardcoded local default.
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+
+def jooqDbUrl      = System.getenv('DB_URL')      ?: localProps.getProperty('db.url')      ?: 'jdbc:postgresql://localhost:5432/kairos'
+def jooqDbUser     = System.getenv('DB_USERNAME')  ?: localProps.getProperty('db.username') ?: 'kairos'
+def jooqDbPassword = System.getenv('DB_PASSWORD')  ?: localProps.getProperty('db.password') ?: 'kairos'
+
+// ── Dependencies ───────────────────────────────────────────────────────────────
+dependencies {
+    implementation project(':common')
+
+    implementation "com.zaxxer:HikariCP:${hikariVersion}"
+
+    implementation "org.flywaydb:flyway-core:${flywayVersion}"
+    implementation "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
+    implementation "org.postgresql:postgresql:${postgresDriverVersion}"
+
+    implementation "io.javalin:javalin:${javalinVersion}"
+    implementation "org.jooq:jooq:${jooqVersion}"
+
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    runtimeOnly "ch.qos.logback:logback-classic:${logbackVersion}"
+
+    jooqGenerator "org.postgresql:postgresql:${postgresDriverVersion}"
+
+    testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "com.h2database:h2:${h2Version}"
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// ── jOOQ codegen ──────────────────────────────────────────────────────────────
+jooq {
+    version = "${jooqVersion}"
+
+    configurations {
+        main {
+            generationTool {
+                jdbc {
+                    driver   = 'org.postgresql.Driver'
+                    url      = jooqDbUrl
+                    user     = jooqDbUser
+                    password = jooqDbPassword
+                }
+                generator {
+                    name = 'org.jooq.codegen.DefaultGenerator'
+
+                    database {
+                        name        = 'org.jooq.meta.postgres.PostgresDatabase'
+                        inputSchema = 'public'
+                        includes    = 'destinations|tasks|retry_policies|schedules|executions|execution_history'
+                        excludes    = 'flyway_schema_history'
+                        // No forcedTypes for JSONB — columns stay as org.jooq.JSONB.
+                        // Conversion to/from String is handled in TaskMapper via
+                        // JSONB.valueOf(string) and jsonb.data().
+                    }
+
+                    generate {
+                        daos           = false
+                        records        = true
+                        pojos          = false
+                        immutablePojos = false
+                        fluentSetters  = true
+                        javaTimeTypes  = true
+                    }
+
+                    target {
+                        packageName = 'dev.kairos.infrastructure.generated'
+                        directory   = 'src/main/generated'
+                    }
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.java.srcDirs += ['src/main/generated']
+
+test {
+    useJUnitPlatform()
+}

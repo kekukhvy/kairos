@@ -1,0 +1,19 @@
+plugins {
+    id 'java-library'
+}
+
+subprojects {
+    // java-library is a superset of java — adds the 'api' configuration so
+    // any subproject can expose transitive dependencies to its consumers.
+    apply plugin: 'java-library'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(javaToolchainVersion as int)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}

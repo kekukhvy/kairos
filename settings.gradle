@@ -1,0 +1,20 @@
+pluginManagement {
+    plugins {
+        // Version resolved from gradle.properties — one place for all pins.
+        id 'nu.studer.jooq' version "${studerJooqVersion}"
+    }
+}
+
+
+rootProject.name = 'kairos'
+
+include 'common'
+include 'kairos-api'
+include 'kairos-engine'
+include 'kairos-worker'
+include 'kairos-adapters:kafka'
+include 'kairos-adapters:sqs'
+include 'kairos-adapters:webhook'
+include 'kairos-adapters:rabbitmq'
+include 'kairos-admin'
+include 'kairos-sdk'
