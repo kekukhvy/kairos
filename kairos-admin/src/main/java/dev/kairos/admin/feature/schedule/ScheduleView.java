@@ -81,9 +81,7 @@ public class ScheduleView extends VerticalLayout {
 
         grid.setTaskLabel(this::labelFor);
         grid.setOnView(this::viewSchedule);
-        grid.setOnEdit(this::editSchedule);
         grid.setOnToggleActive(this::toggleActive);
-        grid.setOnDelete(this::confirmDelete);
 
         refresh();
     }
@@ -216,7 +214,7 @@ public class ScheduleView extends VerticalLayout {
     }
 
     private void viewSchedule(ScheduleResponse schedule) {
-        new ScheduleDetails(schedule).open();
+        ScheduleDetails.of(schedule, this::editSchedule, this::confirmDelete).open();
     }
 
     private void editSchedule(ScheduleResponse schedule) {
@@ -245,15 +243,24 @@ public class ScheduleView extends VerticalLayout {
 
     private void toggleActive(ScheduleResponse schedule) {
         if (schedule.active()) {
-            execute(() -> scheduleService.pause(schedule.id()),
+            toggle(() -> scheduleService.pause(schedule.id()),
                     ScheduleText.NOTIFY_PAUSED, ScheduleText.NOTIFY_UPDATE_FAILED);
         } else {
-            execute(() -> scheduleService.resume(schedule.id()),
+            toggle(() -> scheduleService.resume(schedule.id()),
                     ScheduleText.NOTIFY_RESUMED, ScheduleText.NOTIFY_UPDATE_FAILED);
         }
     }
 
     private void execute(Runnable action, String successMessage, String failureMessage) {
         ViewActions.execute(action, successMessage, failureMessage, this::refresh, logger);
+    }
+
+    /**
+     * Runs an optimistic Active-switch toggle: refreshes the grid whether the
+     * pause/resume call succeeds or fails, so a failed toggle re-renders the row
+     * from server state instead of leaving the switch flipped.
+     */
+    private void toggle(Runnable action, String successMessage, String failureMessage) {
+        ViewActions.executeAndRefresh(action, successMessage, failureMessage, this::refresh, logger);
     }
 }

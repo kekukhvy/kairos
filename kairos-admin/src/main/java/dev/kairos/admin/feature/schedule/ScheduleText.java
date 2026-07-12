@@ -22,16 +22,19 @@ public final class ScheduleText {
     public static final String COL_WHEN = "When";
     public static final String COL_TIMEZONE = "Timezone";
     public static final String COL_ACTIVE = "Active";
-    public static final String COL_ACTIONS = "Actions";
 
     public static final String FIELD_RUN_AT = "Run at";
     public static final String FIELD_CRON = "Cron expression";
     public static final String FIELD_INTERVAL = "Interval (seconds)";
 
-    public static final String ACTION_VIEW = "View details";
     public static final String ACTION_EDIT = "Edit";
     public static final String ACTION_PAUSE = "Pause";
     public static final String ACTION_RESUME = "Resume";
+
+    public static final String CONFIRM_ENABLE_TITLE = "Enable schedule";
+    public static final String CONFIRM_ENABLE_TEXT = "Do you want to enable this schedule?";
+    public static final String CONFIRM_DISABLE_TITLE = "Disable schedule";
+    public static final String CONFIRM_DISABLE_TEXT = "Do you want to disable this schedule?";
 
     public static final String STATUS_ACTIVE = "Active";
     public static final String STATUS_PAUSED = "Paused";

@@ -123,4 +123,7 @@ public final class Tokens {
 
     /** Pointer cursor for interactive (clickable) surfaces. */
     public static final String CURSOR_POINTER = "pointer";
+
+    /** CSS class applied to a {@code Checkbox} rendered as an Apple-style toggle switch. */
+    public static final String TOGGLE_SWITCH_CLASS = "kairos-toggle-switch";
 }

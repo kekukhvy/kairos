@@ -88,9 +88,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         add(buildToolbar(), filterBar, grid);
 
         grid.setOnToggleActive(this::toggleActive);
-        grid.setOnDelete(this::confirmDelete);
         grid.setOnView(this::viewTask);
-        grid.setOnEdit(this::editTask);
         grid.setOnOpenDestination(this::openDestination);
         refresh();
     }
@@ -208,7 +206,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
     }
 
     private void viewTask(TaskDto task) {
-        new TaskDetails(jsonMapper, task).open();
+        TaskDetails.of(jsonMapper, task, this::editTask, this::confirmDelete).open();
     }
 
     private H2 createTitle() {
@@ -253,15 +251,24 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
 
     private void toggleActive(TaskDto task) {
         if (task.active()) {
-            execute(() -> taskService.stop(task.id()), TaskText.NOTIFY_STOPPED, TaskText.NOTIFY_UPDATE_FAILED);
+            toggle(() -> taskService.stop(task.id()), TaskText.NOTIFY_STOPPED, TaskText.NOTIFY_UPDATE_FAILED);
         } else {
-            execute(() -> taskService.start(task.id()), TaskText.NOTIFY_STARTED, TaskText.NOTIFY_UPDATE_FAILED);
+            toggle(() -> taskService.start(task.id()), TaskText.NOTIFY_STARTED, TaskText.NOTIFY_UPDATE_FAILED);
         }
     }
 
 
     private void execute(Runnable action, String successMessage, String failureMessage) {
         ViewActions.execute(action, successMessage, failureMessage, this::refresh, logger);
+    }
+
+    /**
+     * Runs an optimistic Active-switch toggle: refreshes the grid whether the
+     * start/stop call succeeds or fails, so a failed toggle re-renders the row
+     * from server state instead of leaving the switch flipped.
+     */
+    private void toggle(Runnable action, String successMessage, String failureMessage) {
+        ViewActions.executeAndRefresh(action, successMessage, failureMessage, this::refresh, logger);
     }
 
 }
