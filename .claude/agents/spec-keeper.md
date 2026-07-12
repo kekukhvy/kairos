@@ -2,7 +2,7 @@
 name: spec-keeper
 description: Keeps the Kairos design specification in sync with the code. Use after any code change that affects the domain model, entities, schedule/execution semantics, API surface, database schema, or architecture. It reads the diff and updates doc/specification.md (and doc/database.md / doc/plan.md when relevant) to match reality. Invoke it whenever code changes touch behavior or contracts documented in doc/.
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # Role

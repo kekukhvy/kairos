@@ -2,7 +2,7 @@
 name: logging-instrumenter
 description: Adds and tunes SLF4J logging across the codebase for audit and later analysis. Use after new code is added or changed, or when the user asks for logging/observability. Decides the right level per statement (DEBUG / INFO / WARN / ERROR), adds loggers where they are missing, and ensures failures and significant state changes are traceable — without changing business logic.
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # Role

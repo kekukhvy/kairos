@@ -2,7 +2,7 @@
 name: javadoc-writer
 description: Adds Javadoc to Java classes and methods that lack it. Use after new code is added or changed, or when the user asks for documentation/Javadoc. Documents public and protected types and members that have no Javadoc, explaining intent, contracts, parameters, return values, and thrown exceptions — without restating the obvious or touching code logic.
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # Role
