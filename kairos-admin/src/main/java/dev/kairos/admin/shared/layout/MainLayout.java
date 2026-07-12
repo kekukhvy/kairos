@@ -6,6 +6,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
+import dev.kairos.admin.feature.dashboard.DashboardView;
 import dev.kairos.admin.feature.destination.DestinationView;
 import dev.kairos.admin.feature.schedule.ScheduleView;
 import dev.kairos.admin.feature.task.TaskView;
@@ -33,6 +34,12 @@ public class MainLayout extends AppLayout {
 
     private SideNav createSideNav() {
         SideNav nav = new SideNav();
+        nav.addItem(new SideNavItem(
+                LayoutText.NAV_DASHBOARD,
+                DashboardView.class,
+                VaadinIcon.DASHBOARD.create()
+        ));
+
         nav.addItem(new SideNavItem(
                 LayoutText.NAV_TASKS,
                 TaskView.class,
