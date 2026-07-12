@@ -6,9 +6,10 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteAlias;
 import dev.kairos.admin.feature.destination.DestinationService;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.component.DestinationDetails;
@@ -38,10 +39,15 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
 import java.util.function.Predicate;
 
+/**
+ * Task management view: lists all tasks with status/destination filters, supports
+ * create, edit, delete, activate/deactivate, and inline destination inspection.
+ * Implements {@link BeforeEnterObserver} so the dashboard can deep-link to this
+ * view with a pre-selected status filter via the {@code ?status=} query parameter.
+ */
 @Route(value = TaskRoutes.TASKS, layout = MainLayout.class)
-@RouteAlias(value = TaskRoutes.ROOT, layout = MainLayout.class)
 @PageTitle(TaskRoutes.PAGE_TITLE)
-public class TaskView extends VerticalLayout {
+public class TaskView extends VerticalLayout implements BeforeEnterObserver {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskView.class);
 
@@ -53,6 +59,14 @@ public class TaskView extends VerticalLayout {
     private final ComboBox<String> destinationFilter;
     private final FilterBar filterBar;
 
+    /**
+     * Constructs the task view: wires filters, builds the toolbar and grid, and
+     * performs the initial data load.
+     *
+     * @param jsonMapper           used by detail and form dialogs for JSON pretty-printing
+     * @param taskService          data access for task CRUD and lifecycle operations
+     * @param destinationService   data access used to populate the destination filter and inline dialogs
+     */
     public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService) {
         this.jsonMapper = jsonMapper;
         this.taskService = taskService;
@@ -79,6 +93,18 @@ public class TaskView extends VerticalLayout {
         grid.setOnEdit(this::editTask);
         grid.setOnOpenDestination(this::openDestination);
         refresh();
+    }
+
+    /**
+     * Applies the optional {@code status} query parameter (e.g. from a dashboard
+     * deep-link) to the status filter so the grid opens pre-filtered.
+     */
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        event.getLocation().getQueryParameters().getSingleParameter(TaskRoutes.QUERY_STATUS)
+                .filter(status -> TaskText.STATUS_ACTIVE.equals(status)
+                        || TaskText.STATUS_INACTIVE.equals(status))
+                .ifPresent(statusFilter::setValue);
     }
 
     private void openDestination(String destinationId) {
