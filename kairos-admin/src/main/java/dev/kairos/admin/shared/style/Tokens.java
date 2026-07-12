@@ -87,6 +87,7 @@ public final class Tokens {
     public static final String GRADIENT_SURFACE = "var(--kairos-gradient-surface)";
     public static final String TRANSITION = "var(--kairos-transition)";
 
+    /** Vaadin theme string for a destructive confirmation button (red, primary weight). */
     public static final String THEME_DANGER_CONFIRM = "error primary";
 
     public static final int FORM_COLUMNS = 2;
@@ -95,6 +96,31 @@ public final class Tokens {
     /** Vaadin responsive-step breakpoint meaning "apply from 0px up" (always). */
     public static final String FORM_BREAKPOINT_ZERO = "0";
 
+    /** Vaadin theme string for a success-coloured badge (green). */
     public static final String THEME_BADGE_SUCCESS = "badge success";
+
+    /** Vaadin theme string for a contrast-coloured badge (neutral, e.g. the "Preview" label). */
     public static final String THEME_BADGE_CONTRAST = "badge contrast";
+
+    // --- dashboard card grid ---
+    /** Responsive auto-fitting card grid: as many columns as fit, min card width. */
+    public static final String GRID_CARDS_STATS = "repeat(auto-fit, minmax(220px, 1fr))";
+
+    /** Large display number, e.g. the headline value on a dashboard stat card. */
+    public static final String FONT_DISPLAY = "2.25rem";
+
+    /** Circular icon badge size on a card. */
+    public static final String ICON_BADGE_SIZE = "2.75rem";
+
+    /** Card icon glyph size. */
+    public static final String ICON_SIZE_M = "1.375rem";
+
+    /** CSS {@code center} keyword, used for {@code align-items} / {@code justify-content}. */
+    public static final String CENTER = "center";
+
+    /** Pulls a tertiary (link-style) button flush with the card's left text edge. */
+    public static final String NEGATIVE_INSET = "-0.4rem";
+
+    /** Pointer cursor for interactive (clickable) surfaces. */
+    public static final String CURSOR_POINTER = "pointer";
 }

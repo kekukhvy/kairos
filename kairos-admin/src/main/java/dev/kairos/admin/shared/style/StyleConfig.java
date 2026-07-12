@@ -27,6 +27,7 @@ public final class StyleConfig {
     private StyleConfig() {
     }
 
+    /** Returns a new, empty builder ready to collect CSS property declarations. */
     public static StyleConfig create() {
         return new StyleConfig();
     }
@@ -90,6 +91,18 @@ public final class StyleConfig {
         return set("justify-content", value);
     }
 
+    public StyleConfig gridTemplateColumns(String value) {
+        return set("grid-template-columns", value);
+    }
+
+    public StyleConfig cursor(String value) {
+        return set("cursor", value);
+    }
+
+    public StyleConfig transition(String value) {
+        return set("transition", value);
+    }
+
     // --- surface / color ---
     public StyleConfig background(String value) {
         return set("background", value);
@@ -129,6 +142,13 @@ public final class StyleConfig {
     }
 
     // --- generic escape hatch ---
+    /**
+     * Sets an arbitrary CSS property not covered by the named builder methods.
+     *
+     * @param property CSS property name, e.g. {@code "grid-auto-flow"}
+     * @param value    CSS value string
+     * @return this builder, for chaining
+     */
     public StyleConfig set(String property, String value) {
         properties.put(property, value);
         return this;

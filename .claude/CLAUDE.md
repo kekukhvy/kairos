@@ -81,6 +81,61 @@ Package root: `dev.kairos`.
 
 ---
 
+## Delivery & packaging model (composability principle)
+
+Kairos is **composable**: users pick which components to run, not an
+all-or-nothing monolith. Every change must keep this possible. Two component
+natures, two packaging formats:
+
+| Nature | Components | Packaged as | Boundary to the user |
+|---|---|---|---|
+| **Runnable** (a process) | `kairos-engine`, `kairos-api`, `kairos-admin`, each `kairos-adapters/*` | **Docker image** (version = image tag) | talks over DB / network only |
+| **Embeddable** (a library) | `kairos-sdk`, shared contracts in `common` | **Maven JAR** | on the client's classpath |
+
+**Each runnable component is always its own separate image / separate process.**
+There is **no single "all-in-one" process** that merges engine+api+admin into
+one JVM — development always targets the distributed layout. "Run everything
+together" is a **packaging convenience**, not a code artifact: a ready-made
+`docker-compose.yml` (or k8s manifest) that starts the separate containers
+together. So all-in-one = several containers via compose, *not* one merged
+binary.
+
+Composition scenarios the design must support:
+- **A. Full stack** — engine + api + admin + adapters, each its own container.
+  A ready `docker-compose.yml` bundles them so the user runs one
+  `docker compose up`; internally still separate processes.
+- **B. Engine-only** — `kairos-engine` image + the DB. The user writes to the
+  tables directly (no api/admin). **Kairos owns the schema** (Flyway migrations
+  are the single source of truth); the user writes against the *documented*
+  table contract in `doc/database.md`.
+- **C. Engine + API** — engine + api images; the user builds their own admin UI
+  on the API.
+- **D. Any of the above + selected adapters** at chosen versions.
+
+Rules that follow from this — apply them to **every** change:
+- **`kairos-engine` never embeds in another JVM** (only `kairos-sdk` is
+  embeddable). Every runnable component is a standalone process; components talk
+  to each other only over the DB / network, never via in-memory calls. That is
+  what lets them be composed via compose/k8s and scaled independently.
+- **Every runnable component must start independently** — its own bootstrap /
+  `main`, no `System.exit`, clean start/stop — so it works on its own (scenario
+  B/C) and inside the full-stack compose (scenario A).
+- **Adapters are selected at runtime by image/tag** (each adapter is its own
+  service/image, chosen in compose/k8s), never swapped on a shared classpath.
+  This is the concrete form of the "second adapter, zero domain changes"
+  hexagonal payoff — respect it when touching the adapter port.
+- A change to one component must not force a lockstep change in another it
+  doesn't depend on (that would break independent shipping). If it seems to,
+  the boundary is wrong — surface it.
+
+**Independent versioning (per-component) and release automation (release-please
+monorepo) are the intended end state, but not being built yet.** Do not add
+per-module version files or release tooling unless asked. Just don't design
+anything that *prevents* it — keep components independently packageable. See
+`doc/specs/` if/when a modular-distribution spec is written.
+
+---
+
 ## Tech stack
 
 - **Java 26** — pure Java, **no Spring** (except `kairos-admin`)
@@ -135,9 +190,30 @@ full happy path works end-to-end, and tests cover edge cases.
 
 ---
 
+## AI SDLC — commands & subagents
+
+The `.claude/` directory holds a full issue → PR pipeline. The map of every
+command and agent, and how they chain, lives in
+[.claude/README.md](./README.md) — read it to see the whole flow (`/specification`
+→ `/create-issue` → `/implement` → `/review-cycle` → `/verify-coverage` →
+`/create-pr` → `/review`, or `/ship` to run the slice end to end).
+
+**Keep the issue as the living record.** As the pipeline runs on a slice linked
+to a GitHub issue, mirror progress back to that issue (see
+[.claude/reviews/POSTING.md](./reviews/POSTING.md)):
+- Post the review, the fixes, and the acceptance evidence as **comments**
+  (history: review → fix → acceptance), summary on top + full report collapsed.
+- At the verify stage, **tick the acceptance-criteria checkboxes in the issue
+  body** for what's proven, noting any UI-mock/environment limits honestly.
+- If the code has diverged from the criteria (design changed / dropped), don't
+  leave stale criteria — **rewrite the issue body** so every criterion is valid
+  and matches what shipped (code-first, same call `spec-keeper` acts on).
+- All of this is outward-facing: show it and confirm before `gh issue comment` /
+  `gh issue edit`.
+
 ## Keeping spec / docs / tests in sync
 
-There are six subagents (`.claude/agents/`):
+The **sync** subagents (`.claude/agents/`) keep artifacts aligned with the code:
 - **spec-keeper** — updates `doc/` when the domain model, API, schema, or
   execution lifecycle changes.
 - **user-docs-writer** — updates `doc/usage/` when endpoints or DTO fields change.

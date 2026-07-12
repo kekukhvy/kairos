@@ -1,0 +1,22 @@
+# Keep the Docker build context small and reproducible.
+# Build outputs — rebuilt inside the image.
+**/build/
+**/out/
+**/target/
+.gradle/
+
+# VCS & IDE
+.git/
+.github/
+.idea/
+*.iml
+.vscode/
+
+# Local env / secrets — never bake into an image
+.env
+*.local
+
+# Docs & Claude tooling — not needed to build the jar
+doc/
+.claude/
+*.md
