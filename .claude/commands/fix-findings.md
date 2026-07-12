@@ -45,8 +45,8 @@ Prefer the smallest edit that resolves the finding.
 - If applying a fix reveals the finding is wrong or no longer applicable, **skip
   it** and note why — do not force a bad change.
 - Do not fix INVALID findings (unless `--all`).
-- The `PostToolUse` hook may remind you to delegate follow-ups (tests, Javadoc,
-  logging, spec) after `.java`/`.sql` edits — follow it as usual.
+- If the fixes change behavior the artifacts document (spec, user docs, Javadoc,
+  logging, tests), delegate those follow-ups **once at the end** — not per edit.
 
 ## Step 4 — Verify
 

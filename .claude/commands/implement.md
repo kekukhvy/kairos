@@ -47,11 +47,30 @@ code. Wait for it to report the cycles completed and the final build result.
 If it reports a criterion it could not satisfy, surface that — don't paper over
 it. Decide with the user whether to adjust scope or continue.
 
-## Step 4 — Sync the surrounding artifacts (delegate)
+## Step 4 — Sync the surrounding artifacts
 
-Now that code exists, bring the rest in sync. Decide which subagents apply to
-the actual change (skip those that don't) and run the relevant ones in parallel
-via the Task tool — the same set `/sync` uses:
+Now that code exists, bring the rest in sync. First establish the **scope** —
+you will need it either way:
+
+```bash
+git diff --stat <base>...HEAD      # which files, how many lines
+git diff <base>...HEAD             # the actual change
+```
+
+### Small change → do it yourself, no subagents
+
+If the change is small (rule of thumb: **≤ 3 files or ≤ ~50 changed lines**),
+write the Javadoc, logging, and any missing tests **directly**, in this context —
+you have already read the diff. A subagent starts from a **cold context**: it
+re-reads the project from scratch, so three cold starts to service a 20-line
+diff cost far more than the work itself. Delegate only when the change is big
+enough that the re-reading pays for itself.
+
+### Larger change → delegate, but hand over the scope
+
+Run the applicable subagents in parallel via the Task tool. Decide which ones the
+change actually calls for and skip the rest — a UI-only slice needs no
+`spec-keeper`, a `domain`-only change needs no `logging-instrumenter`.
 
 - **spec-keeper** — if domain model, entities, schedule/execution semantics, API
   surface, DB schema, or architecture changed → updates `doc/`.
@@ -63,8 +82,15 @@ via the Task tool — the same set `/sync` uses:
 - **logging-instrumenter** — SLF4J logging at the right levels for new code
   outside `domain` (never touches `domain`).
 
-(Note: when *Claude* edits `.java`/`.sql`, the `PostToolUse` hook already nudges
-these; running them explicitly here guarantees the sync for the whole slice.)
+**Put the scope in the prompt.** Each subagent's prompt must carry the concrete
+list of changed files and the diff (or the relevant slice of it) — not just the
+issue number and a topic. A subagent inherits **none** of this conversation, so
+without it, it burns its first dozen tool calls rediscovering what you already
+know (`git status`, `git diff`, walking the tree). Hand it the facts; it will
+still read the code itself, so accuracy does not depend on your summary.
+
+This is the **only** place the sync agents run during the pipeline — once, for
+the whole slice, never per file edit. `/sync` covers hand-written code separately.
 
 ## Step 5 — Build green and report
 

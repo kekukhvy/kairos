@@ -229,13 +229,21 @@ The **sync** subagents (`.claude/agents/`) keep artifacts aligned with the code:
   edits code. Guards against over-engineering (no deep generics, no speculative
   abstraction) — readability wins.
 
-**When *I* (Claude) change `.java`/`.sql` files**, a `PostToolUse` hook reminds
-me to delegate the relevant follow-ups to these subagents automatically.
+These subagents are invoked **explicitly**, at the point in the pipeline where
+the whole slice is ready to be synced — not per file edit:
 
-**When the *user* writes code themselves** (in their IDE, outside Claude), the
-hook does NOT fire. The user runs the **`/sync`** slash command
-(`.claude/commands/sync.md`), which diffs their changes and delegates the
-relevant updates to the subagents above.
+- **Inside the pipeline** — `/implement` step 4 runs the relevant ones (and
+  `/ship` runs `/implement`). Syncing once per slice, rather than after every
+  `.java`/`.sql` write, is deliberate: each subagent starts from a cold context,
+  so re-running them mid-slice is the single biggest driver of usage.
+- **For code the user writes by hand** (in their IDE, outside Claude) — the
+  **`/sync`** slash command (`.claude/commands/sync.md`) diffs their changes and
+  delegates the relevant updates to the subagents above.
+
+Model choice per subagent is a cost lever: the mechanical ones (`spec-keeper`,
+`user-docs-writer`, `javadoc-writer`, `logging-instrumenter`) run on **haiku**;
+the ones that need judgment (`tdd-implementer`, `architecture-reviewer`,
+`finding-validator`, `acceptance-verifier`, `test-author`) stay on **sonnet**.
 
 ## When writing code
 

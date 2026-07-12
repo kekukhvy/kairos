@@ -2,9 +2,10 @@
 description: Sync spec/docs/tests with the user's own code changes by delegating to the subagents
 ---
 
-The user changed code themselves (in their IDE, outside Claude), so the
-`PostToolUse` hook never fired. Bring the project's specification, user docs,
-and tests back in sync with reality.
+The user changed code themselves (in their IDE, outside Claude), so no pipeline
+stage synced the artifacts. Bring the project's specification, user docs, and
+tests back in sync with reality. (After `/implement` this is unnecessary — its
+step 4 already ran these agents for the slice.)
 
 Steps:
 
@@ -27,8 +28,16 @@ Steps:
    - logging-instrumenter ✔ run — new application-layer code
    ```
 
-4. Decide which subagents are relevant to the actual changes (skip the ones
-   that don't apply):
+4. **If the change is small — do it yourself.** Rule of thumb: **≤ 3 files or
+   ≤ ~50 changed lines**. Write the Javadoc, logging, and tests directly in this
+   context, where the diff is already read. A subagent starts from a **cold
+   context** and re-reads the project from scratch, so several cold starts to
+   service a 20-line diff cost more than the work itself. Still show the plan
+   from step 3 — just mark the rows as "inline" rather than a subagent. Delegate
+   only when the change is big enough that the re-reading pays for itself.
+
+5. Otherwise decide which subagents are relevant to the actual changes (skip the
+   ones that don't apply):
    - **spec-keeper** — if the domain model, entities, schedule/execution
      semantics, API surface, DB schema, or architecture changed → updates `doc/`.
    - **user-docs-writer** — if endpoints, DTO/contract fields, or client-facing
@@ -41,9 +50,13 @@ Steps:
    - **logging-instrumenter** — if Java code outside `domain` was added or
      changed → adds/tunes SLF4J logging at the right levels (DEBUG/INFO/WARN/
      ERROR) for audit and analysis. Never touches `domain` (framework-free).
-5. Delegate to each relevant subagent via the Task tool, passing the changed
-   files and the diff as context. Run independent delegations in parallel.
-6. Summarize what each subagent updated (per the plan in step 3), and note
+6. Delegate to each relevant subagent via the Task tool. **Put the scope in the
+   prompt**: the concrete list of changed files and the diff (or the relevant
+   slice of it). A subagent inherits **none** of this conversation, so without it
+   it burns its first dozen tool calls rediscovering what you already know. It
+   still reads the code itself, so accuracy does not depend on your summary. Run
+   independent delegations in parallel.
+7. Summarize what each subagent updated (per the plan in step 3), and note
    anything skipped and why.
 
 This command **only writes/syncs artifacts** — it does not review code. For a
