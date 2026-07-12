@@ -38,4 +38,27 @@ public final class ViewActions {
             Notifications.error(failureMessage);
         }
     }
+
+    /**
+     * Like {@link #execute}, but runs {@code refresh} on both success and
+     * failure. Use this for an <em>optimistic</em> control (e.g. a grid toggle
+     * switch the client already flipped): a failed action must still re-render
+     * the row from server state, otherwise the control keeps showing the
+     * un-applied value.
+     *
+     * @param action         the API call to run
+     * @param successMessage notification shown when the action succeeds
+     * @param failureMessage notification shown, and logged, when it fails
+     * @param refresh        re-render side effect, run whether the action
+     *                       succeeded or failed
+     * @param logger         the calling view's logger, so failures log under its category
+     */
+    public static void executeAndRefresh(Runnable action, String successMessage, String failureMessage,
+                                         Runnable refresh, Logger logger) {
+        try {
+            execute(action, successMessage, failureMessage, () -> { }, logger);
+        } finally {
+            refresh.run();
+        }
+    }
 }
