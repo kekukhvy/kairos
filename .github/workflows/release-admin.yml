@@ -30,11 +30,13 @@ jobs:
         with:
           # Uses release-please-config.json + .release-please-manifest.json.
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Release from main. The repo's default branch is `develop`, so without
+          # this release-please would target develop instead of the release line.
+          target-branch: main
 
   build-image:
     needs: release-please
-    # Build the image only when a release was actually cut. Also gate on the
-    # admin/common paths so unrelated releases don't rebuild it needlessly.
+    # Build the image only when a release was actually cut for kairos-admin.
     if: ${{ needs.release-please.outputs.released == 'true' }}
     runs-on: ubuntu-latest
     env:
