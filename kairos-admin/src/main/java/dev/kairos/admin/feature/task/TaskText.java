@@ -13,6 +13,7 @@ public final class TaskText {
 
     public static final String TITLE = "Tasks";
     public static final String NEW_TASK = "New task";
+    public static final String GUIDED_SETUP = "Guided setup";
 
     public static final String COL_SERVICE = "Service";
     public static final String COL_NAME = "Name";

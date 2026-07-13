@@ -8,7 +8,8 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link FieldValidation#parseJson}.
+ * Unit tests for {@link FieldValidation#parseJson} and
+ * {@link FieldValidation#requireJson}.
  *
  * <p>{@link TextArea} can be constructed without a running VaadinSession (it
  * carries no server-side push or session state at construction time), so these
@@ -21,6 +22,7 @@ class FieldValidationTest {
     private static final String BLANK_VALUE = "   ";
     private static final String EMPTY_VALUE = "";
     private static final String ERROR_MESSAGE = "Invalid JSON";
+    private static final String REQUIRED_MESSAGE = "Required";
 
     private JsonMapper jsonMapper;
     private TextArea field;
@@ -137,5 +139,67 @@ class FieldValidationTest {
         FieldValidation.parseJson(field, jsonMapper, ERROR_MESSAGE);
 
         assertThat(field.getErrorMessage()).isEqualTo(ERROR_MESSAGE);
+    }
+
+    // --- requireJson: mandatory JSON, blank is rejected ---
+
+    @Test
+    void requireJson_blankField_returnsInvalidResult() {
+        field.setValue(BLANK_VALUE);
+
+        FieldValidation.JsonResult result =
+                FieldValidation.requireJson(field, jsonMapper, REQUIRED_MESSAGE, ERROR_MESSAGE);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.value()).isNull();
+    }
+
+    /**
+     * The bug this method exists to prevent: {@code require} marks the blank
+     * field invalid, and a following {@code parseJson} would clear that flag
+     * (blank parses as valid JSON), leaving the field silently error-free.
+     */
+    @Test
+    void requireJson_blankField_leavesFieldMarkedInvalidWithRequiredMessage() {
+        field.setValue(BLANK_VALUE);
+
+        FieldValidation.requireJson(field, jsonMapper, REQUIRED_MESSAGE, ERROR_MESSAGE);
+
+        assertThat(field.isInvalid()).isTrue();
+        assertThat(field.getErrorMessage()).isEqualTo(REQUIRED_MESSAGE);
+    }
+
+    @Test
+    void requireJson_emptyField_leavesFieldMarkedInvalid() {
+        field.setValue(EMPTY_VALUE);
+
+        FieldValidation.requireJson(field, jsonMapper, REQUIRED_MESSAGE, ERROR_MESSAGE);
+
+        assertThat(field.isInvalid()).isTrue();
+        assertThat(field.getErrorMessage()).isEqualTo(REQUIRED_MESSAGE);
+    }
+
+    @Test
+    void requireJson_malformedJson_marksFieldInvalidWithJsonMessage() {
+        field.setValue(INVALID_JSON);
+
+        FieldValidation.JsonResult result =
+                FieldValidation.requireJson(field, jsonMapper, REQUIRED_MESSAGE, ERROR_MESSAGE);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(field.isInvalid()).isTrue();
+        assertThat(field.getErrorMessage()).isEqualTo(ERROR_MESSAGE);
+    }
+
+    @Test
+    void requireJson_validJson_returnsParsedValueAndClearsError() {
+        field.setValue(VALID_JSON);
+
+        FieldValidation.JsonResult result =
+                FieldValidation.requireJson(field, jsonMapper, REQUIRED_MESSAGE, ERROR_MESSAGE);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.value()).isNotNull();
+        assertThat(field.isInvalid()).isFalse();
     }
 }
