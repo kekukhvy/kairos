@@ -1,5 +1,7 @@
 package dev.kairos.admin.feature.wizard.component;
 
+import com.vaadin.flow.component.button.Button;
+import dev.kairos.admin.feature.schedule.CronText;
 import dev.kairos.admin.feature.schedule.dto.ScheduleType;
 import dev.kairos.admin.feature.wizard.WizardDraft;
 import dev.kairos.common.dto.schedule.CreateScheduleRequest;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests {@code ScheduleStep}, which always creates a new schedule for the
  * task being set up (the wizard always creates a new task, so its schedule
  * is always newly created for that task — there is no "select existing"
- * mode). Mirrors {@code ScheduleForm}'s type-driven when-field validation.
+ * mode). Mirrors {@code ScheduleForm}: the same type-driven when-field
+ * validation and the same CRON row (field + visual builder).
  */
 class ScheduleStepTest {
 
@@ -71,5 +75,50 @@ class ScheduleStepTest {
         CreateScheduleRequest request = draft.scheduleRequestFactory().apply(RESOLVED_TASK_ID);
         assertThat(request.type()).isEqualTo("CRON");
         assertThat(request.cronExpression()).isEqualTo(CRON);
+    }
+
+    // --- cron builder: the wizard offers the same visual builder as ScheduleForm ---
+
+    /**
+     * Regression: the wizard used to place the bare cron text field, so picking
+     * CRON gave the operator no "Build cron" button — unlike {@code ScheduleForm}.
+     */
+    @Test
+    void cronType_cronRowExposesBuildButton() {
+        step.type().setValue(ScheduleType.CRON);
+
+        assertThat(buildButton()).isPresent();
+    }
+
+    @Test
+    void cronType_cronRowIsVisible() {
+        step.type().setValue(ScheduleType.CRON);
+
+        assertThat(step.cronRow().isVisible()).isTrue();
+    }
+
+    @Test
+    void nonCronType_cronRowIsHidden() {
+        step.type().setValue(ScheduleType.ONCE);
+        assertThat(step.cronRow().isVisible()).isFalse();
+
+        step.type().setValue(ScheduleType.FIXED);
+        assertThat(step.cronRow().isVisible()).isFalse();
+    }
+
+    /** The cron field the builder writes back into is the one the step reads on {@code readInto}. */
+    @Test
+    void cronRow_containsTheCronFieldTheStepReads() {
+        step.type().setValue(ScheduleType.CRON);
+
+        assertThat(step.cronRow().getChildren()).contains(step.cronExpression());
+    }
+
+    private Optional<Button> buildButton() {
+        return step.cronRow().getChildren()
+                .filter(Button.class::isInstance)
+                .map(Button.class::cast)
+                .filter(b -> CronText.BUILD_BUTTON.equals(b.getText()))
+                .findFirst();
     }
 }

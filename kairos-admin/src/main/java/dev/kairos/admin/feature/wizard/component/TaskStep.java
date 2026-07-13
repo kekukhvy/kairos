@@ -66,7 +66,11 @@ public class TaskStep extends VerticalLayout {
                 .applyTo(new Span(WizardText.HELP_TASK));
     }
 
-    /** Validates the required fields and the payload JSON, mirroring {@code TaskForm.validate()}. */
+    /**
+     * Validates the required fields and the payload JSON, mirroring
+     * {@code TaskForm.validate()}. The payload is optional: blank is accepted,
+     * only malformed JSON is rejected.
+     */
     public boolean validate() {
         boolean ok = FieldValidation.require(service, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(name, UiText.VALIDATION_REQUIRED);
@@ -78,7 +82,8 @@ public class TaskStep extends VerticalLayout {
 
     /**
      * Installs a request factory on {@code draft} that builds a
-     * {@link CreateTaskRequest} once the destination id is resolved.
+     * {@link CreateTaskRequest} once the destination id is resolved. Call only
+     * after {@link #validate()} has passed.
      */
     public void readInto(WizardDraft draft) {
         String serviceValue = Strings.trimToNull(service.getValue());

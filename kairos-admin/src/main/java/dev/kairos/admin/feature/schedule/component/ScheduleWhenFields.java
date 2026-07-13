@@ -1,9 +1,15 @@
 package dev.kairos.admin.feature.schedule.component;
 
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
+import dev.kairos.admin.feature.schedule.CronText;
 import dev.kairos.admin.feature.schedule.ScheduleText;
+import dev.kairos.admin.shared.style.Tokens;
+import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
 
@@ -23,6 +29,34 @@ import java.time.ZoneOffset;
 public final class ScheduleWhenFields {
 
     private ScheduleWhenFields() {
+    }
+
+    /**
+     * Builds the CRON row: {@code cronExpression} paired with a "Build cron"
+     * button that opens the visual {@link CronBuilderDialog} and writes the
+     * generated expression back into the field.
+     *
+     * <p>Shared by {@link ScheduleForm} and the wizard's {@code ScheduleStep} so
+     * both offer the builder — callers toggle the returned row's visibility
+     * instead of the bare field.
+     *
+     * @param cronExpression the field the builder reads its initial value from and writes back to
+     * @return the row to place in the form, containing {@code cronExpression}
+     */
+    public static HorizontalLayout cronRow(TextField cronExpression) {
+        Button build = Buttons.primary(CronText.BUILD_BUTTON,
+                e -> CronBuilderDialog.open(cronExpression.getValue(), cronExpression::setValue).open());
+        build.setIcon(VaadinIcon.MAGIC.create());
+        build.setTooltipText(CronText.BUILD_TOOLTIP);
+        build.setMinWidth(Tokens.BUTTON_MIN_WIDTH);
+
+        cronExpression.setWidthFull();
+        HorizontalLayout row = new HorizontalLayout(cronExpression, build);
+        row.setAlignItems(HorizontalLayout.Alignment.END); // button bottom-aligns with the field box
+        row.setWidthFull();
+        row.setFlexGrow(1, cronExpression); // field fills the row
+        row.setFlexShrink(0, build);        // button keeps its full label, no clipping
+        return row;
     }
 
     /**

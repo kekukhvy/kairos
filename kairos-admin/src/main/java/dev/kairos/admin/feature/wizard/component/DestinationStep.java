@@ -111,9 +111,8 @@ public class DestinationStep extends VerticalLayout {
     private boolean validateNew() {
         boolean ok = FieldValidation.require(newDestinationId, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.requirePresent(newDestinationType, newDestinationType, UiText.VALIDATION_REQUIRED);
-        ok &= FieldValidation.require(newDestinationConfig, UiText.VALIDATION_REQUIRED);
-        FieldValidation.JsonResult result =
-                FieldValidation.parseJson(newDestinationConfig, jsonMapper, UiText.VALIDATION_INVALID_JSON);
+        FieldValidation.JsonResult result = FieldValidation.requireJson(
+                newDestinationConfig, jsonMapper, UiText.VALIDATION_REQUIRED, UiText.VALIDATION_INVALID_JSON);
         return ok & result.valid();
     }
 

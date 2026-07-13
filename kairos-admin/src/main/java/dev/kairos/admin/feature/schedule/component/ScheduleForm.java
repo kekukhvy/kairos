@@ -5,12 +5,10 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
-import dev.kairos.admin.feature.schedule.CronText;
 import dev.kairos.admin.feature.schedule.ScheduleText;
 import dev.kairos.common.dto.schedule.CreateScheduleRequest;
 import dev.kairos.common.dto.schedule.ScheduleResponse;
@@ -36,8 +34,9 @@ import java.util.function.Consumer;
  * Create/edit dialog for a schedule. In create mode a {@link ComboBox} selects
  * the owning task (schedules are task-scoped); on edit the task is fixed and the
  * picker is hidden. A {@link Select} of {@link ScheduleType} drives which "when"
- * field is visible: {@code ONCE} → {@link DateTimePicker}, {@code CRON} → cron
- * text field, {@code FIXED} → interval field. On edit the type is locked
+ * field is visible: {@code ONCE} → {@link DateTimePicker}, {@code CRON} → the
+ * cron row from {@link ScheduleWhenFields#cronRow} (field + visual builder),
+ * {@code FIXED} → interval field. On edit the type is locked
  * (changing type means delete + recreate) and the form is prefilled. The API
  * remains the source of truth; client-side checks only improve UX.
  */
@@ -52,7 +51,7 @@ public class ScheduleForm extends Dialog {
     private final TextField label = Fields.text(ScheduleText.COL_LABEL);
     private final DateTimePicker runAt = new DateTimePicker(ScheduleText.FIELD_RUN_AT);
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
-    private final HorizontalLayout cronRow = buildCronRow();
+    private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
     private final TextField timezone = Fields.text(ScheduleText.COL_TIMEZONE);
 
@@ -121,29 +120,6 @@ public class ScheduleForm extends Dialog {
         layout.setColspan(runAt, Tokens.FORM_COLSPAN_FULL);
         layout.setColspan(cronRow, Tokens.FORM_COLSPAN_FULL);
         return layout;
-    }
-
-    /**
-     * The CRON text field paired with a "Build…" button that opens the visual
-     * {@link CronBuilderDialog}. The button follows the same visibility rule as
-     * the field via {@link #showFieldsForType}.
-     */
-    private HorizontalLayout buildCronRow() {
-        Button build = Buttons.primary(CronText.BUILD_BUTTON, e -> openCronBuilder());
-        build.setIcon(VaadinIcon.MAGIC.create());
-        build.setTooltipText(CronText.BUILD_TOOLTIP);
-        build.setMinWidth(Tokens.BUTTON_MIN_WIDTH);
-        cronExpression.setWidthFull();
-        HorizontalLayout row = new HorizontalLayout(cronExpression, build);
-        row.setAlignItems(HorizontalLayout.Alignment.END); // button bottom-aligns with the field box
-        row.setWidthFull();
-        row.setFlexGrow(1, cronExpression); // field fills the row
-        row.setFlexShrink(0, build);        // button keeps its full label, no clipping
-        return row;
-    }
-
-    private void openCronBuilder() {
-        CronBuilderDialog.open(cronExpression.getValue(), cronExpression::setValue).open();
     }
 
     private void showFieldsForType(ScheduleType selected) {

@@ -3,6 +3,7 @@ package dev.kairos.admin.feature.wizard.component;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.IntegerField;
@@ -26,7 +27,9 @@ import java.time.Instant;
  * Step 3 body: always creates a new schedule for the task being set up — the
  * wizard creates a new task, so its schedule must be newly created for that
  * task too; there is no "select an existing schedule" mode. Mirrors
- * {@code ScheduleForm}'s type-driven when-field validation.
+ * {@code ScheduleForm}: the same type-driven when-field validation and the
+ * same CRON row (field + visual {@link CronBuilderDialog}), both taken from
+ * {@link ScheduleWhenFields} so the two stay in step.
  */
 public class ScheduleStep extends VerticalLayout {
 
@@ -34,6 +37,7 @@ public class ScheduleStep extends VerticalLayout {
     private final TextField label = Fields.text(ScheduleText.COL_LABEL);
     private final DateTimePicker runAt = new DateTimePicker(ScheduleText.FIELD_RUN_AT);
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
+    private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
     private final TextField timezone = Fields.text(ScheduleText.COL_TIMEZONE);
     private final FormLayout createForm;
@@ -52,9 +56,10 @@ public class ScheduleStep extends VerticalLayout {
     }
 
     private FormLayout buildCreateForm() {
-        FormLayout layout = new FormLayout(type, label, runAt, cronExpression, intervalSeconds, timezone);
+        FormLayout layout = new FormLayout(type, label, runAt, cronRow, intervalSeconds, timezone);
         layout.setResponsiveSteps(new FormLayout.ResponsiveStep(Tokens.FORM_BREAKPOINT_ZERO, Tokens.FORM_COLUMNS));
         layout.setColspan(runAt, Tokens.FORM_COLSPAN_FULL);
+        layout.setColspan(cronRow, Tokens.FORM_COLSPAN_FULL);
         return layout;
     }
 
@@ -67,7 +72,7 @@ public class ScheduleStep extends VerticalLayout {
 
     private void showFieldsForType(ScheduleType selected) {
         runAt.setVisible(selected == ScheduleType.ONCE);
-        cronExpression.setVisible(selected == ScheduleType.CRON);
+        cronRow.setVisible(selected == ScheduleType.CRON);
         intervalSeconds.setVisible(selected == ScheduleType.FIXED);
         timezone.setVisible(selected != ScheduleType.FIXED);
     }
@@ -104,5 +109,9 @@ public class ScheduleStep extends VerticalLayout {
 
     TextField cronExpression() {
         return cronExpression;
+    }
+
+    HorizontalLayout cronRow() {
+        return cronRow;
     }
 }

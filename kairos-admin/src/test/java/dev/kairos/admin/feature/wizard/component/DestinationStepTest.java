@@ -4,6 +4,7 @@ import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.wizard.WizardDraft;
 import dev.kairos.admin.feature.wizard.WizardMode;
+import dev.kairos.admin.shared.ui.UiText;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
@@ -103,6 +104,43 @@ class DestinationStepTest {
         step.existingDestination().setValue(existingDto());
 
         assertThat(step.validate()).isTrue();
+    }
+
+    /**
+     * Regression: a blank config used to be marked "Required" and then
+     * immediately cleared by the JSON parse (blank parses as valid), so Next
+     * refused to advance while the field showed no error at all.
+     */
+    @Test
+    void createNewMode_blankConfig_marksConfigFieldInvalid() {
+        step.createNew();
+        step.newDestinationId().setValue(NEW_ID);
+        step.newDestinationType().setValue(NEW_TYPE);
+
+        assertThat(step.validate()).isFalse();
+        assertThat(step.newDestinationConfig().isInvalid()).isTrue();
+        assertThat(step.newDestinationConfig().getErrorMessage()).isEqualTo(UiText.VALIDATION_REQUIRED);
+    }
+
+    @Test
+    void createNewMode_malformedConfig_marksConfigFieldInvalid() {
+        step.createNew();
+        step.newDestinationId().setValue(NEW_ID);
+        step.newDestinationType().setValue(NEW_TYPE);
+        step.newDestinationConfig().setValue("{not json");
+
+        assertThat(step.validate()).isFalse();
+        assertThat(step.newDestinationConfig().isInvalid()).isTrue();
+        assertThat(step.newDestinationConfig().getErrorMessage()).isEqualTo(UiText.VALIDATION_INVALID_JSON);
+    }
+
+    @Test
+    void createNewMode_validConfig_clearsConfigFieldError() {
+        step.createNew();
+        fillNewDestinationFields();
+
+        assertThat(step.validate()).isTrue();
+        assertThat(step.newDestinationConfig().isInvalid()).isFalse();
     }
 
     private DestinationDTO existingDto() {

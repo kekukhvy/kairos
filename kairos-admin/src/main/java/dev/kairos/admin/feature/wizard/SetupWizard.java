@@ -99,6 +99,7 @@ public class SetupWizard extends Dialog {
 
     private void goNext() {
         if (!validateCurrentStep()) {
+            Notifications.error(WizardText.NOTIFY_INVALID_STEP);
             return;
         }
         readCurrentStepInto(draft);

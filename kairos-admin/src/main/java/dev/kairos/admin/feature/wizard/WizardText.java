@@ -45,4 +45,5 @@ public final class WizardText {
     public static final String NOTIFY_SUCCESS = "Task set up successfully";
     public static final String NOTIFY_FAILED = "Setup failed";
     public static final String NOTIFY_OPEN_FAILED = "Couldn't open guided setup";
+    public static final String NOTIFY_INVALID_STEP = "Fix the highlighted fields to continue";
 }
