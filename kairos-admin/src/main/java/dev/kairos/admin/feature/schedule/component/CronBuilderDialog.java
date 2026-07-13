@@ -25,8 +25,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Visual builder for a 6-field Spring cron expression. Opened from
- * {@link ScheduleForm}'s CRON field, it offers a Quick Start preset picker, six
+ * Visual builder for a 6-field Spring cron expression. Opened from the cron row
+ * built by {@link ScheduleWhenFields#cronRow} — used by both {@link ScheduleForm}
+ * and the wizard's schedule step — it offers a Quick Start preset picker, six
  * per-part {@link ComboBox}es (custom values allowed), a live generated
  * expression with copy, a human-readable description, a next-executions preview,
  * inline validation and advisory warnings. It holds no cron logic — all parsing,

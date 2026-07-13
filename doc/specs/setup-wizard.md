@@ -23,8 +23,9 @@ admin console.
 - A **`SetupWizard`** modal `Dialog` (large) with three ordered steps:
   1. **Task** — collect the new task's fields (always "create").
   2. **Destination** — **select an existing** destination **or create a new** one.
-  3. **Schedule** — **select an existing** schedule's shape **or create a new** one
-     for the task.
+  3. **Schedule** — **create a new** schedule for the task (type-driven
+     when-fields; always "create", no select-existing mode — see rationale
+     below).
 - A **top stepper**: the three steps shown as labelled tabs with a progress
   indicator (a coloured/"blue" line marking the current step). Steps are
   **display-only — not clickable**; upcoming steps are greyed to preview what's
@@ -39,12 +40,13 @@ admin console.
   1. If the Destination step chose "create new", POST it and capture its id;
      otherwise use the selected existing destination id.
   2. POST the Task with that destination id; capture the created task id.
-  3. If the Schedule step chose "create new", POST it under the task id;
-     otherwise (existing-schedule selection) skip creation.
+  3. POST the Schedule under the task id (always — the Schedule step has no
+     select-existing mode).
 - **Partial-failure handling:** if a later POST fails, **stop, surface the error,
   keep the wizard open, and keep whatever was already created** (a created
-  destination is valid on its own). The wizard **remembers already-created ids**
-  in its state so a repeated **Finish** **re-runs only the failed/remaining
+  destination is valid on its own). The wizard **remembers already-created
+  ids/flags** in its state — including whether the schedule POST already
+  succeeded — so a repeated **Finish** **re-runs only the failed/remaining
   steps** and does not duplicate what already succeeded.
 - **Launch points:** the Dashboard "Create Task" CTA opens the wizard; the Tasks
   screen gains a "Guided setup" affordance next to its existing "New task" button.
@@ -62,8 +64,12 @@ admin console.
   and the existing list calls; **no new endpoint, no transactional multi-create
   API**. (A server-side "create task + destination + schedule atomically"
   endpoint is explicitly deferred — noted below.)
-- Editing existing entities through the wizard (it creates a new task; existing
-  destination/schedule are **selected**, not edited).
+- Editing existing entities through the wizard (it creates a new task; an
+  existing destination may be **selected**, not edited; the schedule is
+  always newly created for the task, never selected).
+- Per-task schedule listing on wizard open (see the Schedule-step rationale
+  below — the "select existing schedule" mode, and the `scheduleService
+  .listForTasks` fan-out it required, was removed).
 - A full-page wizard route — the wizard is a modal `Dialog` over the current view.
 - Clickable/jumpable stepper tabs, saving a draft, resuming a partially-filled
   wizard across sessions.
@@ -83,9 +89,31 @@ feature/wizard/
     WizardStepper.java            # top progress stepper (display-only, non-clickable, current-step highlight)
     TaskStep.java                 # step 1 body: task fields + validation (extracted from TaskForm's field/validation logic)
     DestinationStep.java          # step 2 body: select-existing / create-new toggle + fields + validation
-    ScheduleStep.java             # step 3 body: select-existing / create-new toggle + fields + validation
-  WizardDraft.java (or record)    # collected values across steps + captured created ids (for idempotent retry)
+    ScheduleStep.java             # step 3 body: always-create fields + validation (no select-existing mode)
+  WizardDraft.java (or record)    # collected values across steps + captured created ids/flags (for idempotent retry)
 ```
+
+The Schedule step's "when"-field validation/parsing (`validateRunAt`,
+`validateInterval`, `runAtInstant`, `selectedZone`) is factored into a shared
+`dev.kairos.admin.feature.schedule.component.ScheduleWhenFields` helper, used
+by both the standalone `ScheduleForm` and `ScheduleStep`, so the two don't
+duplicate the run-at-future/timezone-fallback rules.
+
+**Why the Schedule step is create-only (design change vs. the original spec):**
+the wizard always creates a **new** `Task`, and `Schedule` is its own
+aggregate that references a task **by id** (`.claude/CLAUDE.md` — a schedule
+is never loaded/reused through a task); so a schedule for this new task must
+always be newly created, there is nothing existing to attach it to. The
+original "select an existing schedule's shape" mode never actually created or
+copied anything — it was a pure skip marker — and to populate its picker the
+wizard had to call `scheduleService.listForTasks(...)`, which loops one
+paged request **per existing task** on every wizard open (an N+1 fan-out
+flagged in review). Since the mode did nothing useful and cost a real N+1
+round-trip, it was dropped: the Schedule step now always shows the
+create-new fields, and `SetupWizard` no longer lists tasks or schedules on
+open at all. The Destination step is unaffected — a `Destination` **is** a
+genuinely reusable aggregate (many tasks can target one), so its
+select-existing-or-create toggle stays.
 
 - **`SetupWizard`** — a `Dialog` (`Tokens.DIALOG_WIDTH_L`) holding the
   `WizardStepper`, a swappable step body, and the Back/Next/Cancel footer. It owns
@@ -102,9 +130,11 @@ feature/wizard/
   field/validation logic is factored so the existing dialog forms and the wizard
   steps don't duplicate it; but the existing save-and-close dialogs stay as they
   are for the standalone screens.
-  - `DestinationStep` / `ScheduleStep` carry a **toggle** (e.g. `RadioButtonGroup`)
-    between "Use existing" (a `ComboBox` of loaded items) and "Create new" (the
-    inline fields). Only the active mode is validated.
+  - `DestinationStep` carries a **toggle** (e.g. `RadioButtonGroup`) between
+    "Use existing" (a `ComboBox` of loaded items) and "Create new" (the inline
+    fields); only the active mode is validated. `ScheduleStep` has **no such
+    toggle** — it always shows the create-new (type-driven when-) fields; see
+    "Why the Schedule step is create-only" below for the rationale.
 - **`WizardStepper`** — renders the three step labels with the current one
   highlighted and a progress line; strictly presentational, driven by the current
   index. Styling via `StyleConfig` + `Tokens` (the "blue" line is
@@ -120,15 +150,21 @@ onFinish():
       draft.destinationId = destinationService.create(...).id()   // capture, store in draft
   if draft.taskId == null:
       draft.taskId = taskService.create(withDestination(draft.destinationId)).id()
-  if step3 == CREATE:
-      scheduleService.create(draft.taskId, ...)                   // schedule create is not "captured" (terminal)
+  if !draft.scheduleCreated:
+      scheduleService.create(draft.taskId, ...)
+      draft.scheduleCreated = true                                // guard, mirrors destination/task id capture
   notify success; refresh; close
 ```
 
 Each `draft.*Id` is written **only after** its POST succeeds, so a failure leaves
 earlier ids populated; the guards (`== null`) mean a repeated Finish skips what
-already succeeded and retries only the failed/remaining call. A failure surfaces
-via `Notifications.error` and leaves the wizard open. This mirrors the
+already succeeded and retries only the failed/remaining call. The schedule step
+is guarded the same way, via a `draft.scheduleCreated` flag rather than a
+captured id (the schedule create response isn't otherwise needed by a later
+step) — set only after the schedule POST succeeds, so a retry after a
+transient failure (e.g. the POST succeeded server-side but the response was
+lost) does not double-create the schedule. A failure surfaces via
+`Notifications.error` and leaves the wizard open. This mirrors the
 "stop, show error, keep created" decision from discussion.
 
 **Dependency-order note:** although the *step order shown to the user* is
@@ -161,14 +197,16 @@ commit-at-end (not commit-per-step) is required.
       persisted.
 - [ ] Back/Next navigation persists nothing to the API; a step must pass its
       validation before **Next** advances; **Back** never validates.
-- [ ] The Destination and Schedule steps each let the operator **select an
-      existing** item **or create a new** one; only the active mode is validated.
+- [ ] The **Destination** step lets the operator **select an existing**
+      destination **or create a new** one (only the active mode is validated);
+      the **Schedule** step always **creates a new** schedule for the task
+      (no select-existing mode).
 - [ ] **Finish** commits in dependency order (destination → task → schedule),
       substituting the created/selected destination id into the task and the
       created task id into the schedule.
 - [ ] If a commit step fails, the wizard **stays open, shows the error, keeps what
       was already created**, and a repeated **Finish** does not duplicate the
-      already-created destination/task.
+      already-created destination/task **or schedule**.
 - [ ] On success the wizard notifies, closes, and the originating view refreshes.
 - [ ] No literals in components (all copy via `WizardText`); styling via
       `StyleConfig` + `Tokens` only; no Lombok; methods ≤ 40 lines; changes
@@ -190,8 +228,10 @@ commit-at-end (not commit-per-step) is required.
   in one call" endpoint (would remove the partial-failure window, but is an
   `kairos-api` concern and a separate spec). A full-page wizard route; draft
   save/resume; editing via the wizard.
-- Task step is always "create" (this is a *new-task* wizard); existing
-  destination/schedule are selected, not edited.
+- Task step is always "create" (this is a *new-task* wizard); an existing
+  destination may be selected, not edited. The Schedule step is always
+  "create" too — it has no select-existing mode (see the Design section's
+  "Why the Schedule step is create-only" for the rationale).
 
 ## Issue metadata (suggested)
 

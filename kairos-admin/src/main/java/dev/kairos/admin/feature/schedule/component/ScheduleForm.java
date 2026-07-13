@@ -5,12 +5,10 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
-import dev.kairos.admin.feature.schedule.CronText;
 import dev.kairos.admin.feature.schedule.ScheduleText;
 import dev.kairos.common.dto.schedule.CreateScheduleRequest;
 import dev.kairos.common.dto.schedule.ScheduleResponse;
@@ -24,11 +22,9 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
 
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -38,8 +34,9 @@ import java.util.function.Consumer;
  * Create/edit dialog for a schedule. In create mode a {@link ComboBox} selects
  * the owning task (schedules are task-scoped); on edit the task is fixed and the
  * picker is hidden. A {@link Select} of {@link ScheduleType} drives which "when"
- * field is visible: {@code ONCE} → {@link DateTimePicker}, {@code CRON} → cron
- * text field, {@code FIXED} → interval field. On edit the type is locked
+ * field is visible: {@code ONCE} → {@link DateTimePicker}, {@code CRON} → the
+ * cron row from {@link ScheduleWhenFields#cronRow} (field + visual builder),
+ * {@code FIXED} → interval field. On edit the type is locked
  * (changing type means delete + recreate) and the form is prefilled. The API
  * remains the source of truth; client-side checks only improve UX.
  */
@@ -54,7 +51,7 @@ public class ScheduleForm extends Dialog {
     private final TextField label = Fields.text(ScheduleText.COL_LABEL);
     private final DateTimePicker runAt = new DateTimePicker(ScheduleText.FIELD_RUN_AT);
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
-    private final HorizontalLayout cronRow = buildCronRow();
+    private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
     private final TextField timezone = Fields.text(ScheduleText.COL_TIMEZONE);
 
@@ -125,29 +122,6 @@ public class ScheduleForm extends Dialog {
         return layout;
     }
 
-    /**
-     * The CRON text field paired with a "Build…" button that opens the visual
-     * {@link CronBuilderDialog}. The button follows the same visibility rule as
-     * the field via {@link #showFieldsForType}.
-     */
-    private HorizontalLayout buildCronRow() {
-        Button build = Buttons.primary(CronText.BUILD_BUTTON, e -> openCronBuilder());
-        build.setIcon(VaadinIcon.MAGIC.create());
-        build.setTooltipText(CronText.BUILD_TOOLTIP);
-        build.setMinWidth(Tokens.BUTTON_MIN_WIDTH);
-        cronExpression.setWidthFull();
-        HorizontalLayout row = new HorizontalLayout(cronExpression, build);
-        row.setAlignItems(HorizontalLayout.Alignment.END); // button bottom-aligns with the field box
-        row.setWidthFull();
-        row.setFlexGrow(1, cronExpression); // field fills the row
-        row.setFlexShrink(0, build);        // button keeps its full label, no clipping
-        return row;
-    }
-
-    private void openCronBuilder() {
-        CronBuilderDialog.open(cronExpression.getValue(), cronExpression::setValue).open();
-    }
-
     private void showFieldsForType(ScheduleType selected) {
         runAt.setVisible(selected == ScheduleType.ONCE);
         cronRow.setVisible(selected == ScheduleType.CRON);
@@ -190,9 +164,9 @@ public class ScheduleForm extends Dialog {
 
     private boolean validate() {
         boolean whenValid = switch (type.getValue()) {
-            case ONCE -> validateRunAt();
+            case ONCE -> ScheduleWhenFields.validateRunAt(runAt, timezone);
             case CRON -> FieldValidation.require(cronExpression, UiText.VALIDATION_REQUIRED);
-            case FIXED -> validateInterval();
+            case FIXED -> ScheduleWhenFields.validateInterval(intervalSeconds);
         };
         return validateTask() & whenValid;
     }
@@ -207,49 +181,12 @@ public class ScheduleForm extends Dialog {
         return selected;
     }
 
-    private boolean validateRunAt() {
-        if (runAt.isEmpty()) {
-            runAt.setErrorMessage(UiText.VALIDATION_REQUIRED);
-            runAt.setInvalid(true);
-            return false;
-        }
-        Instant value = runAtInstant();
-        boolean future = value != null && value.isAfter(Instant.now());
-        runAt.setErrorMessage(ScheduleText.VALIDATION_RUN_AT_FUTURE);
-        runAt.setInvalid(!future);
-        return future;
-    }
-
-    private boolean validateInterval() {
-        Integer value = intervalSeconds.getValue();
-        boolean valid = value != null
-                && value >= ScheduleText.INTERVAL_MIN
-                && value <= ScheduleText.INTERVAL_MAX;
-        intervalSeconds.setErrorMessage(ScheduleText.VALIDATION_INTERVAL_RANGE);
-        intervalSeconds.setInvalid(!valid);
-        return valid;
-    }
-
     private Instant runAtInstant() {
-        LocalDateTime value = runAt.getValue();
-        return value == null ? null : value.atZone(selectedZone()).toInstant();
+        return ScheduleWhenFields.runAtInstant(runAt, timezone);
     }
 
-    /**
-     * Resolves the timezone the user entered, so the ONCE wall-clock picker is
-     * interpreted in that zone rather than the admin JVM's system zone. Falls
-     * back to UTC when the field is blank or not a valid {@link ZoneId}.
-     */
     private ZoneId selectedZone() {
-        String zone = Strings.trimToNull(timezone.getValue());
-        if (zone == null) {
-            return ZoneOffset.UTC;
-        }
-        try {
-            return ZoneId.of(zone);
-        } catch (DateTimeException ex) {
-            return ZoneOffset.UTC;
-        }
+        return ScheduleWhenFields.selectedZone(timezone);
     }
 
     private void prefill(ScheduleResponse schedule) {

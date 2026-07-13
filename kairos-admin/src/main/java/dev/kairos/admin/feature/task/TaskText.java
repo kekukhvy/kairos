@@ -13,6 +13,7 @@ public final class TaskText {
 
     public static final String TITLE = "Tasks";
     public static final String NEW_TASK = "New task";
+    public static final String GUIDED_SETUP = "Guided setup";
 
     public static final String COL_SERVICE = "Service";
     public static final String COL_NAME = "Name";
@@ -28,13 +29,14 @@ public final class TaskText {
     public static final String NOTIFY_CREATED = "Task created";
     public static final String NOTIFY_CREATE_FAILED = "Failed to create task";
 
-    public static final String COL_ACTIONS = "Actions";
-
-    public static final String ACTION_VIEW = "View details";
     public static final String ACTION_EDIT = "Edit";
     public static final String ACTION_START = "Start";
     public static final String ACTION_STOP = "Stop";
 
+    public static final String CONFIRM_ENABLE_TITLE = "Enable task";
+    public static final String CONFIRM_ENABLE_TEXT = "Do you want to enable this task?";
+    public static final String CONFIRM_DISABLE_TITLE = "Disable task";
+    public static final String CONFIRM_DISABLE_TEXT = "Do you want to disable this task?";
 
     public static final String NOTIFY_STARTED = "Task started";
     public static final String NOTIFY_STOPPED = "Task stopped";

@@ -161,3 +161,46 @@ vaadin-grid {
 .kairos-filter-bar vaadin-combo-box {
   --lumo-text-field-size: var(--lumo-size-s);
 }
+
+/*
+ * Apple-style toggle switch: a vaadin-checkbox re-skinned as a pill-shaped
+ * switch (Vaadin ships no native switch component). The native checkbox
+ * icon is hidden and the label element is repurposed as the switch track,
+ * with a circular thumb that slides via the checked/focus-ring parts.
+ */
+.kairos-toggle-switch {
+  --kairos-switch-width: 2.5rem;
+  --kairos-switch-height: 1.5rem;
+  --kairos-switch-thumb-size: calc(var(--kairos-switch-height) - 4px);
+  cursor: pointer;
+}
+
+.kairos-toggle-switch::part(checkbox) {
+  width: var(--kairos-switch-width);
+  height: var(--kairos-switch-height);
+  border-radius: var(--kairos-switch-height);
+  background-color: var(--lumo-contrast-10pct);
+  transition: background-color var(--kairos-transition);
+  position: relative;
+}
+
+.kairos-toggle-switch::part(checkbox)::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: var(--kairos-switch-thumb-size);
+  height: var(--kairos-switch-thumb-size);
+  border-radius: 50%;
+  background-color: var(--lumo-base-color);
+  box-shadow: var(--lumo-box-shadow-xs);
+  transition: transform var(--kairos-transition);
+}
+
+.kairos-toggle-switch[checked]::part(checkbox) {
+  background-color: var(--lumo-success-color);
+}
+
+.kairos-toggle-switch[checked]::part(checkbox)::after {
+  transform: translateX(calc(var(--kairos-switch-width) - var(--kairos-switch-thumb-size) - 4px));
+}

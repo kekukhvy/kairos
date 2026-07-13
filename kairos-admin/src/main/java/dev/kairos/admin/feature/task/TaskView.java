@@ -15,12 +15,15 @@ import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.component.DestinationDetails;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
+import dev.kairos.admin.feature.schedule.ScheduleService;
 import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
+import dev.kairos.admin.feature.wizard.SetupWizard;
+import dev.kairos.admin.feature.wizard.WizardText;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
@@ -54,6 +57,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
     private final JsonMapper jsonMapper;
     private final TaskService taskService;
     private final DestinationService destinationService;
+    private final ScheduleService scheduleService;
     private final TaskGrid grid = new TaskGrid();
     private final Select<String> statusFilter;
     private final ComboBox<String> destinationFilter;
@@ -66,11 +70,14 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
      * @param jsonMapper           used by detail and form dialogs for JSON pretty-printing
      * @param taskService          data access for task CRUD and lifecycle operations
      * @param destinationService   data access used to populate the destination filter and inline dialogs
+     * @param scheduleService      data access the guided setup wizard lists/commits schedules through
      */
-    public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService) {
+    public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService,
+                    ScheduleService scheduleService) {
         this.jsonMapper = jsonMapper;
         this.taskService = taskService;
         this.destinationService = destinationService;
+        this.scheduleService = scheduleService;
         this.statusFilter = buildStatusFilter();
         this.destinationFilter = buildDestinationFilter();
         this.filterBar = buildFilterBar();
@@ -88,9 +95,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         add(buildToolbar(), filterBar, grid);
 
         grid.setOnToggleActive(this::toggleActive);
-        grid.setOnDelete(this::confirmDelete);
         grid.setOnView(this::viewTask);
-        grid.setOnEdit(this::editTask);
         grid.setOnOpenDestination(this::openDestination);
         refresh();
     }
@@ -199,16 +204,29 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         H2 title = createTitle();
 
         Button newTask = Buttons.primary(TaskText.NEW_TASK, e -> openForm());
+        Button guidedSetup = Buttons.secondary(TaskText.GUIDED_SETUP, e -> openWizard());
 
-        HorizontalLayout toolbar = new HorizontalLayout(title, newTask);
+        HorizontalLayout actions = new HorizontalLayout(newTask, guidedSetup);
+        actions.setAlignItems(HorizontalLayout.Alignment.CENTER);
+
+        HorizontalLayout toolbar = new HorizontalLayout(title, actions);
         toolbar.setWidthFull();
         toolbar.setAlignItems(HorizontalLayout.Alignment.CENTER);
         toolbar.setJustifyContentMode(HorizontalLayout.JustifyContentMode.BETWEEN);
         return toolbar;
     }
 
+    private void openWizard() {
+        try {
+            new SetupWizard(jsonMapper, taskService, destinationService, scheduleService, this::refresh).open();
+        } catch (RuntimeException ex) {
+            logger.error("Failed to open setup wizard", ex);
+            Notifications.error(WizardText.NOTIFY_OPEN_FAILED);
+        }
+    }
+
     private void viewTask(TaskDto task) {
-        new TaskDetails(jsonMapper, task).open();
+        TaskDetails.of(jsonMapper, task, this::editTask, this::confirmDelete).open();
     }
 
     private H2 createTitle() {
@@ -253,15 +271,24 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
 
     private void toggleActive(TaskDto task) {
         if (task.active()) {
-            execute(() -> taskService.stop(task.id()), TaskText.NOTIFY_STOPPED, TaskText.NOTIFY_UPDATE_FAILED);
+            toggle(() -> taskService.stop(task.id()), TaskText.NOTIFY_STOPPED, TaskText.NOTIFY_UPDATE_FAILED);
         } else {
-            execute(() -> taskService.start(task.id()), TaskText.NOTIFY_STARTED, TaskText.NOTIFY_UPDATE_FAILED);
+            toggle(() -> taskService.start(task.id()), TaskText.NOTIFY_STARTED, TaskText.NOTIFY_UPDATE_FAILED);
         }
     }
 
 
     private void execute(Runnable action, String successMessage, String failureMessage) {
         ViewActions.execute(action, successMessage, failureMessage, this::refresh, logger);
+    }
+
+    /**
+     * Runs an optimistic Active-switch toggle: refreshes the grid whether the
+     * start/stop call succeeds or fails, so a failed toggle re-renders the row
+     * from server state instead of leaving the switch flipped.
+     */
+    private void toggle(Runnable action, String successMessage, String failureMessage) {
+        ViewActions.executeAndRefresh(action, successMessage, failureMessage, this::refresh, logger);
     }
 
 }

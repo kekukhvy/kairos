@@ -2,7 +2,7 @@
 name: user-docs-writer
 description: Writes and maintains end-user / API consumer documentation for Kairos — how client services use it. Endpoints, request/response fields, field meanings and constraints, examples, error codes, SDK usage. Use when an API endpoint, DTO/contract, or client-facing behavior is added or changed, or when the user asks for usage/API docs. Distinct from spec-keeper (which documents the *why/design*); this agent documents *how to use it*.
 tools: Read, Edit, Write, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # Role

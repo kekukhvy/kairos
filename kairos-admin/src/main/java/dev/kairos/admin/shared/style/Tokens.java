@@ -123,4 +123,14 @@ public final class Tokens {
 
     /** Pointer cursor for interactive (clickable) surfaces. */
     public static final String CURSOR_POINTER = "pointer";
+
+    /** CSS class applied to a {@code Checkbox} rendered as an Apple-style toggle switch. */
+    public static final String TOGGLE_SWITCH_CLASS = "kairos-toggle-switch";
+
+    // --- wizard stepper ---
+    /** Height of the stepper's progress line (current-step indicator and track). */
+    public static final String STEPPER_LINE_HEIGHT = "3px";
+
+    /** CSS {@code default} cursor, used on the non-clickable stepper tabs. */
+    public static final String CURSOR_DEFAULT = "default";
 }

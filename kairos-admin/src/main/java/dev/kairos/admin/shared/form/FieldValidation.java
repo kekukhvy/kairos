@@ -56,6 +56,30 @@ public final class FieldValidation {
     }
 
     /**
+     * Parses a text area whose content is <em>mandatory</em> JSON: a blank field
+     * is rejected with {@code requiredMessage}, malformed JSON with
+     * {@code invalidMessage}.
+     *
+     * <p>Prefer this over combining {@link #require} with {@link #parseJson} on
+     * the same field — {@code parseJson} treats a blank field as valid and would
+     * clear the "required" error, leaving the field silently blocked with no
+     * message shown.
+     *
+     * @param field           the text area whose value is parsed
+     * @param mapper          Jackson mapper used to deserialise the raw JSON string
+     * @param requiredMessage error message set on the field when it is blank
+     * @param invalidMessage  error message set on the field when the JSON is malformed
+     * @return a {@link JsonResult} that is invalid when the field is blank or malformed
+     */
+    public static JsonResult requireJson(
+            TextArea field, JsonMapper mapper, String requiredMessage, String invalidMessage) {
+        if (!require(field, requiredMessage)) {
+            return new JsonResult(false, null);
+        }
+        return parseJson(field, mapper, invalidMessage);
+    }
+
+    /**
      * Marks a text field invalid when it is empty or blank.
      *
      * @return {@code true} when the field holds a non-blank value

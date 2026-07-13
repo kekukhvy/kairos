@@ -47,7 +47,7 @@ public class DestinationGrid extends Grid<DestinationDTO> {
                 .setAutoWidth(true)
                 .setComparator(DestinationDTO::createdAt);
 
-        addItemDoubleClickListener(event -> onView.accept(event.getItem()));
+        addItemClickListener(event -> onView.accept(event.getItem()));
 
         setItems(dataProvider);
         setSizeFull();

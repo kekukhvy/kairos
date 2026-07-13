@@ -29,7 +29,7 @@ Each stage is independently runnable — `/ship` just chains them with human gat
 | `/specification` | Ideate | Shapes a raw idea into a spec file under `doc/specs/`. |
 | `/create-issue` | Plan | Turns a spec into a well-formed GitHub issue (labels, milestone). |
 | `/implement <issue>` | **Build** | TDD implementation (delegates **tdd-implementer**) on a feature branch, then syncs spec/docs/logging/Javadoc/tests. |
-| `/sync` | Build | For code the **user** wrote by hand (the `PostToolUse` hook didn't fire): shows a plan, then writes tests/docs/spec/logging/Javadoc. Not needed after `/implement`. |
+| `/sync` | Build | For code the **user** wrote by hand: shows a plan, then writes tests/docs/spec/logging/Javadoc. Not needed after `/implement` (it already synced). |
 | `/sync-review <scope>` | **Build→Review** | For hand-written code: plan → `/sync` → `/verify-coverage` → `/review-all` → `/validate-findings`. **Stops before fixes** (you fix, or run `/fix-findings`). |
 | `/review-all [scope]` | Review | Runs `/code-review`, `/security-review`, **architecture-reviewer** over one scope → merged findings doc in `reviews/`. |
 | `/validate-findings [doc]` | Review | **finding-validator** marks each finding VALID / INVALID / NEEDS-HUMAN. |
@@ -58,7 +58,8 @@ Each stage is independently runnable — `/ship` just chains them with human gat
 - **tdd-implementer** — writes production code *and* tests test-first
   (red→green→refactor). Owns both, unlike test-author.
 
-**Sync** (keep artifacts aligned with code; auto-nudged by the `PostToolUse` hook)
+**Sync** (keep artifacts aligned with code; run once per slice by `/implement`
+step 4, or by `/sync` for hand-written code — never per file edit)
 - **spec-keeper** — updates `doc/` on domain/API/schema/lifecycle changes.
 - **user-docs-writer** — updates `doc/usage/` on endpoint/DTO/client changes.
 - **test-author** — adds unit/integration/API tests for **existing** code.
