@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/kekukhvy/kairos/compare/kairos-admin-v0.2.0...kairos-admin-v0.3.0) (2026-07-13)
+
+
+### Features
+
+* **admin:** add guided setup wizard (Task → Destination → Schedule) ([f0cba7f](https://github.com/kekukhvy/kairos/commit/f0cba7f5bc68368b5d0d1624bd0868ba5b9e343d)), closes [#23](https://github.com/kekukhvy/kairos/issues/23)
+* **admin:** add guided setup wizard to admin UI ([014b27e](https://github.com/kekukhvy/kairos/commit/014b27e247e161d4f6a06b8625f1c6faded4072c))
+* **admin:** open destination grid details on single click ([5ed7a68](https://github.com/kekukhvy/kairos/commit/5ed7a6872d2d7ae6ca8afe53bef11d68f83ab91b)), closes [#33](https://github.com/kekukhvy/kairos/issues/33)
+* **admin:** share cron builder in wizard, add requireJson helper ([8047f8a](https://github.com/kekukhvy/kairos/commit/8047f8a1281406cb491a8383c43f8e6833352401))
+* **admin:** unify Task & Schedule grids — single-click row, in-row toggle switch ([6b8fbfe](https://github.com/kekukhvy/kairos/commit/6b8fbfee6877510c7232f9956952dd3f212785fe))
+* **admin:** unify Task & Schedule grids — single-click row, in-row toggle switch ([36c636c](https://github.com/kekukhvy/kairos/commit/36c636c0de71359e8aafd1ca9a208ea749a4a448)), closes [#26](https://github.com/kekukhvy/kairos/issues/26)
+
 ## [0.2.0](https://github.com/kekukhvy/kairos/compare/kairos-admin-v0.1.0...kairos-admin-v0.2.0) (2026-07-12)
 
 
