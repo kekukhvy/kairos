@@ -8,6 +8,15 @@ name: Release kairos-admin
 on:
   push:
     branches: [main]
+  # Manual trigger to (re)build and push the image without cutting a new release
+  # — e.g. when a release was tagged but its image build failed. Builds from the
+  # current main and tags with the given version (defaults to version.txt).
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image tag to build/push (blank = kairos-admin/version.txt)"
+        required: false
+        default: ""
 
 # Least-privilege token: contents for tags/releases, packages to push to GHCR,
 # PRs so release-please can open its Release PR.
@@ -18,6 +27,8 @@ permissions:
 
 jobs:
   release-please:
+    # Only the push flow cuts releases; manual dispatch just rebuilds the image.
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     outputs:
       # True only on the run where the kairos-admin Release PR was merged.
@@ -30,18 +41,30 @@ jobs:
         with:
           # Uses release-please-config.json + .release-please-manifest.json.
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Release from main. The repo's default branch is `develop`, so without
+          # this release-please would target develop instead of the release line.
+          target-branch: main
 
   build-image:
     needs: release-please
-    # Build the image only when a release was actually cut. Also gate on the
-    # admin/common paths so unrelated releases don't rebuild it needlessly.
-    if: ${{ needs.release-please.outputs.released == 'true' }}
+    # Build when a release was cut (push flow) OR when triggered manually.
+    # `always()` so a skipped release-please job (manual dispatch) doesn't block this.
+    if: ${{ always() && (needs.release-please.outputs.released == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/kairos-admin
-      VERSION: ${{ needs.release-please.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+
+      # Resolve the version: release output → manual input → version.txt.
+      - name: Resolve version
+        id: ver
+        run: |
+          V="${{ needs.release-please.outputs.version }}"
+          [ -z "$V" ] && V="${{ github.event.inputs.version }}"
+          [ -z "$V" ] && V="$(tr -d ' \n' < kairos-admin/version.txt)"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building image version: $V"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -60,15 +83,17 @@ jobs:
           file: kairos-admin/Dockerfile
           push: true
           build-args: |
-            KAIROS_ADMIN_VERSION=${{ env.VERSION }}
+            KAIROS_ADMIN_VERSION=${{ steps.ver.outputs.version }}
           # Tag both the exact version and a moving :latest.
           tags: |
-            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:${{ steps.ver.outputs.version }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Summary
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           echo "### Pushed \`${IMAGE}:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
