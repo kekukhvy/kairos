@@ -15,12 +15,15 @@ import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.component.DestinationDetails;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
+import dev.kairos.admin.feature.schedule.ScheduleService;
 import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
+import dev.kairos.admin.feature.wizard.SetupWizard;
+import dev.kairos.admin.feature.wizard.WizardText;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
@@ -54,6 +57,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
     private final JsonMapper jsonMapper;
     private final TaskService taskService;
     private final DestinationService destinationService;
+    private final ScheduleService scheduleService;
     private final TaskGrid grid = new TaskGrid();
     private final Select<String> statusFilter;
     private final ComboBox<String> destinationFilter;
@@ -66,11 +70,14 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
      * @param jsonMapper           used by detail and form dialogs for JSON pretty-printing
      * @param taskService          data access for task CRUD and lifecycle operations
      * @param destinationService   data access used to populate the destination filter and inline dialogs
+     * @param scheduleService      data access the guided setup wizard lists/commits schedules through
      */
-    public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService) {
+    public TaskView(JsonMapper jsonMapper, TaskService taskService, DestinationService destinationService,
+                    ScheduleService scheduleService) {
         this.jsonMapper = jsonMapper;
         this.taskService = taskService;
         this.destinationService = destinationService;
+        this.scheduleService = scheduleService;
         this.statusFilter = buildStatusFilter();
         this.destinationFilter = buildDestinationFilter();
         this.filterBar = buildFilterBar();
@@ -197,12 +204,25 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         H2 title = createTitle();
 
         Button newTask = Buttons.primary(TaskText.NEW_TASK, e -> openForm());
+        Button guidedSetup = Buttons.secondary(TaskText.GUIDED_SETUP, e -> openWizard());
 
-        HorizontalLayout toolbar = new HorizontalLayout(title, newTask);
+        HorizontalLayout actions = new HorizontalLayout(newTask, guidedSetup);
+        actions.setAlignItems(HorizontalLayout.Alignment.CENTER);
+
+        HorizontalLayout toolbar = new HorizontalLayout(title, actions);
         toolbar.setWidthFull();
         toolbar.setAlignItems(HorizontalLayout.Alignment.CENTER);
         toolbar.setJustifyContentMode(HorizontalLayout.JustifyContentMode.BETWEEN);
         return toolbar;
+    }
+
+    private void openWizard() {
+        try {
+            new SetupWizard(jsonMapper, taskService, destinationService, scheduleService, this::refresh).open();
+        } catch (RuntimeException ex) {
+            logger.error("Failed to open setup wizard", ex);
+            Notifications.error(WizardText.NOTIFY_OPEN_FAILED);
+        }
     }
 
     private void viewTask(TaskDto task) {

@@ -18,14 +18,21 @@ import dev.kairos.admin.feature.dashboard.component.DashboardCard;
 import dev.kairos.admin.feature.dashboard.component.DashboardSettingsDialog;
 import dev.kairos.admin.feature.dashboard.component.LeaderboardCard;
 import dev.kairos.admin.feature.dashboard.component.StatCard;
+import dev.kairos.admin.feature.destination.DestinationService;
+import dev.kairos.admin.feature.schedule.ScheduleService;
 import dev.kairos.admin.feature.schedule.ScheduleView;
 import dev.kairos.admin.feature.task.TaskRoutes;
+import dev.kairos.admin.feature.task.TaskService;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.TaskView;
+import dev.kairos.admin.feature.wizard.SetupWizard;
+import dev.kairos.admin.feature.wizard.WizardText;
 import dev.kairos.admin.shared.layout.MainLayout;
 import dev.kairos.admin.shared.style.StyleConfig;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Notifications;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +52,10 @@ public class DashboardView extends VerticalLayout {
     private static final Logger logger = LoggerFactory.getLogger(DashboardView.class);
 
     private final DashboardService dashboardService;
+    private final JsonMapper jsonMapper;
+    private final TaskService taskService;
+    private final DestinationService destinationService;
+    private final ScheduleService scheduleService;
     private final Div grid = new Div();
 
     private DashboardPrefs prefs = DashboardPrefs.defaults();
@@ -55,10 +66,19 @@ public class DashboardView extends VerticalLayout {
      * stats synchronously, then asynchronously loads the stored user prefs from
      * browser storage and triggers the first render once both are ready.
      *
-     * @param dashboardService service that computes the dashboard metrics
+     * @param dashboardService   service that computes the dashboard metrics
+     * @param jsonMapper         used by the guided setup wizard's step forms for JSON parsing
+     * @param taskService        data access the guided setup wizard commits a new task through
+     * @param destinationService data access the guided setup wizard lists/commits destinations through
+     * @param scheduleService    data access the guided setup wizard lists/commits schedules through
      */
-    public DashboardView(DashboardService dashboardService) {
+    public DashboardView(DashboardService dashboardService, JsonMapper jsonMapper, TaskService taskService,
+                         DestinationService destinationService, ScheduleService scheduleService) {
         this.dashboardService = dashboardService;
+        this.jsonMapper = jsonMapper;
+        this.taskService = taskService;
+        this.destinationService = destinationService;
+        this.scheduleService = scheduleService;
         setSizeFull();
         setSpacing(false);
         setPadding(false);
@@ -92,10 +112,16 @@ public class DashboardView extends VerticalLayout {
         titleBlock.setPadding(false);
         titleBlock.setSpacing(false);
 
+        Button createTask = Buttons.primary(DashboardText.CREATE_TASK, e -> openWizard());
+        createTask.setIcon(VaadinIcon.PLUS.create());
+
         Button customize = Buttons.secondary(DashboardText.SETTINGS_OPEN, e -> openSettings());
         customize.setIcon(VaadinIcon.COG.create());
 
-        HorizontalLayout header = new HorizontalLayout(titleBlock, customize);
+        HorizontalLayout actions = new HorizontalLayout(createTask, customize);
+        actions.setAlignItems(HorizontalLayout.Alignment.CENTER);
+
+        HorizontalLayout header = new HorizontalLayout(titleBlock, actions);
         header.setWidthFull();
         header.setAlignItems(HorizontalLayout.Alignment.CENTER);
         header.setJustifyContentMode(HorizontalLayout.JustifyContentMode.BETWEEN);
@@ -104,6 +130,21 @@ public class DashboardView extends VerticalLayout {
 
     private void openSettings() {
         new DashboardSettingsDialog(prefs, this::render).open();
+    }
+
+    private void openWizard() {
+        try {
+            new SetupWizard(jsonMapper, taskService, destinationService, scheduleService, this::refreshStats).open();
+        } catch (RuntimeException ex) {
+            logger.error("Failed to open setup wizard", ex);
+            Notifications.error(WizardText.NOTIFY_OPEN_FAILED);
+        }
+    }
+
+    /** Reloads the dashboard stats and re-renders, so the stat cards reflect what the wizard just created. */
+    private void refreshStats() {
+        stats = dashboardService.load();
+        render();
     }
 
     private void render() {

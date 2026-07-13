@@ -24,11 +24,9 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
 
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -190,9 +188,9 @@ public class ScheduleForm extends Dialog {
 
     private boolean validate() {
         boolean whenValid = switch (type.getValue()) {
-            case ONCE -> validateRunAt();
+            case ONCE -> ScheduleWhenFields.validateRunAt(runAt, timezone);
             case CRON -> FieldValidation.require(cronExpression, UiText.VALIDATION_REQUIRED);
-            case FIXED -> validateInterval();
+            case FIXED -> ScheduleWhenFields.validateInterval(intervalSeconds);
         };
         return validateTask() & whenValid;
     }
@@ -207,49 +205,12 @@ public class ScheduleForm extends Dialog {
         return selected;
     }
 
-    private boolean validateRunAt() {
-        if (runAt.isEmpty()) {
-            runAt.setErrorMessage(UiText.VALIDATION_REQUIRED);
-            runAt.setInvalid(true);
-            return false;
-        }
-        Instant value = runAtInstant();
-        boolean future = value != null && value.isAfter(Instant.now());
-        runAt.setErrorMessage(ScheduleText.VALIDATION_RUN_AT_FUTURE);
-        runAt.setInvalid(!future);
-        return future;
-    }
-
-    private boolean validateInterval() {
-        Integer value = intervalSeconds.getValue();
-        boolean valid = value != null
-                && value >= ScheduleText.INTERVAL_MIN
-                && value <= ScheduleText.INTERVAL_MAX;
-        intervalSeconds.setErrorMessage(ScheduleText.VALIDATION_INTERVAL_RANGE);
-        intervalSeconds.setInvalid(!valid);
-        return valid;
-    }
-
     private Instant runAtInstant() {
-        LocalDateTime value = runAt.getValue();
-        return value == null ? null : value.atZone(selectedZone()).toInstant();
+        return ScheduleWhenFields.runAtInstant(runAt, timezone);
     }
 
-    /**
-     * Resolves the timezone the user entered, so the ONCE wall-clock picker is
-     * interpreted in that zone rather than the admin JVM's system zone. Falls
-     * back to UTC when the field is blank or not a valid {@link ZoneId}.
-     */
     private ZoneId selectedZone() {
-        String zone = Strings.trimToNull(timezone.getValue());
-        if (zone == null) {
-            return ZoneOffset.UTC;
-        }
-        try {
-            return ZoneId.of(zone);
-        } catch (DateTimeException ex) {
-            return ZoneOffset.UTC;
-        }
+        return ScheduleWhenFields.selectedZone(timezone);
     }
 
     private void prefill(ScheduleResponse schedule) {

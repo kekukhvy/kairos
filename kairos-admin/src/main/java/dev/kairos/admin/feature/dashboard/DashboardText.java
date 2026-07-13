@@ -14,6 +14,7 @@ public final class DashboardText {
     // --- header ---
     public static final String TITLE = "Dashboard";
     public static final String SUBTITLE = "Your Kairos scheduler at a glance";
+    public static final String CREATE_TASK = "Create Task";
 
     // --- badge shown on cards not yet backed by real data ---
     public static final String PREVIEW_BADGE = "Preview";
