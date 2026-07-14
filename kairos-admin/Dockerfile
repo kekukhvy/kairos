@@ -29,8 +29,9 @@ WORKDIR /app
 # single runnable jar; copy it as app.jar.
 COPY --from=build /workspace/kairos-admin/build/libs/*.jar app.jar
 
-# Vaadin/Spring Boot default HTTP port.
-EXPOSE 8080
+# The admin UI listens on 8090 (server.port in application.properties), kept
+# distinct from kairos-api's 8080 so both can run side by side.
+EXPOSE 8090
 
 USER kairos
 
