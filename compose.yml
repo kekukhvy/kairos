@@ -17,6 +17,29 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Admin UI. Runs the published image. 0.3.0 is amd64-only, so `platform` is
+  # pinned to run it (via emulation) on Apple Silicon; images from the next
+  # release are multi-arch (amd64+arm64) — drop the `platform` line then. The
+  # admin is a REST client to kairos-api, which for now runs on the host (not in
+  # compose), so it targets the API via host.docker.internal. It listens on 8090.
+  admin:
+    image: ghcr.io/kekukhvy/kairos-admin:0.3.0
+    container_name: kairos-admin
+    platform: linux/amd64
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # kairos-api runs on the host machine; reach it from the container.
+      KAIROS_API_BASE_URL: http://host.docker.internal:8080
+      # Don't pop a browser inside the container.
+      VAADIN_LAUNCH_BROWSER: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+
 volumes:
   kairos-postgres-data:
     driver: local
