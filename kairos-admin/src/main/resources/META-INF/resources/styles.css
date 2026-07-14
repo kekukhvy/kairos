@@ -175,32 +175,36 @@ vaadin-grid {
   cursor: pointer;
 }
 
+/* The track AND the thumb are both painted on ::part(checkbox) itself: a white
+   radial-gradient circle (the thumb) layered over the track colour. This avoids
+   ::part(checkbox)::after, which collides with the checkbox's own internal
+   pseudo-element and doesn't render in the unchecked state. The thumb slides by
+   animating background-position from left (off) to right (on). */
 .kairos-toggle-switch::part(checkbox) {
   width: var(--kairos-switch-width);
   height: var(--kairos-switch-height);
   border-radius: var(--kairos-switch-height);
-  background-color: var(--lumo-contrast-10pct);
-  transition: background-color var(--kairos-transition);
-  position: relative;
+  background-color: rgba(60, 60, 67, 0.28); /* off-state track */
+  background-image: radial-gradient(
+    circle at center,
+    #ffffff 0,
+    #ffffff calc(var(--kairos-switch-thumb-size) / 2),
+    transparent calc(var(--kairos-switch-thumb-size) / 2 + 1px)
+  );
+  background-repeat: no-repeat;
+  background-size: var(--kairos-switch-height) var(--kairos-switch-height);
+  background-position: left center; /* thumb on the left when off */
+  transition: background-color var(--kairos-transition),
+    background-position var(--kairos-transition);
 }
 
+/* Hide the checkbox's built-in checkmark — the switch shows state via the
+   track colour + sliding thumb, not a tick. */
 .kairos-toggle-switch::part(checkbox)::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: var(--kairos-switch-thumb-size);
-  height: var(--kairos-switch-thumb-size);
-  border-radius: 50%;
-  background-color: var(--lumo-base-color);
-  box-shadow: var(--lumo-box-shadow-xs);
-  transition: transform var(--kairos-transition);
+  display: none;
 }
 
 .kairos-toggle-switch[checked]::part(checkbox) {
   background-color: var(--lumo-success-color);
-}
-
-.kairos-toggle-switch[checked]::part(checkbox)::after {
-  transform: translateX(calc(var(--kairos-switch-width) - var(--kairos-switch-thumb-size) - 4px));
+  background-position: right center; /* thumb slides right when on */
 }
