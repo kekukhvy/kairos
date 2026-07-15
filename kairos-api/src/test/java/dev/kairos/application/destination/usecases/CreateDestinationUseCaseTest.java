@@ -1,8 +1,10 @@
 package dev.kairos.application.destination.usecases;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.application.destination.commands.CreateDestinationCommand;
+import dev.kairos.common.exceptions.ValidationException;
 import dev.kairos.domain.destination.Destination;
-import dev.kairos.domain.destination.DestinationType;
+import dev.kairos.common.destination.DestinationType;
 import dev.kairos.domain.destination.exceptions.DestinationAlreadyExistsException;
 import dev.kairos.domain.destination.exceptions.InvalidDestinationTypeException;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 import static dev.kairos.application.destination.usecases.DestinationBuilder.DEFAULT_CONFIG;
 import static dev.kairos.application.destination.usecases.DestinationBuilder.DEFAULT_ID;
@@ -18,6 +21,7 @@ import static dev.kairos.application.destination.usecases.DestinationBuilder.DEF
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CreateDestinationUseCaseTest {
 
@@ -25,13 +29,20 @@ class CreateDestinationUseCaseTest {
     private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     private static final String UNKNOWN_TYPE = "GRPC";
 
+    private static final Map<DestinationType, String> VALID_CONFIG_BY_TYPE = Map.of(
+            DestinationType.KAFKA, "{\"topic\":\"payments\"}",
+            DestinationType.SQS, "{\"queueUrl\":\"https://sqs.example.com/q\"}",
+            DestinationType.WEBHOOK, "{\"url\":\"https://example.com/hook\"}",
+            DestinationType.RABBITMQ, "{\"exchange\":\"orders\",\"routingKey\":\"orders.created\"}"
+    );
+
     private InMemoryDestinationRepository destinationRepository;
     private CreateDestinationUseCase useCase;
 
     @BeforeEach
     void setUp() {
         destinationRepository = new InMemoryDestinationRepository();
-        useCase = new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK);
+        useCase = new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, new ObjectMapper());
     }
 
     // --- happy path ---
@@ -84,13 +95,65 @@ class CreateDestinationUseCaseTest {
             CreateDestinationCommand cmd = new CreateDestinationCommand(
                     "dest-" + type.name().toLowerCase(),
                     type.name(),
-                    DEFAULT_CONFIG
+                    VALID_CONFIG_BY_TYPE.get(type)
             );
 
             Destination result = useCase.execute(cmd);
 
             assertEquals(type, result.destinationType());
         }
+    }
+
+    // --- config schema validation ---
+
+    @Test
+    void execute_withConfigMissingRequiredKey_throwsValidationException() {
+        CreateDestinationCommand cmd = new CreateDestinationCommand(
+                DEFAULT_ID, DestinationType.SQS.name(), "{}");
+
+        assertThrows(ValidationException.class, () -> useCase.execute(cmd));
+    }
+
+    @Test
+    void execute_withConfigMissingRequiredKey_messageNamesMissingKey() {
+        CreateDestinationCommand cmd = new CreateDestinationCommand(
+                DEFAULT_ID, DestinationType.SQS.name(), "{}");
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> useCase.execute(cmd));
+
+        assertTrue(ex.getMessage().contains("queueUrl"));
+    }
+
+    @Test
+    void execute_withConfigMissingRequiredKey_doesNotSave() {
+        CreateDestinationCommand cmd = new CreateDestinationCommand(
+                DEFAULT_ID, DestinationType.SQS.name(), "{}");
+
+        try {
+            useCase.execute(cmd);
+        } catch (ValidationException ignored) {
+        }
+
+        assertEquals(0, destinationRepository.saveCallCount());
+    }
+
+    @Test
+    void execute_withConfigContainingAllRequiredKeys_succeeds() {
+        CreateDestinationCommand cmd = new CreateDestinationCommand(
+                DEFAULT_ID, DestinationType.RABBITMQ.name(),
+                "{\"exchange\":\"orders\",\"routingKey\":\"orders.created\"}");
+
+        Destination result = useCase.execute(cmd);
+
+        assertEquals(DestinationType.RABBITMQ, result.destinationType());
+    }
+
+    @Test
+    void execute_withConfigNotAJsonObject_throwsValidationException() {
+        CreateDestinationCommand cmd = new CreateDestinationCommand(
+                DEFAULT_ID, DestinationType.KAFKA.name(), "[\"topic\"]");
+
+        assertThrows(ValidationException.class, () -> useCase.execute(cmd));
     }
 
     // --- duplicate id ---

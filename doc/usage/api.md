@@ -428,8 +428,41 @@ All destination endpoints that return a body use this structure.
 |---|---|---|
 | `destinationId` | string | The client-supplied identifier for this destination. Unique across all destinations. |
 | `destinationType` | string | The delivery mechanism (e.g. `KAFKA`). Must be a recognized type. |
-| `config` | JSON object | Destination-specific configuration (e.g. `{"topic": "bookings"}`). Opaque to Kairos — stored and returned as-is. |
+| `config` | JSON object | Destination-specific configuration (e.g. `{"topic": "bookings"}`). Must contain the required keys for its type (see [Destination config schema](#destination-config-schema)); values are not inspected, and extra keys are stored and returned as-is. |
 | `createdAt` | ISO-8601 string | When the destination was created. |
+
+### Destination config schema
+
+The `config` field is a JSON object whose shape is validated according to the
+destination's type. Each type requires specific keys to be present; extra keys
+beyond the required and optional set are accepted and stored untouched.
+
+**Only key presence is enforced** — values are never inspected or validated. An
+empty string, `null`, or any other JSON value is accepted as long as the key
+exists. Delivery adapters may later inspect and validate the values for their
+specific type.
+
+| Type | Required keys | Optional keys | Example |
+|---|---|---|---|
+| `KAFKA` | `topic` | `key`, `headers` | `{"topic": "orders"}` |
+| `SQS` | `queueUrl` | `messageGroupId` | `{"queueUrl": "https://sqs.us-east-1.amazonaws.com/123456789/myqueue"}` |
+| `WEBHOOK` | `url` | `method`, `headers` | `{"url": "https://example.com/hook"}` |
+| `RABBITMQ` | `exchange`, `routingKey` | `headers` | `{"exchange": "orders", "routingKey": "order.created"}` |
+
+**Example: valid config with optional keys**
+
+```json
+{
+  "topic": "bookings",
+  "key": "booking-id",
+  "headers": {"service-name": "booking-service"},
+  "myCustomKey": 42
+}
+```
+
+The above is valid for type `KAFKA`: it has the required `topic` key, includes
+optional keys `key` and `headers`, and adds a custom `myCustomKey` which is
+preserved but not validated by Kairos.
 
 ---
 
@@ -443,19 +476,19 @@ be unique. Returns the created destination.
 | Field | Type | Required | Default | Constraints |
 |---|---|---|---|---|
 | `destinationId` | string | yes | — | Caller-chosen unique identifier. Must not already exist. |
-| `destinationType` | string | yes | — | Must be a recognized delivery type (e.g. `KAFKA`). |
-| `config` | JSON object | yes | — | Any valid JSON object. Content is delivery-adapter-specific. |
+| `destinationType` | string | yes | — | Must be a recognized delivery type: `KAFKA`, `SQS`, `WEBHOOK`, or `RABBITMQ`. |
+| `config` | JSON object | yes | — | Must be a valid JSON object (not `null`, not an array). Must contain all required keys for the given `destinationType` (see [Destination config schema](#destination-config-schema)). Extra keys are allowed. |
 
 **Responses**
 
 | Status | Body | When |
 |---|---|---|
 | `201 Created` | `DestinationResponse` | Destination created successfully. |
-| `400 Bad Request` | `ErrorResponse` | Missing required field, malformed JSON, or unrecognized `destinationType`. |
+| `400 Bad Request` | `ErrorResponse` | Missing required field; `config` is not valid JSON or is not a JSON object; `config` is null/blank; `config` omits a required key for the given `destinationType`; or unrecognized `destinationType`. |
 | `409 Conflict` | `ErrorResponse` | A destination with the given `destinationId` already exists. |
 | `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
 
-**Example**
+**Example — successful creation**
 
 ```http
 POST /api/v1/destinations
@@ -500,6 +533,26 @@ HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
 { "error": "Invalid destination type: UNKNOWN" }
+```
+
+**Error example — missing required config key**
+
+```http
+POST /api/v1/destinations
+Content-Type: application/json
+
+{
+  "destinationId": "booking-rabbitmq",
+  "destinationType": "RABBITMQ",
+  "config": {}
+}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{ "error": "config is missing required key(s): exchange, routingKey" }
 ```
 
 ---
@@ -614,7 +667,9 @@ Content-Type: application/json
 ### PUT /api/v1/destinations/{id} — Update a destination
 
 Updates the `config` of an existing destination. `destinationId` and
-`destinationType` are immutable and cannot be changed.
+`destinationType` are immutable and cannot be changed. The new config is
+validated against the destination's stored type's schema (see [Destination config
+schema](#destination-config-schema)).
 
 **Path parameters**
 
@@ -626,18 +681,18 @@ Updates the `config` of an existing destination. `destinationId` and
 
 | Field | Type | Required | Default | Constraints |
 |---|---|---|---|---|
-| `config` | JSON object | yes | — | Replaces the current config. Any valid JSON object. |
+| `config` | JSON object | yes | — | Replaces the current config. Must be a valid JSON object (not `null`, not an array). Must contain all required keys for the destination's type (determined at creation). Extra keys are allowed. |
 
 **Responses**
 
 | Status | Body | When |
 |---|---|---|
 | `200 OK` | `DestinationResponse` | Destination updated successfully. |
-| `400 Bad Request` | `ErrorResponse` | Malformed JSON body. |
+| `400 Bad Request` | `ErrorResponse` | `config` is not valid JSON or is not a JSON object; `config` is null/blank; or `config` omits a required key for the destination's stored type. |
 | `404 Not Found` | `ErrorResponse` | Destination does not exist. |
 | `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
 
-**Example**
+**Example — successful update**
 
 ```http
 PUT /api/v1/destinations/booking-kafka
@@ -664,6 +719,24 @@ Content-Type: application/json
   },
   "createdAt": "2026-06-24T10:00:00.000000Z"
 }
+```
+
+**Error example — missing required config key**
+
+```http
+PUT /api/v1/destinations/booking-kafka
+Content-Type: application/json
+
+{
+  "config": {}
+}
+```
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{ "error": "config is missing required key(s): topic" }
 ```
 
 ---

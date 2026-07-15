@@ -197,8 +197,9 @@ injected clock for determinism and testability.
   (`limit + 1`) applied in both `TaskHandler` and `DestinationHandler`
 - [x] Destination DTO contracts in `common`: `CreateDestinationRequest` (destinationId, destinationType, config JsonNode),
   `UpdateDestinationRequest` (config JsonNode), `DestinationResponse` (destinationId, destinationType, config, createdAt)
-- [ ] Validate basic `config` shape per type (currently any non-blank string is
-  accepted)
+- [x] Validate basic `config` shape per type via `DestinationConfigSchema` (in
+  `common`): required/optional keys per type, key presence enforced, values
+  unchecked, extra keys allowed; templates for UI prefill
 
 ## M3 — Schedules ✅
 

@@ -1,5 +1,6 @@
 package dev.kairos.application.destination.usecases;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.destination.DestinationRepository;
@@ -9,12 +10,17 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
+import static dev.kairos.application.destination.usecases.DestinationConfigValidator.validateConfigSchema;
+
 /**
  * Updates the connectivity config of an existing destination.
  *
  * <p>Only {@code config} may be changed after creation — {@code type} and
  * {@code createdAt} are immutable. To change the delivery mechanism itself,
- * delete the destination and create a new one.
+ * delete the destination and create a new one. The new {@code config} is
+ * validated against the schema of the destination's <em>stored</em> type
+ * (see {@code dev.kairos.common.destination.DestinationConfigSchema}) before
+ * being applied.
  *
  * <p>Used by the {@code PUT /api/v1/destinations/{id}} endpoint.
  *
@@ -25,18 +31,22 @@ public final class UpdateDestinationUseCase {
     private static final Logger logger = LoggerFactory.getLogger(UpdateDestinationUseCase.class);
 
     private final DestinationRepository destinationRepository;
+    private final ObjectMapper objectMapper;
 
-    public UpdateDestinationUseCase(DestinationRepository destinationRepository) {
+    public UpdateDestinationUseCase(DestinationRepository destinationRepository, ObjectMapper objectMapper) {
         this.destinationRepository = Objects.requireNonNull(destinationRepository);
-
+        this.objectMapper = Objects.requireNonNull(objectMapper, "'objectMapper' must not be null.");
     }
 
     /**
-     * Loads the destination, replaces its config, and persists the change.
+     * Loads the destination, validates the new config against its stored
+     * type's schema, replaces the config, and persists the change.
      *
      * @param destinationId id of the destination to update
      * @param config        new connectivity config (must be non-null and non-blank)
      * @throws DestinationNotFoundException if no destination exists for {@code destinationId}
+     * @throws dev.kairos.common.exceptions.ValidationException if {@code config}
+     *         omits a key required by the schema for the destination's stored type
      */
     public Destination execute(DestinationId destinationId, String config) {
         Objects.requireNonNull(destinationId, "destinationId cannot be null!");
@@ -45,6 +55,8 @@ public final class UpdateDestinationUseCase {
 
         Destination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new DestinationNotFoundException(destinationId));
+
+        validateConfigSchema(destination.destinationType(), config, objectMapper);
 
         destination.updateConfig(config);
         destinationRepository.save(destination);

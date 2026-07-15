@@ -64,8 +64,8 @@ final class ApplicationContext {
         );
 
         DestinationHandler destinationHandler = new DestinationHandler(
-                new CreateDestinationUseCase(destinationRepository, clock),
-                new UpdateDestinationUseCase(destinationRepository),
+                new CreateDestinationUseCase(destinationRepository, clock, objectMapper),
+                new UpdateDestinationUseCase(destinationRepository, objectMapper),
                 new DeleteDestinationUseCase(destinationRepository, taskRepository),
                 new ListDestinationsUseCase(destinationRepository),
                 new GetDestinationByIdUseCase(destinationRepository),

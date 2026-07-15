@@ -110,12 +110,16 @@ class DestinationStepTest {
      * Regression: a blank config used to be marked "Required" and then
      * immediately cleared by the JSON parse (blank parses as valid), so Next
      * refused to advance while the field showed no error at all.
+     *
+     * <p>Selecting a type now auto-prefills the config template, so the field
+     * is explicitly cleared afterwards to exercise the blank-config path.
      */
     @Test
     void createNewMode_blankConfig_marksConfigFieldInvalid() {
         step.createNew();
         step.newDestinationId().setValue(NEW_ID);
         step.newDestinationType().setValue(NEW_TYPE);
+        step.newDestinationConfig().setValue("");
 
         assertThat(step.validate()).isFalse();
         assertThat(step.newDestinationConfig().isInvalid()).isTrue();
@@ -141,6 +145,41 @@ class DestinationStepTest {
 
         assertThat(step.validate()).isTrue();
         assertThat(step.newDestinationConfig().isInvalid()).isFalse();
+    }
+
+    // --- config template prefill (same schema as DestinationForm) ---
+
+    @Test
+    void selectingKafka_prefillsKafkaTemplate() {
+        step.newDestinationType().setValue(NEW_TYPE);
+
+        assertThat(step.newDestinationConfig().getValue()).isEqualTo("{\"topic\": \"\"}");
+    }
+
+    @Test
+    void selectingSqs_prefillsSqsTemplate() {
+        step.newDestinationType().setValue("SQS");
+
+        assertThat(step.newDestinationConfig().getValue()).isEqualTo("{\"queueUrl\": \"\"}");
+    }
+
+    @Test
+    void switchingType_configStillHoldsPreviousTemplate_replacesWithNewTemplate() {
+        step.newDestinationType().setValue(NEW_TYPE);
+
+        step.newDestinationType().setValue("SQS");
+
+        assertThat(step.newDestinationConfig().getValue()).isEqualTo("{\"queueUrl\": \"\"}");
+    }
+
+    @Test
+    void switchingType_configEditedByUser_doesNotOverwriteUserInput() {
+        step.newDestinationType().setValue(NEW_TYPE);
+        step.newDestinationConfig().setValue("{\"topic\": \"payments\"}");
+
+        step.newDestinationType().setValue("SQS");
+
+        assertThat(step.newDestinationConfig().getValue()).isEqualTo("{\"topic\": \"payments\"}");
     }
 
     private DestinationDTO existingDto() {

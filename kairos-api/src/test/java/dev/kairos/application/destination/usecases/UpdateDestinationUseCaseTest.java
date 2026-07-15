@@ -1,5 +1,6 @@
 package dev.kairos.application.destination.usecases;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.common.exceptions.ValidationException;
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
@@ -26,7 +27,7 @@ class UpdateDestinationUseCaseTest {
     @BeforeEach
     void setUp() {
         destinationRepository = new InMemoryDestinationRepository();
-        useCase = new UpdateDestinationUseCase(destinationRepository);
+        useCase = new UpdateDestinationUseCase(destinationRepository, new ObjectMapper());
     }
 
     // --- happy path ---
@@ -110,5 +111,47 @@ class UpdateDestinationUseCaseTest {
     void execute_withNullId_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
                 () -> useCase.execute(null, NEW_CONFIG));
+    }
+
+    // --- config schema validation against stored type ---
+
+    @Test
+    void execute_withConfigMissingRequiredKeyForStoredType_throwsValidationException() {
+        destinationRepository.seed(buildDefault());
+
+        assertThrows(ValidationException.class,
+                () -> useCase.execute(KNOWN_ID, "{}"));
+    }
+
+    @Test
+    void execute_withConfigMissingRequiredKeyForStoredType_messageNamesMissingKey() {
+        destinationRepository.seed(buildDefault());
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> useCase.execute(KNOWN_ID, "{}"));
+
+        assertEquals("config is missing required key(s): topic", ex.getMessage());
+    }
+
+    @Test
+    void execute_withConfigMissingRequiredKeyForStoredType_doesNotSave() {
+        destinationRepository.seed(buildDefault());
+
+        try {
+            useCase.execute(KNOWN_ID, "{}");
+        } catch (ValidationException ignored) {
+        }
+
+        assertEquals(0, destinationRepository.saveCallCount());
+    }
+
+    @Test
+    void execute_withConfigContainingRequiredKeyForStoredType_succeeds() {
+        destinationRepository.seed(buildDefault());
+
+        useCase.execute(KNOWN_ID, "{\"topic\":\"\"}");
+
+        Destination stored = destinationRepository.findById(KNOWN_ID).orElseThrow();
+        assertEquals("{\"topic\":\"\"}", stored.config());
     }
 }

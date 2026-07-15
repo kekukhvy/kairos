@@ -2,7 +2,7 @@ package dev.kairos.application.destination.usecases;
 
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
-import dev.kairos.domain.destination.DestinationType;
+import dev.kairos.common.destination.DestinationType;
 
 import java.time.Instant;
 
