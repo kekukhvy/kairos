@@ -59,7 +59,7 @@ class TaskDetailsTest {
 
     private static TaskDto task() {
         return new TaskDto(TASK_ID, "billing", "monthly-invoice", null, true,
-                "dest-1", "InvoiceReady", null, 5000, false, NOW, NOW);
+                "dest-1", "InvoiceReady", null, 5000, false, NOW, NOW, 0);
     }
 
     private static List<Button> footerButtons(TaskDetails details) {

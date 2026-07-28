@@ -5,6 +5,8 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import dev.kairos.admin.feature.schedule.component.ScheduleDetails;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,11 +44,14 @@ import java.util.stream.Collectors;
  * task-scoped, so this fans out one call per task) into a single grid with a
  * Task column, filtered client-side by task, type, status and free text. The
  * owning task is chosen inside the create form, so "New schedule" is always
- * available.
+ * available. Implements {@link BeforeEnterObserver} so the Tasks grid's
+ * schedule-count badge can deep-link here with a pre-selected task filter via
+ * the {@code ?task=} query parameter, mirroring {@code TaskView}'s
+ * {@code ?status=} handling.
  */
 @Route(value = ScheduleRoutes.SCHEDULES, layout = MainLayout.class)
 @PageTitle(ScheduleRoutes.PAGE_TITLE)
-public class ScheduleView extends VerticalLayout {
+public class ScheduleView extends VerticalLayout implements BeforeEnterObserver {
 
     private static final Logger logger = LoggerFactory.getLogger(ScheduleView.class);
 
@@ -84,6 +90,40 @@ public class ScheduleView extends VerticalLayout {
         grid.setOnToggleActive(this::toggleActive);
 
         refresh();
+    }
+
+    /**
+     * Applies the optional {@code task} query parameter (e.g. from the Tasks
+     * grid's schedule-count badge) to the task filter so the grid opens
+     * pre-filtered. An unknown or malformed task id is ignored, leaving the
+     * list unfiltered — the same fallback {@code TaskView} uses for an unknown
+     * {@code ?status=} value.
+     */
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        event.getLocation().getQueryParameters().getSingleParameter(ScheduleRoutes.QUERY_TASK)
+                .flatMap(taskId -> resolveTaskFilterLabel(taskId, tasks))
+                .ifPresent(taskFilter::setValue);
+    }
+
+    /**
+     * Resolves a {@code ?task=<taskId>} query value to the matching task's
+     * filter label, or empty if the id is missing, malformed, or unknown.
+     */
+    static Optional<String> resolveTaskFilterLabel(String taskId, List<TaskDto> tasks) {
+        if (Strings.isBlank(taskId)) {
+            return Optional.empty();
+        }
+        UUID parsed;
+        try {
+            parsed = UUID.fromString(taskId);
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+        return tasks.stream()
+                .filter(task -> task.id().equals(parsed))
+                .map(TaskDto::label)
+                .findFirst();
     }
 
     private FilterBar buildFilterBar() {

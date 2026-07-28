@@ -11,6 +11,11 @@ import java.util.UUID;
  * Here {@code payload} is a plain {@link Object} (a {@code Map}/{@code List}/
  * scalar), which both Jackson versions handle. Once {@code common} drops
  * {@code JsonNode} in favour of {@code Object}, this local copy can be removed.
+ *
+ * <p>{@code activeScheduleCount} mirrors {@code TaskResponse.activeScheduleCount}
+ * — the number of this task's schedules with {@code active = true}, computed
+ * by the API. It is a read-side projection only; it does not imply the task
+ * aggregate itself carries a schedules field.
  */
 public record TaskDto(
         UUID id,
@@ -24,7 +29,8 @@ public record TaskDto(
         int timeoutMs,
         boolean supportsRetry,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long activeScheduleCount
 ) {
 
     /** Human-readable {@code service / name} label used in pickers and grids. */

@@ -256,7 +256,7 @@ class DashboardServiceTest {
 
     private static TaskDto task(UUID id, String service, String name, boolean active) {
         return new TaskDto(id, service, name, null, active,
-                "dest-1", "Event", null, 5000, false, NOW, NOW);
+                "dest-1", "Event", null, 5000, false, NOW, NOW, 0);
     }
 
     private static ScheduleResponse schedule(UUID taskId, boolean active) {

@@ -60,7 +60,8 @@ final class ApplicationContext {
                 new SoftDeleteTaskUseCase(taskRepository, clock),
                 new GetTaskUseCase(taskRepository),
                 new ListTasksUseCase(taskRepository),
-                new SetTaskActiveUseCase(taskRepository, clock)
+                new SetTaskActiveUseCase(taskRepository, clock),
+                scheduleRepository
         );
 
         DestinationHandler destinationHandler = new DestinationHandler(

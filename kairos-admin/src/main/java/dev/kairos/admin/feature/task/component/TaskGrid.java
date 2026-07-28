@@ -3,10 +3,14 @@ package dev.kairos.admin.feature.task.component;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.shared.Tooltip;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
+import dev.kairos.admin.shared.style.StyleConfig;
+import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
 import dev.kairos.admin.shared.ui.Dialogs;
 import dev.kairos.admin.shared.ui.ToggleSwitches;
@@ -25,12 +29,22 @@ import java.util.function.Predicate;
  */
 public class TaskGrid extends Grid<TaskDto> {
 
+    /** {@code activeScheduleCount} threshold above which the name cell shows a badge. */
+    private static final long BADGE_THRESHOLD = 1L;
+
+    /** {@code activeScheduleCount} below which the task name is coloured as an error. */
+    private static final long NO_ACTIVE_SCHEDULES = 0L;
+
+    /** DOM event fired when the schedule-count badge is clicked. */
+    private static final String EVENT_CLICK = "click";
 
     private Consumer<TaskDto> onView = task -> {
     };
     private Consumer<TaskDto> onToggleActive = task -> {
     };
     private Consumer<String> onOpenDestination = destinationId -> {
+    };
+    private Consumer<TaskDto> onOpenSchedules = task -> {
     };
 
     private final ListDataProvider<TaskDto> dataProvider = new ListDataProvider<>(new ArrayList<>());
@@ -40,7 +54,8 @@ public class TaskGrid extends Grid<TaskDto> {
         super(TaskDto.class, false);
 
         addColumn(TaskDto::service).setHeader(TaskText.COL_SERVICE).setAutoWidth(true).setSortable(true);
-        addColumn(TaskDto::name).setHeader(TaskText.COL_NAME).setAutoWidth(true).setSortable(true);
+        addComponentColumn(this::nameCell).setHeader(TaskText.COL_NAME).setAutoWidth(true)
+                .setComparator(TaskDto::name);
         addComponentColumn(this::destinationLink).setHeader(TaskText.COL_DESTINATION).setAutoWidth(true)
                 .setComparator(TaskDto::destinationId);
         addColumn(TaskDto::eventName).setHeader(TaskText.COL_EVENT_NAME).setAutoWidth(true).setSortable(true);
@@ -66,6 +81,40 @@ public class TaskGrid extends Grid<TaskDto> {
         dataProvider.setFilter(predicate == null ? null : predicate::test);
     }
 
+
+    /**
+     * Builds the task-name cell: the name alone for 0/1 active schedules (0
+     * additionally coloured as an error, with an explanatory tooltip), or the
+     * name plus a clickable count badge for more than one.
+     */
+    private Component nameCell(TaskDto task) {
+        Div cell = new Div(nameSpan(task));
+        if (task.activeScheduleCount() > BADGE_THRESHOLD) {
+            cell.add(scheduleBadge(task));
+        }
+        return cell;
+    }
+
+    private Span nameSpan(TaskDto task) {
+        Span name = new Span(task.name());
+        if (task.activeScheduleCount() == NO_ACTIVE_SCHEDULES) {
+            StyleConfig.create().color(Tokens.COLOR_ERROR).applyTo(name);
+            Tooltip.forComponent(name).withText(TaskText.TOOLTIP_NO_ACTIVE_SCHEDULES);
+        }
+        return name;
+    }
+
+    private Span scheduleBadge(TaskDto task) {
+        Span badge = new Span(String.valueOf(task.activeScheduleCount()));
+        badge.getElement().getThemeList().add(Tokens.THEME_BADGE_CONTRAST);
+        badge.getElement().addEventListener(EVENT_CLICK, event -> onOpenSchedules.accept(task))
+                .stopPropagation();
+        StyleConfig.create()
+                .cursor(Tokens.CURSOR_POINTER)
+                .marginInlineStart(Tokens.SPACE_XS)
+                .applyTo(badge);
+        return badge;
+    }
 
     private Component destinationLink(TaskDto task) {
         String destinationId = task.destinationId();
@@ -104,5 +153,10 @@ public class TaskGrid extends Grid<TaskDto> {
     /** Sets the callback invoked with the destination id when a destination link is clicked. */
     public void setOnOpenDestination(Consumer<String> onOpenDestination) {
         this.onOpenDestination = onOpenDestination;
+    }
+
+    /** Sets the callback invoked with the task when its schedule-count badge is clicked. */
+    public void setOnOpenSchedules(Consumer<TaskDto> onOpenSchedules) {
+        this.onOpenSchedules = onOpenSchedules;
     }
 }

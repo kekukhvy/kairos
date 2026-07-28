@@ -177,7 +177,7 @@ class WizardCommitTest {
                     throw new RuntimeException("transient failure");
                 }
                 return new TaskDto(CREATED_TASK_ID, "svc", "name", null, true,
-                        request.destinationId(), "event", null, 30_000, false, NOW, NOW);
+                        request.destinationId(), "event", null, 30_000, false, NOW, NOW, 0);
             }
         };
         WizardCommit commit = new WizardCommit(destinationCreatorStub(), failsOnce, scheduleCreatorStub());
@@ -260,7 +260,7 @@ class WizardCommitTest {
             taskCalls.add(request);
             return new TaskDto(CREATED_TASK_ID, request.service(), request.name(), request.description(),
                     Boolean.TRUE.equals(request.active()), request.destinationId(), request.eventName(),
-                    request.payload(), request.timeoutMs(), Boolean.TRUE.equals(request.supportsRetry()), NOW, NOW);
+                    request.payload(), request.timeoutMs(), Boolean.TRUE.equals(request.supportsRetry()), NOW, NOW, 0);
         };
     }
 

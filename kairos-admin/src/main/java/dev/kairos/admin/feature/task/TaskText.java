@@ -65,4 +65,8 @@ public final class TaskText {
 
     public static final String FILTER_STATUS = "Status";
     public static final String FILTER_DESTINATION = "Destination";
+
+    /** Tooltip shown on a task name when it has zero active schedules. */
+    public static final String TOOLTIP_NO_ACTIVE_SCHEDULES =
+            "This task has no active schedules and will never run.";
 }
