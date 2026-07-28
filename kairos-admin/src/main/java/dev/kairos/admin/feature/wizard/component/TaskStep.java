@@ -19,6 +19,8 @@ import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
@@ -32,6 +34,8 @@ import java.util.Set;
  * edits an existing task).
  */
 public class TaskStep extends VerticalLayout {
+
+    private static final Logger logger = LoggerFactory.getLogger(TaskStep.class);
 
     private static final int DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -97,8 +101,13 @@ public class TaskStep extends VerticalLayout {
     }
 
     private boolean checkUnique() {
-        return FieldValidation.uniqueServiceName(
+        boolean unique = FieldValidation.uniqueServiceName(
                 service, name, takenServiceNameKeys, TaskText.VALIDATION_DUPLICATE_SERVICE_NAME);
+        if (!unique) {
+            logger.debug("Duplicate (service, name) flagged in the setup wizard: service='{}', name='{}'",
+                    service.getValue(), name.getValue());
+        }
+        return unique;
     }
 
     /**

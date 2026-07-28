@@ -20,6 +20,8 @@ import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.JsonText;
 import dev.kairos.admin.shared.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
@@ -28,6 +30,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 public class TaskForm extends Dialog {
+
+    private static final Logger logger = LoggerFactory.getLogger(TaskForm.class);
 
     private static final int DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -163,8 +167,13 @@ public class TaskForm extends Dialog {
     }
 
     private boolean checkUnique() {
-        return FieldValidation.uniqueServiceName(
+        boolean unique = FieldValidation.uniqueServiceName(
                 service, name, takenServiceNameKeys, TaskText.VALIDATION_DUPLICATE_SERVICE_NAME);
+        if (!unique) {
+            logger.debug("Duplicate (service, name) flagged in the task form: service='{}', name='{}'",
+                    service.getValue(), name.getValue());
+        }
+        return unique;
     }
 
     private void prefill(TaskDto task) {

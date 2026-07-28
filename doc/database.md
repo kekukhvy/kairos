@@ -13,9 +13,10 @@
 > | `V5__create_executions_table.sql` | `executions` |
 > | `V6__create_execution_history_table.sql` | `execution_history` |
 > | `V7__tighten_schedules_fixed_interval.sql` | `schedules` (constraint update) |
+> | `V8__tasks_unique_service_name.sql` | `tasks` (unique index) |
 >
-> Verified on a fresh Postgres 16: all seven apply cleanly (6 tables + 7
-> FKs), and the CHECK constraints behave (an invalid destination `type` is
+> Verified on a fresh Postgres 16: all eight migrations apply cleanly (6 tables + 7
+> FKs + 1 unique index), and the CHECK constraints behave (an invalid destination `type` is
 > rejected, a `ONCE` schedule without `run_at` is rejected, a `FIXED`
 > schedule with `interval_seconds > 86400` is rejected). The migration
 > files are the source of truth for exact column names, types, defaults,
@@ -104,6 +105,12 @@ three columns are a derived convenience for fast listing.
 - `idx_tasks_active_not_deleted` — partial index on `(created_at)`
   `WHERE deleted_at IS NULL`, supporting the live-rows list query.
 - `idx_tasks_destination_id` on `(destination_id)` — FK lookup index.
+- `idx_tasks_service_name_unique` — **unique partial index** on `(service, name)`
+  `WHERE deleted_at IS NULL`. A task's human-readable identity is the
+  `(service, name)` pair; `service` is immutable. This index ensures no
+  duplicate live tasks exist for the same service+name combination. The
+  partial index excludes soft-deleted rows, so a deleted task's name is
+  freed for reuse by a subsequent create.
 
 ---
 

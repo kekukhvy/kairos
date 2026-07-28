@@ -25,12 +25,15 @@ this way.
   — destinations are hard-deleted.
 - **Task** — the definition of work: what to deliver, where, with what
   timeout and retry policy. A stable entity that changes rarely. Supports
-  soft delete. Identity is `TaskId` (wraps a UUID). Editable state is
-  carried by `TaskEdit` (a record that excludes immutable fields `id`,
-  `service`, `createdAt`); mutation goes through `update(TaskEdit, Instant)`.
-  The `service` field is immutable for the task's lifetime. Timestamps are
-  supplied by the caller (application layer via `Clock`) so the entity
-  stays deterministic and testable.
+  soft delete. Identity is `TaskId` (wraps a UUID); the human-readable
+  identity is the `(service, name)` pair, which is unique among live tasks.
+  Editable state is carried by `TaskEdit` (a record that excludes immutable
+  fields `id`, `service`, `createdAt`); mutation goes through `update(TaskEdit, Instant)`.
+  The `service` field is immutable for the task's lifetime; `name` is
+  editable but cannot be changed into a name already taken within the same
+  service (raises `TaskNameAlreadyExistsException`). Timestamps are supplied
+  by the caller (application layer via `Clock`) so the entity stays
+  deterministic and testable.
 - **Schedule** — the "when" rule. A single task can have multiple
   schedules (e.g. weekdays and weekends as separate rules with different
   cron expressions). Pausing works at the level of a single schedule, not
@@ -177,6 +180,11 @@ always sourced from the injected clock so tests can run with a fixed instant.
 - `existsByDestinationId(DestinationId)` — returns `true` if any task (including
   soft-deleted ones) still holds a reference to the given destination. Used by
   `DeleteDestinationUseCase` to enforce the referential-integrity guard.
+- `existsByServiceAndName(String service, String name, TaskId excludeId)` — returns
+  `true` if any live (non-deleted) task exists with the given `(service, name)` pair,
+  excluding the task with `excludeId` (which may be null on create). Used by
+  `CreateTaskUseCase` and `UpdateTaskUseCase` to enforce the `(service, name)`
+  uniqueness invariant before raising `TaskNameAlreadyExistsException`.
 
 **`DestinationRepository`** (`dev.kairos.domain.destination`; full CRUD as of M2):
 - `existsById(DestinationId)` — validates the destination FK before a task
@@ -206,8 +214,8 @@ always sourced from the injected clock so tests can run with a fixed instant.
 
 | Use case | Inputs | Normal return | Domain exceptions |
 |---|---|---|---|
-| `CreateTaskUseCase` | `CreateTaskCommand`, `Clock` | `Task` | `ValidationException` (unknown destination or invalid field) |
-| `UpdateTaskUseCase` | `TaskId`, `UpdateTaskCommand`, `Clock` | `Task` | `TaskNotFoundException` (missing/deleted); `ValidationException` (unknown destination or invalid field) |
+| `CreateTaskUseCase` | `CreateTaskCommand`, `Clock` | `Task` | `ValidationException` (unknown destination or invalid field); `TaskNameAlreadyExistsException` (`(service, name)` pair already taken) |
+| `UpdateTaskUseCase` | `TaskId`, `UpdateTaskCommand`, `Clock` | `Task` | `TaskNotFoundException` (missing/deleted); `ValidationException` (unknown destination or invalid field); `TaskNameAlreadyExistsException` (`(service, name)` pair already taken) |
 | `GetTaskUseCase` | `TaskId` | `Task` | `TaskNotFoundException` (missing or soft-deleted) |
 | `ListTasksUseCase` | `Pagination` | `List<Task>` | — |
 | `SoftDeleteTaskUseCase` | `TaskId`, `Clock` | void | `TaskNotFoundException` (task not found); `TaskAlreadyDeletedException` (task already soft-deleted) |
@@ -410,6 +418,7 @@ schedule directly by id.
 | `DestinationNotFoundException` | 404 | destination not found (GET/PUT) |
 | `ScheduleNotFoundException` | 404 | schedule not found (GET/PUT/PATCH/DELETE on schedule) |
 | `TaskAlreadyDeletedException` | 409 | repeat DELETE on an already-deleted task |
+| `TaskNameAlreadyExistsException` | 409 | `(service, name)` pair already taken by another live task on create or update |
 | `DestinationAlreadyExistsException` | 409 | destination id already taken on create |
 | `DestinationInUseException` | 409 | at least one task still references the destination on delete |
 | any other `Exception` | 500 | logged server-side; body is `{"error":"Internal server error"}` |
@@ -593,6 +602,12 @@ already ran into, not because the domain itself is complex.
 - `TaskAlreadyDeletedException extends DomainException` — thrown by
   `Task.update()` and `Task.softDelete()` when the task is already
   soft-deleted. Maps to HTTP 409 at the API layer.
+- `TaskNameAlreadyExistsException extends DomainException` — raised by
+  `CreateTaskUseCase` and `UpdateTaskUseCase` when a live task already
+  exists with the same `(service, name)` pair. The `(service, name)` pair
+  is the task's human-readable identity; `service` is immutable, so this
+  can be triggered by creating a task or renaming one into a name already
+  taken within the same service. Maps to HTTP 409 at the API layer.
 - Destination exceptions (all in `dev.kairos.domain.destination.exceptions`,
   all extending `DomainException`):
   - `DestinationAlreadyExistsException` — raised by `CreateDestinationUseCase`
