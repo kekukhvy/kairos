@@ -3,7 +3,7 @@ package dev.kairos.infrastructure.destination;
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.destination.DestinationRepository;
-import dev.kairos.domain.destination.DestinationType;
+import dev.kairos.common.destination.DestinationType;
 import dev.kairos.infrastructure.generated.tables.records.DestinationsRecord;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;

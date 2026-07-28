@@ -8,6 +8,7 @@ import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import dev.kairos.admin.feature.destination.ConfigTemplatePrefill;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
@@ -43,6 +44,7 @@ public class DestinationStep extends VerticalLayout {
             DestinationText.TYPE_WEBHOOK, DestinationText.TYPE_RABBITMQ);
     private final TextArea newDestinationConfig = Fields.textArea(DestinationText.FIELD_CONFIG);
     private final FormLayout createForm;
+    private final ConfigTemplatePrefill configTemplatePrefill = new ConfigTemplatePrefill(newDestinationConfig);
 
     public DestinationStep(JsonMapper jsonMapper, List<DestinationDTO> existing) {
         this.jsonMapper = jsonMapper;
@@ -53,6 +55,7 @@ public class DestinationStep extends VerticalLayout {
         setPadding(false);
         StyleConfig.create().gap(Tokens.SPACE_S).applyTo(this);
         mode.addValueChangeListener(e -> showFieldsForMode(e.getValue()));
+        newDestinationType.addValueChangeListener(e -> configTemplatePrefill.onTypeSelected(e.getValue()));
         add(buildHelp(), mode, existingDestination, createForm);
         showFieldsForMode(WizardMode.SELECT_EXISTING);
     }

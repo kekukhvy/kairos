@@ -27,9 +27,9 @@ hs_err_pid*
 replay_pid*
 /.gradle/
 /.idea/
-/kairos-api/build/
-/build/
+# Gradle/IDE build output in any module (root or nested), not just a hand-listed few.
+**/build/
+**/out/
+**/target/
+/src/
 /kairos-admin/src/main/frontend/generated/
-/kairos-admin/build/
-/kairos-admin/out/
-/kairos-admin/target/

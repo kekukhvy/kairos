@@ -1,5 +1,7 @@
 package dev.kairos.domain.destination;
 
+import dev.kairos.common.destination.DestinationType;
+
 import java.time.Instant;
 import java.util.Objects;
 

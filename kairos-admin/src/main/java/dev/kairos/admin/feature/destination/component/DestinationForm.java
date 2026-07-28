@@ -6,6 +6,7 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import dev.kairos.admin.feature.destination.ConfigTemplatePrefill;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.dto.CreateDestinationRequest;
 import dev.kairos.admin.shared.form.FieldValidation;
@@ -36,6 +37,7 @@ public class DestinationForm extends Dialog {
             DestinationText.TYPE_WEBHOOK,
             DestinationText.TYPE_RABBITMQ);
     private final TextArea config = Fields.textArea(DestinationText.FIELD_CONFIG);
+    private final ConfigTemplatePrefill configTemplatePrefill = new ConfigTemplatePrefill(config);
 
     private DestinationForm(JsonMapper jsonMapper, Consumer<CreateDestinationRequest> onCreate) {
         this.jsonMapper = jsonMapper;
@@ -43,6 +45,8 @@ public class DestinationForm extends Dialog {
 
         setHeaderTitle(DestinationText.NEW_DESTINATION_TITLE);
         setWidth(Tokens.DIALOG_WIDTH_M);
+
+        destinationType.addValueChangeListener(e -> configTemplatePrefill.onTypeSelected(e.getValue()));
 
         add(buildForm());
         getFooter().add(buildCancel(), buildSave());
@@ -101,5 +105,13 @@ public class DestinationForm extends Dialog {
         ok &= FieldValidation.requirePresent(destinationType, destinationType, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(config, UiText.VALIDATION_REQUIRED);
         return ok;
+    }
+
+    Select<String> destinationType() {
+        return destinationType;
+    }
+
+    TextArea config() {
+        return config;
     }
 }

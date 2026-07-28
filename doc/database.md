@@ -56,7 +56,7 @@ destinations  1───* tasks  1───* retry_policies
 |---|---|---|
 | id | VARCHAR(128) PK | human-readable id, e.g. `booking-kafka` |
 | type | VARCHAR(32) NOT NULL | `KAFKA` \| `SQS` \| `WEBHOOK` \| `RABBITMQ` |
-| config | JSONB NOT NULL | topic / url / credentials reference, etc. |
+| config | JSONB NOT NULL | connectivity config; the shape is governed by the per-type schema (see `dev.kairos.common.destination.DestinationConfigSchema` in the `common` module). This is an **application-level contract**, not a DB constraint — the column itself remains a free-form JSON/JSONB. |
 | created_at | TIMESTAMPTZ NOT NULL DEFAULT now() | |
 
 `CONSTRAINT destinations_type_check CHECK (type IN ('KAFKA', 'SQS',

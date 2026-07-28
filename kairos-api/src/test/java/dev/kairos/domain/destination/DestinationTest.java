@@ -1,5 +1,6 @@
 package dev.kairos.domain.destination;
 
+import dev.kairos.common.destination.DestinationType;
 import dev.kairos.common.exceptions.ValidationException;
 import org.junit.jupiter.api.Test;
 

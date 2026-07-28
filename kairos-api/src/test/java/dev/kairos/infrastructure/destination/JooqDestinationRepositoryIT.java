@@ -2,7 +2,7 @@ package dev.kairos.infrastructure.destination;
 
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
-import dev.kairos.domain.destination.DestinationType;
+import dev.kairos.common.destination.DestinationType;
 import dev.kairos.infrastructure.H2DatabaseBase;
 import dev.kairos.infrastructure.generated.Tables;
 import org.jooq.Field;

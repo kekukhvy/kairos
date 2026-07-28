@@ -18,7 +18,8 @@ this way.
   `type` (`DestinationType` enum: `KAFKA`, `SQS`, `WEBHOOK`, `RABBITMQ`)
   and `createdAt` are immutable after creation — changing the delivery
   mechanism is modelled as delete + re-create. `config` (a JSONB string)
-  is mutable via `updateConfig(String)`. The entity is constructed via a
+  is mutable via `updateConfig(String)` and has a **declared per-type shape**
+  enforced at the application layer. The entity is constructed via a
   `Builder`; `createdAt` is supplied by the application layer (via
   `Clock`) so the entity stays deterministic and testable. No soft-delete
   — destinations are hard-deleted.
@@ -215,10 +216,10 @@ always sourced from the injected clock so tests can run with a fixed instant.
 
 | Use case | Inputs | Normal return | Domain exceptions |
 |---|---|---|---|
-| `CreateDestinationUseCase` | `CreateDestinationCommand`, `Clock` | `Destination` | `DestinationAlreadyExistsException` (id already taken); `InvalidDestinationTypeException` (unrecognised `destinationType` string) |
+| `CreateDestinationUseCase` | `CreateDestinationCommand`, `Clock` | `Destination` | `DestinationAlreadyExistsException` (id already taken); `InvalidDestinationTypeException` (unrecognised `destinationType` string); `ValidationException` (config missing required key, invalid JSON, or not a JSON object) |
 | `GetDestinationByIdUseCase` | `DestinationId` | `Destination` | `DestinationNotFoundException` (no row for the id) |
 | `ListDestinationsUseCase` | `Pagination` | `List<Destination>` | — |
-| `UpdateDestinationUseCase` | `DestinationId`, `String config` | `Destination` | `DestinationNotFoundException` (no row for the id) |
+| `UpdateDestinationUseCase` | `DestinationId`, `String config` | `Destination` | `DestinationNotFoundException` (no row for the id); `ValidationException` (config missing required key, invalid JSON, or not a JSON object) |
 | `DeleteDestinationUseCase` | `DestinationId` | void | `DestinationInUseException` (at least one task still references the destination) |
 
 **Schedule use cases** (`dev.kairos.application.schedule.usecases`):
@@ -255,7 +256,45 @@ e.g. `booking-kafka`) rather than auto-generated. A duplicate-id check via
 `existsById` runs before the row is written. `createdAt` is stamped from the
 injected `Clock`. The raw `destinationType` string from `CreateDestinationCommand`
 is parsed to `DestinationType` via `DestinationType.valueOf()`; an unknown value
-raises `InvalidDestinationTypeException`.
+raises `InvalidDestinationTypeException`. The `config` field is validated against
+the per-type schema before the destination is built (see **Config schema** below).
+
+**Config schema:** `dev.kairos.common.destination.DestinationConfigSchema` (in the
+`common` module) is the single source of truth for the shape of a destination's
+`config` — which JSON object keys are required vs. optional for each delivery type.
+It is kept in `common` (rather than duplicated or imported from `kairos-api`) so
+that both `kairos-api` and `kairos-admin` can reach it without the admin module
+depending on the API module (which would invert the dependency graph). The schema
+is used by the application layer (not the domain, which remains framework-free) to
+validate the `config` JSON string before it reaches the entity.
+
+`DestinationType` lives in `common` alongside the schema, and the domain uses that
+same enum — there is deliberately **one** `DestinationType`, not a domain copy plus
+a mirror. A mirrored enum would be coupled to its twin only by a string
+(`valueOf(name())`), so adding a constant to one and not the other would compile
+cleanly and fail at runtime. Being plain Java, an enum in `common` keeps the domain
+framework-free, and `domain → common` is an edge that already exists (`Validation`,
+`ValidationException`).
+
+Schema per type:
+| Type | Required | Optional |
+|---|---|---|
+| `KAFKA` | `topic` | `key`, `headers` |
+| `SQS` | `queueUrl` | `messageGroupId` |
+| `WEBHOOK` | `url` | `method`, `headers` |
+| `RABBITMQ` | `exchange`, `routingKey` | `headers` |
+
+Validation semantics:
+- Only key **presence** is enforced; values are never inspected. A config like
+  `{"topic": ""}` is valid — the prefilled UI template must itself be submittable.
+- Keys **beyond** the required ∪ optional set are **accepted and stored untouched**.
+  Delivery adapters may read custom parameters from the config later (M7+).
+- A config that is not a JSON object (e.g. an array or scalar) is rejected.
+- The schema is reachable from both `kairos-api` and `kairos-admin` without module
+  coupling, and provides templates for UI prefill (e.g. KAFKA → `{"topic": ""}`).
+  This contract — that the schema is per-type, values are unchecked, and extra
+  keys are accepted — is what the "second adapter, zero domain changes" hexagonal
+  payoff depends on.
 
 **Destination deletion semantics:** deletion is idempotent — no existence check
 is performed before the `deleteById` call (single round trip, standard DELETE
@@ -363,7 +402,7 @@ schedule directly by id.
 
 | Exception | HTTP status | Notes |
 |---|---|---|
-| `ValidationException` | 400 | field-level constraint violations (blank name, invalid type, missing/forbidden when-field, past `runAt`, `intervalSeconds` out of bounds, invalid timezone) |
+| `ValidationException` | 400 | field-level constraint violations (blank name, invalid type, missing/forbidden when-field, past `runAt`, `intervalSeconds` out of bounds, invalid timezone; also destination config missing required keys, invalid JSON, or not a JSON object) |
 | `IllegalArgumentException` | 400 | malformed path param (e.g. non-UUID `{id}`) |
 | `InvalidDestinationTypeException` | 400 | unrecognised `destinationType` string on destination create |
 | `JacksonException` | 400 | malformed or unparseable request body |

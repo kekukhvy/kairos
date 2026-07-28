@@ -99,8 +99,8 @@ class DestinationApiTest {
         taskRepository = new StubTaskRepositoryForApi();
 
         DestinationHandler handler = new DestinationHandler(
-                new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK),
-                new UpdateDestinationUseCase(destinationRepository),
+                new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, objectMapper),
+                new UpdateDestinationUseCase(destinationRepository, objectMapper),
                 new DeleteDestinationUseCase(destinationRepository, taskRepository),
                 new ListDestinationsUseCase(destinationRepository),
                 new GetDestinationByIdUseCase(destinationRepository),
@@ -206,6 +206,21 @@ class DestinationApiTest {
         assertEquals(HTTP_BAD_REQUEST, response.statusCode());
     }
 
+    @Test
+    void create_withConfigMissingRequiredKey_returns400() throws Exception {
+        HttpResponse<String> response = post(BASE_PATH, createBodyWithConfig("{}"));
+
+        assertEquals(HTTP_BAD_REQUEST, response.statusCode());
+    }
+
+    @Test
+    void create_withConfigMissingRequiredKey_errorNamesMissingKey() throws Exception {
+        HttpResponse<String> response = post(BASE_PATH, createBodyWithConfig("{}"));
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertTrue(body.get(FIELD_ERROR).asText().contains(TOPIC_KEY));
+    }
+
     // ── GET /api/v1/destinations/{id} ─────────────────────────────────────────
 
     @Test
@@ -275,6 +290,25 @@ class DestinationApiTest {
         JsonNode config = body.get(FIELD_CONFIG);
         assertTrue(config.isObject(), "updated config must be a JSON object");
         assertEquals(UPDATED_TOPIC_VALUE, config.get(TOPIC_KEY).asText());
+    }
+
+    @Test
+    void update_withConfigMissingRequiredKey_returns400() throws Exception {
+        destinationRepository.seed(destination());
+
+        HttpResponse<String> response = put(destinationPath(DESTINATION_ID), updateBodyWithConfig("{}"));
+
+        assertEquals(HTTP_BAD_REQUEST, response.statusCode());
+    }
+
+    @Test
+    void update_withConfigMissingRequiredKey_errorNamesMissingKey() throws Exception {
+        destinationRepository.seed(destination());
+
+        HttpResponse<String> response = put(destinationPath(DESTINATION_ID), updateBodyWithConfig("{}"));
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertTrue(body.get(FIELD_ERROR).asText().contains(TOPIC_KEY));
     }
 
     @Test
@@ -491,11 +525,29 @@ class DestinationApiTest {
                 """.formatted(DESTINATION_ID, type, TOPIC_VALUE);
     }
 
+    private static String createBodyWithConfig(String config) {
+        return """
+                {
+                  "destinationId": "%s",
+                  "destinationType": "%s",
+                  "config": %s
+                }
+                """.formatted(DESTINATION_ID, DESTINATION_TYPE.name(), config);
+    }
+
     private static String validUpdateBody() {
         return """
                 {
                   "config": {"topic": "%s"}
                 }
                 """.formatted(UPDATED_TOPIC_VALUE);
+    }
+
+    private static String updateBodyWithConfig(String config) {
+        return """
+                {
+                  "config": %s
+                }
+                """.formatted(config);
     }
 }
