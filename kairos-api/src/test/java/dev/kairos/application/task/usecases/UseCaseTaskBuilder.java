@@ -54,6 +54,20 @@ final class UseCaseTaskBuilder {
                 .build();
     }
 
+    /** Builds a live task with a caller-supplied id and name (same service). */
+    static Task liveTaskWithIdAndName(TaskId id, String name) {
+        return Task.builder()
+                .id(id)
+                .service(SERVICE)
+                .name(name)
+                .destinationId(DestinationId.of(DESTINATION_ID))
+                .eventName(EVENT_NAME)
+                .timeoutMs(TIMEOUT_MS)
+                .createdAt(CREATED_AT)
+                .updatedAt(CREATED_AT)
+                .build();
+    }
+
     /** Builds a soft-deleted task. */
     static Task deletedTask() {
         Instant deletedAt = Instant.parse("2026-02-01T00:00:00Z");

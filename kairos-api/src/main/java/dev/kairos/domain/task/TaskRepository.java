@@ -48,6 +48,19 @@ public interface TaskRepository {
      * hard-deleting a destination while tasks depend on it.
      */
     boolean existsByDestinationId(DestinationId id);
+
+    /**
+     * Returns {@code true} if a <b>live</b> (not soft-deleted) task already has
+     * the given {@code (service, name)} pair, other than {@code excludeId}
+     * itself. {@code (service, name)} is a task's human-readable identity, so
+     * this backs the uniqueness check on create and rename.
+     *
+     * @param excludeId the task being renamed (excluded from the match so a
+     *                  no-op rename doesn't collide with itself), or
+     *                  {@code null} on create, when there is no task yet to
+     *                  exclude
+     */
+    boolean existsByServiceAndName(String service, String name, TaskId excludeId);
 }
 
 

@@ -49,7 +49,7 @@ public class SetupWizard extends Dialog {
                        DestinationService destinationService, ScheduleService scheduleService,
                        Runnable onSuccess) {
         this.onSuccess = onSuccess;
-        this.taskStep = new TaskStep(jsonMapper);
+        this.taskStep = new TaskStep(jsonMapper, taskService.list());
         this.destinationStep = new DestinationStep(jsonMapper, destinationService.list());
         this.scheduleStep = new ScheduleStep();
         this.commit = new WizardCommit(destinationService::create, taskService::create, scheduleService::create);

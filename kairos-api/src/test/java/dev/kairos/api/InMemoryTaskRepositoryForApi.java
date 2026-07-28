@@ -59,6 +59,14 @@ final class InMemoryTaskRepositoryForApi implements TaskRepository {
                 .anyMatch(t -> t.destinationId().equals(id));
     }
 
+    @Override
+    public boolean existsByServiceAndName(String service, String name, TaskId excludeId) {
+        return store.values().stream()
+                .filter(t -> !t.isDeleted())
+                .filter(t -> !t.id().equals(excludeId))
+                .anyMatch(t -> t.service().equals(service) && t.name().equals(name));
+    }
+
     /** Seeds a task directly without going through save(), preserving deletedAt state. */
     void seed(Task task) {
         store.put(task.id(), task);

@@ -95,4 +95,21 @@ public final class JooqTaskRepository implements TaskRepository {
                         .where(TASKS.DESTINATION_ID.equal(id.value()))
         );
     }
+
+    @Override
+    public boolean existsByServiceAndName(String service, String name, TaskId excludeId) {
+        var condition = TASKS.SERVICE.equal(service)
+                .and(TASKS.NAME.equal(name))
+                .and(TASKS.DELETED_AT.isNull());
+
+        if (excludeId != null) {
+            condition = condition.and(TASKS.ID.notEqual(excludeId.value()));
+        }
+
+        return dslContext.fetchExists(
+                dslContext.selectOne()
+                        .from(TASKS)
+                        .where(condition)
+        );
+    }
 }

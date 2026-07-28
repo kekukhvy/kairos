@@ -9,6 +9,7 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import dev.kairos.admin.feature.task.TaskText;
+import dev.kairos.admin.feature.task.TaskUniqueness;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
 import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.feature.task.dto.UpdateTaskRequest;
@@ -22,6 +23,8 @@ import dev.kairos.admin.shared.util.Strings;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class TaskForm extends Dialog {
@@ -33,7 +36,7 @@ public class TaskForm extends Dialog {
     private final TaskDto editing;                       // null → create mode
     private final Consumer<CreateTaskRequest> onCreate;  // set in create mode
     private final Consumer<UpdateTaskRequest> onEdit;    // set in edit mode
-
+    private final Set<String> takenServiceNameKeys;
 
     private final TextField service = Fields.text(TaskText.COL_SERVICE);
     private final TextField name = Fields.text(TaskText.COL_NAME);
@@ -47,6 +50,7 @@ public class TaskForm extends Dialog {
 
     private TaskForm(JsonMapper jsonMapper,
                      List<String> destinationIds,
+                     List<TaskDto> existingTasks,
                      TaskDto editing,
                      Consumer<CreateTaskRequest> onCreate,
                      Consumer<UpdateTaskRequest> onEdit) {
@@ -55,6 +59,8 @@ public class TaskForm extends Dialog {
         this.onCreate = onCreate;
         this.onEdit = onEdit;
         this.destinationId = Fields.combo(TaskText.COL_DESTINATION, destinationIds);
+        UUID excludeId = editing == null ? null : editing.id();
+        this.takenServiceNameKeys = TaskUniqueness.keysExcluding(existingTasks, excludeId);
 
         setHeaderTitle(editing == null ? TaskText.NEW_TASK : TaskText.EDIT_TASK);
         setWidth(Tokens.DIALOG_WIDTH_L);
@@ -66,21 +72,26 @@ public class TaskForm extends Dialog {
             service.setReadOnly(true); // service is immutable
         }
 
+        name.addBlurListener(e -> checkUnique());
+        service.addBlurListener(e -> checkUnique());
+
         add(buildForm());
         getFooter().add(buildCancel(), buildSave());
     }
 
     public static TaskForm forCreate(JsonMapper jsonMapper,
                                      List<String> destinationIds,
+                                     List<TaskDto> existingTasks,
                                      Consumer<CreateTaskRequest> onCreate) {
-        return new TaskForm(jsonMapper, destinationIds, null, onCreate, null);
+        return new TaskForm(jsonMapper, destinationIds, existingTasks, null, onCreate, null);
     }
 
     public static TaskForm forEdit(JsonMapper jsonMapper,
                                    List<String> destinationIds,
+                                   List<TaskDto> existingTasks,
                                    TaskDto task,
                                    Consumer<UpdateTaskRequest> onEdit) {
-        return new TaskForm(jsonMapper, destinationIds, task, null, onEdit);
+        return new TaskForm(jsonMapper, destinationIds, existingTasks, task, null, onEdit);
     }
 
     private FormLayout buildForm() {
@@ -141,13 +152,19 @@ public class TaskForm extends Dialog {
         close();
     }
 
-    private boolean validate() {
+    boolean validate() {
         boolean ok = FieldValidation.require(service, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(name, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(destinationId, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(eventName, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.requirePresent(timeoutMs, timeoutMs, UiText.VALIDATION_REQUIRED);
+        ok &= checkUnique();
         return ok;
+    }
+
+    private boolean checkUnique() {
+        return FieldValidation.uniqueServiceName(
+                service, name, takenServiceNameKeys, TaskText.VALIDATION_DUPLICATE_SERVICE_NAME);
     }
 
     private void prefill(TaskDto task) {
@@ -160,6 +177,26 @@ public class TaskForm extends Dialog {
         active.setValue(task.active());
         supportsRetry.setValue(task.supportsRetry());
         payload.setValue(JsonText.forDisplay(jsonMapper, task.payload()));
+    }
+
+    TextField service() {
+        return service;
+    }
+
+    TextField name() {
+        return name;
+    }
+
+    TextField eventName() {
+        return eventName;
+    }
+
+    ComboBox<String> destinationId() {
+        return destinationId;
+    }
+
+    IntegerField timeoutMs() {
+        return timeoutMs;
     }
 
 }

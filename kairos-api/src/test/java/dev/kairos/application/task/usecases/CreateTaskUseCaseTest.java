@@ -3,6 +3,7 @@ package dev.kairos.application.task.usecases;
 import dev.kairos.application.task.commands.CreateTaskCommand;
 import dev.kairos.common.exceptions.ValidationException;
 import dev.kairos.domain.task.Task;
+import dev.kairos.domain.task.TaskNameAlreadyExistsException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -139,6 +140,27 @@ class CreateTaskUseCaseTest {
         }
 
         assertEquals(0, taskRepository.saveCallCount());
+    }
+
+    // --- unique (service, name) ---
+
+    @Test
+    void execute_withDuplicateServiceAndName_throwsTaskNameAlreadyExistsException() {
+        useCase.execute(validCommand());
+
+        assertThrows(TaskNameAlreadyExistsException.class, () -> useCase.execute(validCommand()));
+    }
+
+    @Test
+    void execute_withDuplicateServiceAndName_doesNotSaveSecondTask() {
+        useCase.execute(validCommand());
+
+        try {
+            useCase.execute(validCommand());
+        } catch (TaskNameAlreadyExistsException ignored) {
+        }
+
+        assertEquals(1, taskRepository.saveCallCount());
     }
 
     // --- null guard ---
