@@ -42,6 +42,11 @@ class TaskDtoMapperTest {
     private static final String ORDER_ID_FIELD = "orderId";
     private static final String ORDER_ID_VALUE = "abc";
 
+    private static final long ZERO_ACTIVE_SCHEDULES = 0L;
+    private static final long ONE_ACTIVE_SCHEDULE = 1L;
+    private static final long MULTIPLE_ACTIVE_SCHEDULES = 3L;
+    private static final long IRRELEVANT_ACTIVE_SCHEDULE_COUNT = 0L;
+
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -55,7 +60,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsIdCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(TASK_UUID, response.id());
     }
@@ -64,7 +69,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsServiceCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(SERVICE, response.service());
     }
@@ -73,7 +78,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsNameCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(NAME, response.name());
     }
@@ -82,7 +87,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsDescriptionCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(DESCRIPTION, response.description());
     }
@@ -91,7 +96,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsActiveCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertTrue(response.active());
     }
@@ -100,7 +105,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsDestinationIdCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(DESTINATION_ID, response.destinationId());
     }
@@ -109,7 +114,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsEventNameCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(EVENT_NAME, response.eventName());
     }
@@ -118,7 +123,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsTimeoutMsCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(TIMEOUT_MS, response.timeoutMs());
     }
@@ -127,7 +132,7 @@ class TaskDtoMapperTest {
     void toResponse_mapsCreatedAtCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(CREATED_AT, response.createdAt());
     }
@@ -136,9 +141,38 @@ class TaskDtoMapperTest {
     void toResponse_mapsUpdatedAtCorrectly() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(UPDATED_AT, response.updatedAt());
+    }
+
+    // ── activeScheduleCount ──────────────────────────────────────────────────
+
+    @Test
+    void toResponse_withZeroActiveSchedules_countIsZero() {
+        Task task = taskWithPayload(null);
+
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, ZERO_ACTIVE_SCHEDULES);
+
+        assertEquals(ZERO_ACTIVE_SCHEDULES, response.activeScheduleCount());
+    }
+
+    @Test
+    void toResponse_withOneActiveSchedule_countIsOne() {
+        Task task = taskWithPayload(null);
+
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, ONE_ACTIVE_SCHEDULE);
+
+        assertEquals(ONE_ACTIVE_SCHEDULE, response.activeScheduleCount());
+    }
+
+    @Test
+    void toResponse_withMultipleActiveSchedules_countReflectsTotal() {
+        Task task = taskWithPayload(null);
+
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, MULTIPLE_ACTIVE_SCHEDULES);
+
+        assertEquals(MULTIPLE_ACTIVE_SCHEDULES, response.activeScheduleCount());
     }
 
     // ── payload conversion branches ──────────────────────────────────────────
@@ -147,7 +181,7 @@ class TaskDtoMapperTest {
     void toResponse_withNullPayload_payloadIsNull() {
         Task task = taskWithPayload(null);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertNull(response.payload());
     }
@@ -156,7 +190,7 @@ class TaskDtoMapperTest {
     void toResponse_withValidJsonPayload_payloadIsJsonObject() {
         Task task = taskWithPayload(VALID_PAYLOAD_JSON);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         JsonNode payload = response.payload();
         assertNotNull(payload);
@@ -167,7 +201,7 @@ class TaskDtoMapperTest {
     void toResponse_withValidJsonPayload_payloadContainsExpectedFields() {
         Task task = taskWithPayload(VALID_PAYLOAD_JSON);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         assertEquals(ORDER_ID_VALUE, response.payload().get(ORDER_ID_FIELD).asText());
     }
@@ -176,7 +210,7 @@ class TaskDtoMapperTest {
     void toResponse_withCorruptStoredJson_payloadFallsBackToTextNode() {
         Task task = taskWithPayload(CORRUPT_PAYLOAD);
 
-        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper);
+        TaskResponse response = TaskDtoMapper.toResponse(task, objectMapper, IRRELEVANT_ACTIVE_SCHEDULE_COUNT);
 
         JsonNode payload = response.payload();
         assertNotNull(payload);

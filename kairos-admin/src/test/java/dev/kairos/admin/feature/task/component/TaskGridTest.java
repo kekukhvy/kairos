@@ -1,12 +1,16 @@
 package dev.kairos.admin.feature.task.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.ItemClickEvent;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.shared.Tooltip;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import dev.kairos.admin.feature.task.TaskText;
 import dev.kairos.admin.feature.task.dto.TaskDto;
+import dev.kairos.admin.shared.style.Tokens;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -79,11 +83,139 @@ class TaskGridTest {
         assertThat(viewed).containsExactly(task);
     }
 
+    // ── name cell: badge visibility + zero-active styling ────────────────────
+
+    @Test
+    void nameCell_zeroActiveSchedules_isRenderedInErrorColor() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(0);
+        grid.setRows(List.of(task));
+
+        Span name = nameSpanFor(grid, task);
+
+        assertThat(name.getStyle().get("color")).isEqualTo(Tokens.COLOR_ERROR);
+    }
+
+    @Test
+    void nameCell_zeroActiveSchedules_hasExplanatoryTooltip() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(0);
+        grid.setRows(List.of(task));
+
+        Span name = nameSpanFor(grid, task);
+
+        assertThat(Tooltip.forComponent(name).getText()).isEqualTo(TaskText.TOOLTIP_NO_ACTIVE_SCHEDULES);
+    }
+
+    @Test
+    void nameCell_zeroActiveSchedules_showsNoBadge() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(0);
+        grid.setRows(List.of(task));
+
+        Component nameCell = nameCellFor(grid, task);
+
+        assertThat(badgeIn(nameCell)).isEmpty();
+    }
+
+    @Test
+    void nameCell_oneActiveSchedule_isRenderedInDefaultColor() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(1);
+        grid.setRows(List.of(task));
+
+        Span name = nameSpanFor(grid, task);
+
+        assertThat(name.getStyle().get("color")).isNull();
+    }
+
+    @Test
+    void nameCell_oneActiveSchedule_showsNoBadge() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(1);
+        grid.setRows(List.of(task));
+
+        Component nameCell = nameCellFor(grid, task);
+
+        assertThat(badgeIn(nameCell)).isEmpty();
+    }
+
+    @Test
+    void nameCell_multipleActiveSchedules_showsBadgeWithCount() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(3);
+        grid.setRows(List.of(task));
+
+        Component nameCell = nameCellFor(grid, task);
+
+        assertThat(badgeIn(nameCell)).map(Span::getText).contains("3");
+    }
+
+    @Test
+    void nameCell_multipleActiveSchedules_isRenderedInDefaultColor() {
+        TaskGrid grid = new TaskGrid();
+        TaskDto task = taskWithActiveScheduleCount(3);
+        grid.setRows(List.of(task));
+
+        Span name = nameSpanFor(grid, task);
+
+        assertThat(name.getStyle().get("color")).isNull();
+    }
+
+    @Test
+    void nameCell_badgeClick_doesNotInvokeOnView() {
+        TaskGrid grid = new TaskGrid();
+        List<TaskDto> viewed = new ArrayList<>();
+        grid.setOnView(viewed::add);
+        TaskDto task = taskWithActiveScheduleCount(3);
+        grid.setRows(List.of(task));
+
+        Component nameCell = nameCellFor(grid, task);
+        Span badge = badgeIn(nameCell).orElseThrow(() -> new AssertionError("No badge found"));
+        badge.getElement().executeJs("this.click()");
+
+        assertThat(viewed).isEmpty();
+    }
+
     // --- helpers ---
 
     private static TaskDto activeTask(boolean active) {
         return new TaskDto(TASK_ID, "billing", "monthly-invoice", null, active,
-                "dest-1", "InvoiceReady", null, 5000, false, NOW, NOW);
+                "dest-1", "InvoiceReady", null, 5000, false, NOW, NOW, 1);
+    }
+
+    private static TaskDto taskWithActiveScheduleCount(long activeScheduleCount) {
+        return new TaskDto(TASK_ID, "billing", "monthly-invoice", null, true,
+                "dest-1", "InvoiceReady", null, 5000, false, NOW, NOW, activeScheduleCount);
+    }
+
+    private static Component nameCellFor(TaskGrid grid, TaskDto task) {
+        Grid.Column<TaskDto> nameColumn = grid.getColumns().stream()
+                .filter(c -> TaskText.COL_NAME.equals(c.getHeaderText()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No Name column found"));
+
+        @SuppressWarnings("unchecked")
+        ComponentRenderer<Component, TaskDto> renderer =
+                (ComponentRenderer<Component, TaskDto>) nameColumn.getRenderer();
+        return renderer.createComponent(task);
+    }
+
+    private static Span nameSpanFor(TaskGrid grid, TaskDto task) {
+        Component nameCell = nameCellFor(grid, task);
+        return nameCell.getChildren()
+                .filter(Span.class::isInstance)
+                .map(Span.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No name Span found in cell"));
+    }
+
+    private static java.util.Optional<Span> badgeIn(Component nameCell) {
+        return nameCell.getChildren()
+                .filter(Span.class::isInstance)
+                .map(Span.class::cast)
+                .filter(span -> span.getElement().getThemeList().contains(Tokens.THEME_BADGE))
+                .findFirst();
     }
 
     private static Checkbox activeToggleFor(TaskGrid grid, TaskDto task) {

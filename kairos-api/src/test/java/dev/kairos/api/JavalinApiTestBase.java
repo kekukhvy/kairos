@@ -37,6 +37,7 @@ abstract class JavalinApiTestBase {
     protected ObjectMapper objectMapper;
     protected InMemoryTaskRepositoryForApi taskRepository;
     protected StubDestinationRepositoryForApi destinationRepository;
+    protected InMemoryScheduleRepositoryForApi scheduleRepository;
     protected Javalin app;
     protected HttpClient httpClient;
     protected String baseUrl;
@@ -47,6 +48,7 @@ abstract class JavalinApiTestBase {
         taskRepository = new InMemoryTaskRepositoryForApi();
         destinationRepository = new StubDestinationRepositoryForApi();
         destinationRepository.register(DESTINATION_ID);
+        scheduleRepository = new InMemoryScheduleRepositoryForApi();
 
         TaskHandler taskHandler = new TaskHandler(
                 objectMapper,
@@ -55,7 +57,8 @@ abstract class JavalinApiTestBase {
                 new SoftDeleteTaskUseCase(taskRepository, FIXED_CLOCK),
                 new GetTaskUseCase(taskRepository),
                 new ListTasksUseCase(taskRepository),
-                new SetTaskActiveUseCase(taskRepository, FIXED_CLOCK)
+                new SetTaskActiveUseCase(taskRepository, FIXED_CLOCK),
+                scheduleRepository
         );
 
         app = Router.create(objectMapper);

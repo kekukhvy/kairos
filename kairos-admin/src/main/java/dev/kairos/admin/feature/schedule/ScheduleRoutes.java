@@ -8,4 +8,7 @@ public final class ScheduleRoutes {
 
     public static final String SCHEDULES = "schedules";
     public static final String PAGE_TITLE = "Schedules · Kairos";
+
+    /** Query parameter that pre-selects the task filter, e.g. {@code schedules?task=<taskId>}. */
+    public static final String QUERY_TASK = "task";
 }

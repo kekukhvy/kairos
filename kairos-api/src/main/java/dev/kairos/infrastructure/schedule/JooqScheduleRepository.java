@@ -7,12 +7,19 @@ import dev.kairos.domain.task.TaskId;
 import dev.kairos.infrastructure.generated.Tables;
 import dev.kairos.infrastructure.generated.tables.records.SchedulesRecord;
 import org.jooq.DSLContext;
+import org.jooq.Record2;
+import org.jooq.Result;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static dev.kairos.infrastructure.generated.tables.Schedules.SCHEDULES;
+import static org.jooq.impl.DSL.count;
 
 /**
  * jOOQ-backed implementation of {@link ScheduleRepository}.
@@ -74,5 +81,30 @@ public final class JooqScheduleRepository implements ScheduleRepository {
         dslContext.deleteFrom(SCHEDULES)
                 .where(SCHEDULES.ID.equal(id.value()))
                 .execute();
+    }
+
+    /**
+     * Counts active schedules per task in one grouped query — the whole page's
+     * count is fetched in a single round trip, never one query per task.
+     */
+    @Override
+    public Map<TaskId, Long> countActiveByTaskIds(Collection<TaskId> taskIds) {
+        if (taskIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<UUID> ids = taskIds.stream().map(TaskId::value).toList();
+        Result<Record2<UUID, Integer>> rows = dslContext
+                .select(SCHEDULES.TASK_ID, count())
+                .from(SCHEDULES)
+                .where(SCHEDULES.ACTIVE.isTrue())
+                .and(SCHEDULES.TASK_ID.in(ids))
+                .groupBy(SCHEDULES.TASK_ID)
+                .fetch();
+
+        return rows.stream()
+                .collect(Collectors.toMap(
+                        row -> TaskId.of(row.value1()),
+                        row -> row.value2().longValue()));
     }
 }

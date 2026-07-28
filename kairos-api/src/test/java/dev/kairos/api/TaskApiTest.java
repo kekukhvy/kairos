@@ -1,9 +1,12 @@
 package dev.kairos.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import dev.kairos.domain.schedule.Schedule;
+import dev.kairos.domain.schedule.ScheduleId;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.UUID;
 
 import static dev.kairos.api.ApiTaskBuilder.*;
@@ -69,6 +72,11 @@ class TaskApiTest extends JavalinApiTestBase {
     private static final int DEFAULT_OFFSET = 0;
     private static final int EXPLICIT_LIMIT = 1;
     private static final int EXPLICIT_OFFSET = 1;
+
+    private static final String FIELD_ACTIVE_SCHEDULE_COUNT = "activeScheduleCount";
+    private static final Instant SCHEDULE_CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
+    private static final Instant FUTURE_RUN_AT = Instant.parse("2027-01-01T00:00:00Z");
+    private static final String SCHEDULE_LABEL = "nightly-run";
 
     // ── POST /api/v1/tasks ───────────────────────────────────────────────────
 
@@ -519,7 +527,88 @@ class TaskApiTest extends JavalinApiTestBase {
                 "hasNext must be true when more items exist beyond the current page");
     }
 
+    // ── activeScheduleCount (GET /api/v1/tasks and /{id}) ────────────────────
+
+    @Test
+    void list_taskWithNoSchedules_activeScheduleCountIsZero() throws Exception {
+        taskRepository.seed(liveTask());
+
+        HttpResponse<String> response = get(BASE_PATH);
+
+        JsonNode firstItem = objectMapper.readTree(response.body()).get(FIELD_ITEMS).get(0);
+        assertEquals(0, firstItem.get(FIELD_ACTIVE_SCHEDULE_COUNT).asLong());
+    }
+
+    @Test
+    void list_taskWithOnlyPausedSchedule_activeScheduleCountIsZero() throws Exception {
+        taskRepository.seed(liveTask());
+        scheduleRepository.seed(pausedSchedule(TASK_UUID));
+
+        HttpResponse<String> response = get(BASE_PATH);
+
+        JsonNode firstItem = objectMapper.readTree(response.body()).get(FIELD_ITEMS).get(0);
+        assertEquals(0, firstItem.get(FIELD_ACTIVE_SCHEDULE_COUNT).asLong());
+    }
+
+    @Test
+    void list_taskWithOneActiveSchedule_activeScheduleCountIsOne() throws Exception {
+        taskRepository.seed(liveTask());
+        scheduleRepository.seed(activeSchedule(TASK_UUID));
+
+        HttpResponse<String> response = get(BASE_PATH);
+
+        JsonNode firstItem = objectMapper.readTree(response.body()).get(FIELD_ITEMS).get(0);
+        assertEquals(1, firstItem.get(FIELD_ACTIVE_SCHEDULE_COUNT).asLong());
+    }
+
+    @Test
+    void list_taskWithMultipleActiveSchedules_activeScheduleCountReflectsTotal() throws Exception {
+        taskRepository.seed(liveTask());
+        scheduleRepository.seed(activeSchedule(TASK_UUID));
+        scheduleRepository.seed(activeSchedule(TASK_UUID));
+
+        HttpResponse<String> response = get(BASE_PATH);
+
+        JsonNode firstItem = objectMapper.readTree(response.body()).get(FIELD_ITEMS).get(0);
+        assertEquals(2, firstItem.get(FIELD_ACTIVE_SCHEDULE_COUNT).asLong());
+    }
+
+    @Test
+    void list_multipleTasks_issuesExactlyOneScheduleCountQuery() throws Exception {
+        taskRepository.seed(liveTask());
+        taskRepository.seed(liveTaskWithId(randomTaskId()));
+        taskRepository.seed(liveTaskWithId(randomTaskId()));
+
+        get(BASE_PATH);
+
+        assertEquals(1, scheduleRepository.countActiveByTaskIdsCallCount(),
+                "listing tasks must issue exactly one schedule-count query for the whole page");
+    }
+
+    @Test
+    void getById_taskWithActiveSchedule_activeScheduleCountReflectsIt() throws Exception {
+        taskRepository.seed(liveTask());
+        scheduleRepository.seed(activeSchedule(TASK_UUID));
+
+        HttpResponse<String> response = get(taskPath(TASK_UUID.toString()));
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertEquals(1, body.get(FIELD_ACTIVE_SCHEDULE_COUNT).asLong());
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
+
+    private static Schedule activeSchedule(UUID taskId) {
+        return Schedule.once(ScheduleId.newId(), new dev.kairos.domain.task.TaskId(taskId),
+                SCHEDULE_LABEL, FUTURE_RUN_AT, SCHEDULE_CREATED_AT);
+    }
+
+    private static Schedule pausedSchedule(UUID taskId) {
+        Schedule schedule = activeSchedule(taskId);
+        schedule.pause(SCHEDULE_CREATED_AT);
+        return schedule;
+    }
+
 
     private static String validCreateBody() {
         return """

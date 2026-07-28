@@ -5,36 +5,45 @@
 An operator looking at the Tasks grid cannot tell how a task is scheduled
 without leaving the screen. Two states are invisible today and both matter:
 
-- **A task with several schedules.** Nothing on the row hints that the task
-  fires on more than one schedule, so an operator editing or stopping it has no
-  idea how many triggers they are affecting.
-- **A task with *no* schedules at all.** This is a silent misconfiguration: the
-  task exists, looks healthy, is `active` — and will never run. Today it is
-  visually identical to a correctly scheduled task.
+- **A task with several active schedules.** Nothing on the row hints that the
+  task fires on more than one active schedule, so an operator editing or
+  stopping it has no idea how many live triggers they are affecting.
+- **A task with *no* active schedules.** This is a silent misconfiguration: the
+  task exists, looks healthy, is `active` — and will never run, because every
+  schedule it has is paused (or it has none at all). Today it is visually
+  identical to a correctly scheduled task.
 
 Both are answerable only by navigating to Schedules and filtering by hand.
 
-Surface both directly on the Tasks grid: a small badge carrying the schedule
-count when a task has **more than one** schedule, and a red task name when it
-has **none**.
+Surface both directly on the Tasks grid: a small badge carrying the *active*
+schedule count when a task has **more than one** active schedule, and a red task
+name when it has **none**.
+
+The count deliberately reflects **active** schedules only (`schedules.active =
+true`) — a paused schedule contributes nothing to how the task actually fires,
+so counting it would misrepresent the task's live trigger set and mask the
+zero-active misconfiguration above.
 
 ## Scope
 
 **In:**
-- `scheduleCount` added to the task listing read model, computed by the API
-  (`kairos-api`, `common`).
-- `TaskGrid`: a small badge next to the task name when `scheduleCount > 1`;
+- `activeScheduleCount` added to the task listing read model, computed by the
+  API (`kairos-api`, `common`) — counts only schedules with `active = true`.
+- `TaskGrid`: a small badge next to the task name when `activeScheduleCount > 1`;
   clicking it opens Schedules filtered to that task.
 - `TaskGrid`: the task name rendered in the error colour, with an explanatory
-  tooltip, when `scheduleCount == 0`.
+  tooltip, when `activeScheduleCount == 0`.
 - `ScheduleView`: a `?task=<taskId>` query parameter that pre-selects the task
   filter, so the badge can deep-link into it.
 
 **Out:**
 - Any change to the `Schedule` aggregate, the schedules table, or the schedule
   endpoints. The count is a read-side projection only.
-- Showing a badge for `scheduleCount == 1` (the common case — no badge, no
+- Showing a badge for `activeScheduleCount == 1` (the common case — no badge, no
   colouring; the row stays quiet).
+- Counting paused (`active = false`) schedules. A paused schedule is not part of
+  the task's live trigger set and never contributes to the badge or the
+  zero-active colouring.
 - A sortable "Schedules" column, or any listing of the schedules themselves on
   the Tasks grid. The badge is a signal and a link, not a summary.
 - Reacting to schedule changes made elsewhere without a grid refresh — the
@@ -45,8 +54,11 @@ has **none**.
 
 ### Where the count comes from
 
-`scheduleCount` is added to `TaskResponse` (`common`) and populated by the API
-when listing and fetching tasks. This was chosen over two alternatives:
+`activeScheduleCount` is added to `TaskResponse` (`common`) and populated by the
+API when listing and fetching tasks. It counts only schedules with `active =
+true`; the partial index `idx_schedules_active` (`WHERE active = true`, see
+`doc/database.md`) already serves exactly this predicate. This was chosen over
+two alternatives:
 
 - **Fan-out in the admin UI** — reuse `ScheduleService.listForTasks(...)`, group
   by `taskId`, count client-side. Rejected: the schedule list API is task-scoped
@@ -61,19 +73,21 @@ when listing and fetching tasks. This was chosen over two alternatives:
 
 **Aggregate boundary.** `.claude/CLAUDE.md` states that `Schedule` is its own
 aggregate and that schedules must never be loaded through `Task`. That rule holds
-here: `Task` gains **no** `schedules` field and no `scheduleCount` field. The
-count is assembled in the **API/read layer** — a CQRS read-side projection, which
-is exactly the role `doc/specification.md` gives to read models. Concretely:
+here: `Task` gains **no** `schedules` field and no `activeScheduleCount` field.
+The count is assembled in the **API/read layer** — a CQRS read-side projection,
+which is exactly the role `doc/specification.md` gives to read models.
+Concretely:
 
 - `ScheduleRepository` (`domain/schedule`) gains a counting method —
-  `countByTaskIds(Collection<TaskId>) → Map<TaskId, Long>` — implemented in
-  `JooqScheduleRepository` as a single grouped `COUNT(*)`. One query for the
-  whole page, not one per task.
+  `countActiveByTaskIds(Collection<TaskId>) → Map<TaskId, Long>` — implemented in
+  `JooqScheduleRepository` as a single grouped `COUNT(*)` with a
+  `WHERE active = true` predicate. One query for the whole page, not one per task.
 - A list-tasks read path (use case / handler) calls it once for the page's task
   ids and hands the map to `TaskDtoMapper.toResponse(...)`, which today builds
   `TaskResponse` from a bare `Task`. The mapper takes the count as an explicit
   argument; the domain `Task` is untouched.
-- A task with no schedules is absent from the grouped result and maps to `0`.
+- A task with no active schedules is absent from the grouped result and maps to
+  `0` — whether it has zero schedules at all, or only paused ones.
 
 `kairos-admin`'s `TaskDto` mirrors the new field (it is a deliberate local copy
 of `TaskResponse`, see its Javadoc).
@@ -82,9 +96,9 @@ of `TaskResponse`, see its Javadoc).
 
 The task-name cell becomes a component column:
 
-| `scheduleCount` | Rendering |
+| `activeScheduleCount` | Rendering |
 |---|---|
-| `0` | Name in `Tokens.COLOR_ERROR`, tooltip explaining the task has no schedules and will never run. No badge. |
+| `0` | Name in `Tokens.COLOR_ERROR`, tooltip explaining the task has no active schedules and will never run. No badge. |
 | `1` | Plain name. Nothing else. |
 | `> 1` | Plain name + a small badge showing the number, clickable. |
 
@@ -94,7 +108,9 @@ badge-size token is genuinely missing.
 
 The red name is paired with a tooltip rather than standing alone: colour as the
 sole carrier of meaning is invisible to colour-blind users and to screen readers,
-and "why is this one red?" is otherwise a guess.
+and "why is this one red?" is otherwise a guess. The tooltip also disambiguates
+the two zero-active causes (no schedules at all vs. all paused), since the badge
+alone cannot.
 
 ### Click behaviour
 
@@ -113,17 +129,18 @@ the details dialog.
 
 ## Acceptance criteria
 
-- [ ] `TaskResponse` (`common`) carries a `scheduleCount` field, populated by the API.
-- [ ] `ScheduleRepository` exposes a count-by-task-ids method, implemented in `JooqScheduleRepository` as a **single** grouped `COUNT(*)` query — not one query per task.
+- [ ] `TaskResponse` (`common`) carries an `activeScheduleCount` field, populated by the API.
+- [ ] `ScheduleRepository` exposes a count-active-by-task-ids method, implemented in `JooqScheduleRepository` as a **single** grouped `COUNT(*)` query with a `WHERE active = true` predicate — not one query per task.
 - [ ] Listing tasks issues **one** schedule-count query for the whole page, regardless of how many tasks it contains.
 - [ ] The domain `Task` entity is unchanged — no `schedules` collection, no count field; the count lives only in the read model.
-- [ ] A task with **more than one** schedule shows a small badge with the count next to its name in `TaskGrid`.
-- [ ] A task with **exactly one** schedule shows no badge and no colouring.
-- [ ] A task with **zero** schedules shows its name in the error colour with a tooltip explaining it has no schedules and will never run.
+- [ ] Only **active** (`active = true`) schedules are counted; a paused schedule contributes nothing to the count.
+- [ ] A task with **more than one** active schedule shows a small badge with the count next to its name in `TaskGrid`.
+- [ ] A task with **exactly one** active schedule shows no badge and no colouring.
+- [ ] A task with **zero** active schedules (no schedules, or only paused ones) shows its name in the error colour with a tooltip explaining it has no active schedules and will never run.
 - [ ] Clicking the badge navigates to Schedules with the task filter pre-selected to that task; the row's `TaskDetails` dialog does **not** open.
 - [ ] `ScheduleView` accepts `?task=<taskId>` and pre-selects the task filter; an unknown id falls back to the unfiltered list.
 - [ ] All new UI strings live in `TaskText` / `ScheduleText`; styling goes through `Tokens` (no literals); no Lombok; methods ≤ 40 lines.
-- [ ] Unit tests cover the mapper (count 0 / 1 / N), the badge-visibility rule, and the zero-schedule name styling; a repository integration test (Testcontainers) covers the grouped count including a task with zero schedules.
+- [ ] Unit tests cover the mapper (count 0 / 1 / N), the badge-visibility rule, and the zero-active name styling; a repository integration test (Testcontainers) covers the grouped active count including a task with zero active schedules **and a task whose only schedule is paused** (must count as 0).
 - [ ] `./gradlew build` passes.
 
 ## Notes

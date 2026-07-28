@@ -14,7 +14,9 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -394,6 +396,86 @@ class JooqScheduleRepositoryIT extends H2DatabaseBase {
         assertDoesNotThrow(() -> repository.deleteById(randomScheduleId()));
     }
 
+    // ── countActiveByTaskIds ─────────────────────────────────────────────────
+
+    @Test
+    void countActiveByTaskIds_withEmptyInput_returnsEmptyMap() {
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void countActiveByTaskIds_taskWithNoSchedules_isAbsentFromResult() {
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertFalse(result.containsKey(seededTaskId));
+    }
+
+    @Test
+    void countActiveByTaskIds_taskWithOnlyPausedSchedule_isAbsentFromResult() {
+        insertPausedOnce(randomScheduleId(), seededTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertFalse(result.containsKey(seededTaskId),
+                "a task whose only schedule is paused must count as 0 (absent from the map)");
+    }
+
+    @Test
+    void countActiveByTaskIds_taskWithOneActiveSchedule_countsOne() {
+        insertOnce(randomScheduleId(), seededTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertEquals(1L, result.get(seededTaskId));
+    }
+
+    @Test
+    void countActiveByTaskIds_taskWithMultipleActiveSchedules_countsAll() {
+        insertOnce(randomScheduleId(), seededTaskId);
+        insertCron(randomScheduleId(), seededTaskId);
+        insertFixed(randomScheduleId(), seededTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertEquals(3L, result.get(seededTaskId));
+    }
+
+    @Test
+    void countActiveByTaskIds_ignoresPausedSchedulesAmongActiveOnes() {
+        insertOnce(randomScheduleId(), seededTaskId);
+        insertPausedOnce(randomScheduleId(), seededTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertEquals(1L, result.get(seededTaskId));
+    }
+
+    @Test
+    void countActiveByTaskIds_groupsSeparatelyPerTask() {
+        TaskId otherTaskId = seedTaskWithDestination("dest-kafka-count-other", "other-count-task");
+        insertOnce(randomScheduleId(), seededTaskId);
+        insertOnce(randomScheduleId(), otherTaskId);
+        insertOnce(randomScheduleId(), otherTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId, otherTaskId));
+
+        assertEquals(1L, result.get(seededTaskId));
+        assertEquals(2L, result.get(otherTaskId));
+    }
+
+    @Test
+    void countActiveByTaskIds_onlyCountsRequestedTaskIds() {
+        TaskId otherTaskId = seedTaskWithDestination("dest-kafka-count-excluded", "excluded-count-task");
+        insertOnce(randomScheduleId(), seededTaskId);
+        insertOnce(randomScheduleId(), otherTaskId);
+
+        Map<TaskId, Long> result = repository.countActiveByTaskIds(Set.of(seededTaskId));
+
+        assertFalse(result.containsKey(otherTaskId));
+    }
+
     // ── cascade on task delete ────────────────────────────────────────────────
 
     @Test
@@ -465,6 +547,20 @@ class JooqScheduleRepositoryIT extends H2DatabaseBase {
                 .set(Tables.SCHEDULES.RUN_AT, toOdt(FUTURE_RUN_AT))
                 .set(Tables.SCHEDULES.TIMEZONE, DEFAULT_TIMEZONE)
                 .set(Tables.SCHEDULES.ACTIVE, true)
+                .set(Tables.SCHEDULES.CREATED_AT, toOdt(CREATED_AT))
+                .set(Tables.SCHEDULES.UPDATED_AT, toOdt(UPDATED_AT))
+                .execute();
+    }
+
+    private void insertPausedOnce(ScheduleId id, TaskId taskId) {
+        dslContext.insertInto(Tables.SCHEDULES)
+                .set(Tables.SCHEDULES.ID, id.value())
+                .set(Tables.SCHEDULES.TASK_ID, taskId.value())
+                .set(Tables.SCHEDULES.LABEL, DEFAULT_LABEL)
+                .set(Tables.SCHEDULES.TYPE, "ONCE")
+                .set(Tables.SCHEDULES.RUN_AT, toOdt(FUTURE_RUN_AT))
+                .set(Tables.SCHEDULES.TIMEZONE, DEFAULT_TIMEZONE)
+                .set(Tables.SCHEDULES.ACTIVE, false)
                 .set(Tables.SCHEDULES.CREATED_AT, toOdt(CREATED_AT))
                 .set(Tables.SCHEDULES.UPDATED_AT, toOdt(UPDATED_AT))
                 .execute();

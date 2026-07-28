@@ -96,11 +96,14 @@ public final class Tokens {
     /** Vaadin responsive-step breakpoint meaning "apply from 0px up" (always). */
     public static final String FORM_BREAKPOINT_ZERO = "0";
 
+    /** Base Vaadin theme token shared by every badge variant. */
+    public static final String THEME_BADGE = "badge";
+
     /** Vaadin theme string for a success-coloured badge (green). */
-    public static final String THEME_BADGE_SUCCESS = "badge success";
+    public static final String THEME_BADGE_SUCCESS = THEME_BADGE + " success";
 
     /** Vaadin theme string for a contrast-coloured badge (neutral, e.g. the "Preview" label). */
-    public static final String THEME_BADGE_CONTRAST = "badge contrast";
+    public static final String THEME_BADGE_CONTRAST = THEME_BADGE + " contrast";
 
     // --- dashboard card grid ---
     /** Responsive auto-fitting card grid: as many columns as fit, min card width. */

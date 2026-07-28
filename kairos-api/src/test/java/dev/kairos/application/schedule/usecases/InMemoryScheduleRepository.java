@@ -6,10 +6,12 @@ import dev.kairos.domain.schedule.ScheduleRepository;
 import dev.kairos.domain.task.TaskId;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * In-memory fake for {@link ScheduleRepository}. Stores schedules by id in
@@ -45,6 +47,17 @@ final class InMemoryScheduleRepository implements ScheduleRepository {
     @Override
     public void deleteById(ScheduleId id) {
         store.remove(id);
+    }
+
+    @Override
+    public Map<TaskId, Long> countActiveByTaskIds(Collection<TaskId> taskIds) {
+        if (taskIds.isEmpty()) {
+            return Map.of();
+        }
+        return store.values().stream()
+                .filter(Schedule::active)
+                .filter(schedule -> taskIds.contains(schedule.taskId()))
+                .collect(Collectors.groupingBy(Schedule::taskId, Collectors.counting()));
     }
 
     // ── test helpers ──────────────────────────────────────────────────────────

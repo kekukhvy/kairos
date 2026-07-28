@@ -1,5 +1,6 @@
 package dev.kairos.admin.feature.task;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H2;
@@ -9,13 +10,16 @@ import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import dev.kairos.admin.feature.destination.DestinationService;
 import dev.kairos.admin.feature.destination.DestinationText;
 import dev.kairos.admin.feature.destination.component.DestinationDetails;
 import dev.kairos.admin.feature.destination.dto.DestinationDTO;
 import dev.kairos.admin.feature.destination.dto.UpdateDestinationRequest;
+import dev.kairos.admin.feature.schedule.ScheduleRoutes;
 import dev.kairos.admin.feature.schedule.ScheduleService;
+import dev.kairos.admin.feature.schedule.ScheduleView;
 import dev.kairos.admin.feature.task.component.TaskDetails;
 import dev.kairos.admin.feature.task.component.TaskForm;
 import dev.kairos.admin.feature.task.component.TaskGrid;
@@ -97,6 +101,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         grid.setOnToggleActive(this::toggleActive);
         grid.setOnView(this::viewTask);
         grid.setOnOpenDestination(this::openDestination);
+        grid.setOnOpenSchedules(this::openSchedules);
         refresh();
     }
 
@@ -110,6 +115,12 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
                 .filter(status -> TaskText.STATUS_ACTIVE.equals(status)
                         || TaskText.STATUS_INACTIVE.equals(status))
                 .ifPresent(statusFilter::setValue);
+    }
+
+    /** Navigates to Schedules with the task filter pre-selected via {@code ?task=<taskId>}. */
+    private void openSchedules(TaskDto task) {
+        QueryParameters query = QueryParameters.of(ScheduleRoutes.QUERY_TASK, task.id().toString());
+        UI.getCurrent().navigate(ScheduleView.class, query);
     }
 
     private void openDestination(String destinationId) {
