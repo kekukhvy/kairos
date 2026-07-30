@@ -94,10 +94,11 @@ feature/wizard/
 ```
 
 The Schedule step's "when"-field validation/parsing (`validateRunAt`,
-`validateInterval`, `runAtInstant`, `selectedZone`) is factored into a shared
+`validateInterval`, `runAtInstant`, `selectedZone`, `validateTimezone`,
+`validateTimezoneIfApplicable`) is factored into a shared
 `dev.kairos.admin.feature.schedule.component.ScheduleWhenFields` helper, used
 by both the standalone `ScheduleForm` and `ScheduleStep`, so the two don't
-duplicate the run-at-future/timezone-fallback rules.
+duplicate the run-at-future/timezone-validity rules.
 
 **Why the Schedule step is create-only (design change vs. the original spec):**
 the wizard always creates a **new** `Task`, and `Schedule` is its own
@@ -208,6 +209,11 @@ commit-at-end (not commit-per-step) is required.
       was already created**, and a repeated **Finish** does not duplicate the
       already-created destination/task **or schedule**.
 - [ ] On success the wizard notifies, closes, and the originating view refreshes.
+- [ ] The Schedule step's **timezone picker** offers a curated shortlist of
+      common IANA zones (UTC, Europe/London, Europe/Berlin, Europe/Kyiv,
+      America/New_York, America/Los_Angeles, Asia/Tokyo, Asia/Singapore,
+      Australia/Sydney) but still accepts any free-typed valid `ZoneId`; invalid
+      zones are marked invalid and block advancing.
 - [ ] No literals in components (all copy via `WizardText`); styling via
       `StyleConfig` + `Tokens` only; no Lombok; methods ≤ 40 lines; changes
       confined to `kairos-admin`; no domain/application/infrastructure/API/schema

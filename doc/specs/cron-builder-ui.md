@@ -95,7 +95,11 @@ feature/schedule/
 "Build…" button (via `Buttons`). Clicking it opens `CronBuilderDialog`
 initialised from the field's current value; on Apply the returned expression is
 set back into the field. The button follows the same visibility rule as the CRON
-field (`showFieldsForType` → `CRON`).
+field (`showFieldsForType` → `CRON`). Note: the timezone field on the same form
+is a `ComboBox<String>` (via `Fields.comboCustom`) offering a curated shortlist
+of common IANA zones while accepting any free-typed valid zone — this is a
+reusable pattern for timezone pickers and is also used in the setup wizard's
+Schedule step.
 
 **Cron format:** **6-field Spring cron** — `seconds minutes hours day-of-month
 month day-of-week`. This matches the reference implementation and `CronExpression`

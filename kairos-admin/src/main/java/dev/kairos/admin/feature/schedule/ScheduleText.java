@@ -1,5 +1,7 @@
 package dev.kairos.admin.feature.schedule;
 
+import java.util.List;
+
 /**
  * UI string constants for the Schedules feature — column headers, field labels,
  * action labels, and notification messages. Centralised here so that literal
@@ -45,6 +47,20 @@ public final class ScheduleText {
 
     public static final String DEFAULT_TIMEZONE = "UTC";
     public static final String WHEN_EMPTY = "—";
+
+    /** Common IANA zones offered by the timezone picker; any other valid zone can still be typed in. */
+    public static final List<String> TIMEZONE_OPTIONS = List.of(
+            "UTC",
+            "Europe/London",
+            "Europe/Berlin",
+            "Europe/Kyiv",
+            "America/New_York",
+            "America/Los_Angeles",
+            "Asia/Tokyo",
+            "Asia/Singapore",
+            "Australia/Sydney");
+    public static final String HELPER_TIMEZONE = "Pick a common zone or type any IANA timezone id";
+    public static final String VALIDATION_TIMEZONE_INVALID = "Not a valid timezone";
 
     public static final String DETAILS_TITLE = "Schedule details";
     public static final String DETAIL_ID = "ID";

@@ -1,0 +1,12 @@
+# Sync-agent run markers — 40-timezone-picker
+
+- test-author | 2026-07-30 | ran: TDD-driven via tdd-implementer — new ScheduleWhenFieldsTest (validateTimezone/validateTimezoneIfApplicable, blank + shortlist + off-shortlist + invalid typo + FIXED exemption), new ScheduleFormTest (UTC default, custom-zone round-trip through save(), off-shortlist preselect on edit, FIXED visibility), extended ScheduleStepTest (same picker behavior in the wizard) | files: 3
+- javadoc-writer | 2026-07-30 | ran: covered inline — new public methods validateTimezone/validateTimezoneIfApplicable carry full Javadoc with @return; selectedZone's doc updated to state it interprets already-valid values and does not surface invalid input | files: 1
+- logging-instrumenter | 2026-07-30 | ran: single DEBUG in ScheduleWhenFields.validateTimezone on a rejected free-typed zone, placed at the one point of rejection rather than duplicated at both call sites | files: 1
+- spec-keeper | 2026-07-30 | ran: doc/specs/schedule-admin-ui.md (ComboBox<String> timezone field, shortlist values, validation rule, FIXED-hidden), doc/specs/setup-wizard.md (shared ScheduleWhenFields methods, wizard picker criterion), doc/specs/cron-builder-ui.md (comboCustom reuse note) | files: 3
+- user-docs-writer | 2026-07-30 | NOT NEEDED: no REST endpoint, DTO, or contract field changed — pure admin-UI input affordance over the existing `timezone` string field; doc/usage/api.md already documents the 400-on-invalid-zone and UTC-default behavior | files: 0
+
+## Notes
+- logging-instrumenter was interrupted mid-run by a session limit, leaving an unused logger (import + field, no statements) in ScheduleForm.java; removed by hand rather than respawning a cold agent, since ScheduleWhenFields already covers the rejection centrally and a second statement would be duplicate noise. Gate confirmed no stray logger remains.
+- architecture-reviewer: 0 must-fix findings. One low-severity note logged as out-of-scope — ScheduleForm.prefill() still falls back to UTC via selectedZone() for a stored non-IANA zone (reachable only by writing the DB directly in the engine-only composition scenario); pre-existing, not introduced by this slice.
+- acceptance-verifier: 9/9 criteria PASS, 0 gaps. AC1 ("searchable drop-down") is honestly recorded as PASS-with-caveat — verified as component configuration (ComboBox items + setAllowCustomValue) in plain JUnit, not as rendered browser behavior.

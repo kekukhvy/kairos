@@ -1,5 +1,6 @@
 package dev.kairos.admin.feature.wizard.component;
 
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Span;
@@ -39,7 +40,8 @@ public class ScheduleStep extends VerticalLayout {
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
     private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
-    private final TextField timezone = Fields.text(ScheduleText.COL_TIMEZONE);
+    private final ComboBox<String> timezone =
+            Fields.comboCustom(ScheduleText.COL_TIMEZONE, ScheduleText.HELPER_TIMEZONE, ScheduleText.TIMEZONE_OPTIONS);
     private final FormLayout createForm;
 
     public ScheduleStep() {
@@ -79,11 +81,13 @@ public class ScheduleStep extends VerticalLayout {
 
     /** Validates the type-driven "when" fields for the schedule about to be created. */
     public boolean validate() {
-        return switch (type.getValue()) {
+        boolean whenValid = switch (type.getValue()) {
             case ONCE -> ScheduleWhenFields.validateRunAt(runAt, timezone);
             case CRON -> FieldValidation.require(cronExpression, UiText.VALIDATION_REQUIRED);
             case FIXED -> ScheduleWhenFields.validateInterval(intervalSeconds);
         };
+        boolean timezoneValid = ScheduleWhenFields.validateTimezoneIfApplicable(timezone, type.getValue());
+        return whenValid & timezoneValid;
     }
 
     /** Installs a request factory on {@code draft} that builds the new schedule's {@link CreateScheduleRequest}. */
@@ -113,5 +117,13 @@ public class ScheduleStep extends VerticalLayout {
 
     HorizontalLayout cronRow() {
         return cronRow;
+    }
+
+    ComboBox<String> timezone() {
+        return timezone;
+    }
+
+    IntegerField intervalSeconds() {
+        return intervalSeconds;
     }
 }
