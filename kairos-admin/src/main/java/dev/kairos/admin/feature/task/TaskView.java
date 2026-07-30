@@ -254,11 +254,12 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
     }
 
     private void openForm() {
-        TaskForm.forCreate(jsonMapper, destinationIds(), this::createTask).open();
+        TaskForm.forCreate(jsonMapper, destinationIds(), taskService.list(), this::createTask).open();
     }
 
     private void editTask(TaskDto task) {
-        TaskForm.forEdit(jsonMapper, destinationIds(), task, request -> updateTask(task, request)).open();
+        TaskForm.forEdit(jsonMapper, destinationIds(), taskService.list(), task, request -> updateTask(task, request))
+                .open();
     }
 
     private List<String> destinationIds() {

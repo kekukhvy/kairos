@@ -1,9 +1,12 @@
 package dev.kairos.admin.shared.form;
 
 import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.component.textfield.TextField;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -201,5 +204,53 @@ class FieldValidationTest {
         assertThat(result.valid()).isTrue();
         assertThat(result.value()).isNotNull();
         assertThat(field.isInvalid()).isFalse();
+    }
+
+    // --- uniqueServiceName ---
+
+    private static final String DUPLICATE_MESSAGE = "A task with this service and name already exists.";
+
+    @Test
+    void uniqueServiceName_matchingKeyInTakenSet_marksNameFieldInvalid() {
+        TextField service = new TextField();
+        TextField name = new TextField();
+        service.setValue("billing");
+        name.setValue("invoice-sync");
+        Set<String> taken = Set.of(FieldValidation.serviceNameKey("billing", "invoice-sync"));
+
+        boolean unique = FieldValidation.uniqueServiceName(service, name, taken, DUPLICATE_MESSAGE);
+
+        assertThat(unique).isFalse();
+        assertThat(name.isInvalid()).isTrue();
+        assertThat(name.getErrorMessage()).isEqualTo(DUPLICATE_MESSAGE);
+    }
+
+    @Test
+    void uniqueServiceName_keyNotInTakenSet_returnsTrueAndClearsInvalidState() {
+        TextField service = new TextField();
+        TextField name = new TextField();
+        service.setValue("billing");
+        name.setValue("invoice-sync");
+        name.setInvalid(true);
+        Set<String> taken = Set.of(FieldValidation.serviceNameKey("shipping", "other-task"));
+
+        boolean unique = FieldValidation.uniqueServiceName(service, name, taken, DUPLICATE_MESSAGE);
+
+        assertThat(unique).isTrue();
+        assertThat(name.isInvalid()).isFalse();
+    }
+
+    @Test
+    void uniqueServiceName_blankServiceOrName_returnsTrueWithoutFlagging() {
+        TextField service = new TextField();
+        TextField name = new TextField();
+        service.setValue("");
+        name.setValue("invoice-sync");
+        Set<String> taken = Set.of(FieldValidation.serviceNameKey("billing", "invoice-sync"));
+
+        boolean unique = FieldValidation.uniqueServiceName(service, name, taken, DUPLICATE_MESSAGE);
+
+        assertThat(unique).isTrue();
+        assertThat(name.isInvalid()).isFalse();
     }
 }

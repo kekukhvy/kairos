@@ -4,6 +4,8 @@ import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
 import dev.kairos.domain.task.TaskNotFoundException;
 import dev.kairos.domain.task.TaskRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -15,6 +17,8 @@ import java.util.Objects;
  * {@link Task#softDelete} guard raises {@code TaskAlreadyDeletedException}.
  */
 public final class SoftDeleteTaskUseCase {
+
+    private static final Logger logger = LoggerFactory.getLogger(SoftDeleteTaskUseCase.class);
 
     private final TaskRepository taskRepository;
     private final Clock clock;
@@ -36,5 +40,7 @@ public final class SoftDeleteTaskUseCase {
         task.softDelete(now); // already-deleted -> TaskAlreadyDeletedException (409)
 
         taskRepository.softDelete(taskId, now);
+
+        logger.info("Task deleted: id='{}'", taskId.value());
     }
 }

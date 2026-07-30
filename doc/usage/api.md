@@ -97,6 +97,7 @@ Creates a new task. Returns the created task with its server-assigned `id` and t
 |---|---|---|
 | `201 Created` | `TaskResponse` | Task created successfully. |
 | `400 Bad Request` | `ErrorResponse` | Missing required field, `timeoutMs <= 0`, or `destinationId` does not exist. |
+| `409 Conflict` | `ErrorResponse` | A task with the same `(service, name)` pair already exists in this service. A task's `(service, name)` pair is its human-readable identity and must be unique among live tasks. Soft-deleted tasks do not block reuse of the name. |
 | `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
 
 **Example**
@@ -142,6 +143,29 @@ Content-Type: application/json
   "createdAt": "2026-06-24T10:15:30.123456Z",
   "updatedAt": "2026-06-24T10:15:30.123456Z"
 }
+```
+
+**Error example — duplicate service and name**
+
+```http
+POST /api/v1/tasks
+Content-Type: application/json
+
+{
+  "service": "booking-service",
+  "name": "expire-booking",
+  "active": true,
+  "destinationId": "booking-kafka",
+  "eventName": "booking.expire.v1",
+  "timeoutMs": 5000
+}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{ "error": "Task 'expire-booking' already exists in service 'booking-service'" }
 ```
 
 ---
@@ -324,6 +348,7 @@ and must not be included in the request body.
 | `200 OK` | `TaskResponse` | Task updated successfully. |
 | `400 Bad Request` | `ErrorResponse` | Validation error or malformed `id`. |
 | `404 Not Found` | `ErrorResponse` | Task does not exist or has been deleted. |
+| `409 Conflict` | `ErrorResponse` | Renaming the task to a `name` that is already taken by another live task in the same service. A task's `(service, name)` pair must be unique among live tasks. Updating other fields while keeping the same name always succeeds (200). |
 | `500 Internal Server Error` | `ErrorResponse` | Unexpected server error. |
 
 **Example**
@@ -372,12 +397,38 @@ Content-Type: application/json
 }
 ```
 
+**Error example — duplicate service and name on rename**
+
+```http
+PUT /api/v1/tasks/f47ac10b-58cc-4372-a567-0e02b2c3d479
+Content-Type: application/json
+
+{
+  "name": "another-task-already-in-booking-service",
+  "destinationId": "booking-kafka",
+  "eventName": "booking.expire.v1",
+  "timeoutMs": 5000
+}
+```
+
+```json
+HTTP/1.1 409 Conflict
+Content-Type: application/json
+
+{ "error": "Task 'another-task-already-in-booking-service' already exists in service 'booking-service'" }
+```
+
 ---
 
 ### DELETE /api/v1/tasks/{id} — Delete a task
 
 Soft-deletes a task. The task is marked as deleted and will no longer appear in
 any response. The operation is not reversible through the API.
+
+**Note on name reuse:** After a task is soft-deleted, its `(service, name)` pair
+is freed and can be reused. Creating a new task with the same `service` and
+`name` as a deleted task succeeds with `201 Created`. The uniqueness constraint
+applies only to live (non-deleted) tasks.
 
 **Path parameters**
 
@@ -1237,5 +1288,5 @@ Content-Type: application/json
 |---|---|
 | `400 Bad Request` | Missing required field; `timeoutMs <= 0`; path `id` is not a valid UUID (tasks, schedules); unrecognized `destinationType` or `type`; `runAt` is not in the future; `intervalSeconds` out of range (`1–86400`); `timezone` is not a valid IANA zone id; `cronExpression` is blank; malformed JSON body. |
 | `404 Not Found` | Task or destination with the given `id` does not exist, or the task has been soft-deleted. Schedule with the given `id` does not exist. |
-| `409 Conflict` | Attempting to delete a task that is already deleted; creating a destination whose `destinationId` already exists; deleting a destination that is still referenced by one or more tasks. |
+| `409 Conflict` | Creating a task whose `(service, name)` pair duplicates an existing live task; renaming a task to a `name` already taken by another live task in the same service; attempting to delete a task that is already deleted; creating a destination whose `destinationId` already exists; deleting a destination that is still referenced by one or more tasks. |
 | `500 Internal Server Error` | An unexpected error occurred. The response body contains `{ "error": "Internal server error" }`. No internal detail is exposed. |

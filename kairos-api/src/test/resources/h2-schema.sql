@@ -46,6 +46,16 @@ CREATE TABLE tasks (
 CREATE INDEX idx_tasks_created_at ON tasks (created_at);
 CREATE INDEX idx_tasks_destination_id ON tasks (destination_id);
 
+-- V8 mirror: production has a partial UNIQUE INDEX on (service, name)
+-- WHERE deleted_at IS NULL, enforced by Postgres as a safety net. H2 (even in
+-- MODE=PostgreSQL) does not support filtered/partial indexes at all — see the
+-- same limitation already noted for the schedules table above — so this is a
+-- plain, non-unique index here. The uniqueness invariant itself is exercised
+-- against JooqTaskRepository#existsByServiceAndName (the application-level
+-- guard); the DB-level constraint is verified separately against real
+-- Postgres (see the migration).
+CREATE INDEX idx_tasks_service_name ON tasks (service, name);
+
 -- schedules: mirrors V4 + V7 migrations (H2-compatible; no gen_random_uuid() default,
 -- no partial index on WHERE, no TIMESTAMPTZ alias — H2 uses TIMESTAMP WITH TIME ZONE).
 CREATE TABLE schedules (

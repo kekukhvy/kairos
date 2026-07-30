@@ -5,6 +5,8 @@ import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.destination.DestinationRepository;
 import dev.kairos.domain.task.*;
 import dev.kairos.application.task.commands.UpdateTaskCommand;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.util.Objects;
@@ -15,6 +17,8 @@ import java.util.Objects;
  * the referenced destination must exist.
  */
 public class UpdateTaskUseCase {
+
+    private static final Logger logger = LoggerFactory.getLogger(UpdateTaskUseCase.class);
 
     private final TaskRepository taskRepository;
     private final DestinationRepository destinationRepository;
@@ -40,6 +44,7 @@ public class UpdateTaskUseCase {
 
         DestinationId destinationId = DestinationId.of(command.destinationId());
         requireExistingDestination(destinationId);
+        requireUniqueServiceAndName(task, command.name());
 
         TaskEdit taskEdit = new TaskEdit(
                 command.name(),
@@ -56,12 +61,26 @@ public class UpdateTaskUseCase {
 
         taskRepository.save(task);
 
+        logger.info("Task updated: id='{}', service='{}', name='{}'",
+                task.id().value(), task.service(), task.name());
         return task;
     }
 
     private void requireExistingDestination(DestinationId destinationId) {
         if (!destinationRepository.existsById(destinationId)) {
             throw new ValidationException("Destination with id " + destinationId + " does not exist!");
+        }
+    }
+
+    /**
+     * {@code service} is immutable, so only a rename can collide; a same-name
+     * update against the task's own row is excluded via {@code task.id()}.
+     */
+    private void requireUniqueServiceAndName(Task task, String newName) {
+        if (taskRepository.existsByServiceAndName(task.service(), newName, task.id())) {
+            logger.warn("Task update rejected — rename collides with an existing task: id='{}', service='{}', name='{}'",
+                    task.id().value(), task.service(), newName);
+            throw new TaskNameAlreadyExistsException(task.service(), newName);
         }
     }
 }

@@ -4,6 +4,7 @@ import dev.kairos.application.task.commands.UpdateTaskCommand;
 import dev.kairos.common.exceptions.ValidationException;
 import dev.kairos.domain.task.Task;
 import dev.kairos.domain.task.TaskId;
+import dev.kairos.domain.task.TaskNameAlreadyExistsException;
 import dev.kairos.domain.task.TaskNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,10 +15,12 @@ import java.util.UUID;
 
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.DESTINATION_ID;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.FIXED_NOW;
+import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.NAME;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.SERVICE;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.TASK_ID;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.deletedTask;
 import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.liveTask;
+import static dev.kairos.application.task.usecases.UseCaseTaskBuilder.liveTaskWithIdAndName;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -32,6 +35,9 @@ class UpdateTaskUseCaseTest {
     private static final String UPDATED_PAYLOAD = "{\"updated\":true}";
     private static final int UPDATED_TIMEOUT_MS = 10_000;
     private static final String MISSING_DESTINATION_ID = "dest-does-not-exist";
+    private static final TaskId OTHER_TASK_ID =
+            new TaskId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+    private static final String TAKEN_NAME = "already-taken-name";
 
     private InMemoryTaskRepository taskRepository;
     private StubDestinationRepository destinationRepository;
@@ -130,6 +136,35 @@ class UpdateTaskUseCaseTest {
 
         assertThrows(ValidationException.class,
                 () -> useCase.execute(TASK_ID, command));
+    }
+
+    // --- unique (service, name) ---
+
+    @Test
+    void execute_renamingToNameTakenByAnotherLiveTask_throwsTaskNameAlreadyExistsException() {
+        taskRepository.seed(liveTask());
+        taskRepository.seed(liveTaskWithIdAndName(OTHER_TASK_ID, TAKEN_NAME));
+
+        UpdateTaskCommand command = new UpdateTaskCommand(
+                TAKEN_NAME, UPDATED_DESCRIPTION, true,
+                UPDATED_DESTINATION_ID, UPDATED_EVENT_NAME,
+                UPDATED_PAYLOAD, UPDATED_TIMEOUT_MS, false);
+
+        assertThrows(TaskNameAlreadyExistsException.class,
+                () -> useCase.execute(TASK_ID, command));
+    }
+
+    @Test
+    void execute_keepingSameNameWhileUpdatingOtherFields_succeeds() {
+        taskRepository.seed(liveTask());
+        UpdateTaskCommand command = new UpdateTaskCommand(
+                NAME, UPDATED_DESCRIPTION, true,
+                UPDATED_DESTINATION_ID, UPDATED_EVENT_NAME,
+                UPDATED_PAYLOAD, UPDATED_TIMEOUT_MS, false);
+
+        Task result = useCase.execute(TASK_ID, command);
+
+        assertEquals(UPDATED_DESCRIPTION, result.description());
     }
 
     // --- null guards ---

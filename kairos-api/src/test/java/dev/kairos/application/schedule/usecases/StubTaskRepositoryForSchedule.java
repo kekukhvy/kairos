@@ -44,4 +44,9 @@ final class StubTaskRepositoryForSchedule implements TaskRepository {
     public boolean existsByDestinationId(DestinationId id) {
         return false;
     }
+
+    @Override
+    public boolean existsByServiceAndName(String service, String name, TaskId excludeId) {
+        return false;
+    }
 }

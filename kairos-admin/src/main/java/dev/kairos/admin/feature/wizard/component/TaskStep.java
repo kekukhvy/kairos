@@ -8,7 +8,9 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import dev.kairos.admin.feature.task.TaskText;
+import dev.kairos.admin.feature.task.TaskUniqueness;
 import dev.kairos.admin.feature.task.dto.CreateTaskRequest;
+import dev.kairos.admin.feature.task.dto.TaskDto;
 import dev.kairos.admin.feature.wizard.WizardDraft;
 import dev.kairos.admin.feature.wizard.WizardText;
 import dev.kairos.admin.shared.form.FieldValidation;
@@ -17,7 +19,12 @@ import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * Step 1 body: collects every {@link CreateTaskRequest} field except
@@ -28,9 +35,12 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public class TaskStep extends VerticalLayout {
 
+    private static final Logger logger = LoggerFactory.getLogger(TaskStep.class);
+
     private static final int DEFAULT_TIMEOUT_MS = 30_000;
 
     private final JsonMapper jsonMapper;
+    private final Set<String> takenServiceNameKeys;
 
     private final TextField service = Fields.text(TaskText.COL_SERVICE);
     private final TextField name = Fields.text(TaskText.COL_NAME);
@@ -41,9 +51,18 @@ public class TaskStep extends VerticalLayout {
     private final Checkbox supportsRetry = Fields.checkbox(TaskText.FIELD_SUPPORTS_RETRY, false);
     private final TextArea payload = Fields.textArea(TaskText.FIELD_PAYLOAD);
 
-    public TaskStep(JsonMapper jsonMapper) {
+    /**
+     * @param existingTasks the already-loaded task list, used for the
+     *                      client-side service+name uniqueness check; the
+     *                      wizard always creates, so no task is excluded
+     */
+    public TaskStep(JsonMapper jsonMapper, List<TaskDto> existingTasks) {
         this.jsonMapper = jsonMapper;
+        this.takenServiceNameKeys = TaskUniqueness.keysExcluding(existingTasks, null);
         timeoutMs.setValue(DEFAULT_TIMEOUT_MS);
+
+        name.addBlurListener(e -> checkUnique());
+        service.addBlurListener(e -> checkUnique());
 
         setPadding(false);
         StyleConfig.create().gap(Tokens.SPACE_S).applyTo(this);
@@ -76,8 +95,19 @@ public class TaskStep extends VerticalLayout {
         ok &= FieldValidation.require(name, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.require(eventName, UiText.VALIDATION_REQUIRED);
         ok &= FieldValidation.requirePresent(timeoutMs, timeoutMs, UiText.VALIDATION_REQUIRED);
+        ok &= checkUnique();
         FieldValidation.JsonResult result = FieldValidation.parseJson(payload, jsonMapper, UiText.VALIDATION_INVALID_JSON);
         return ok & result.valid();
+    }
+
+    private boolean checkUnique() {
+        boolean unique = FieldValidation.uniqueServiceName(
+                service, name, takenServiceNameKeys, TaskText.VALIDATION_DUPLICATE_SERVICE_NAME);
+        if (!unique) {
+            logger.debug("Duplicate (service, name) flagged in the setup wizard: service='{}', name='{}'",
+                    service.getValue(), name.getValue());
+        }
+        return unique;
     }
 
     /**

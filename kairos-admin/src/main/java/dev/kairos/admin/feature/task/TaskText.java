@@ -69,4 +69,8 @@ public final class TaskText {
     /** Tooltip shown on a task name when it has zero active schedules. */
     public static final String TOOLTIP_NO_ACTIVE_SCHEDULES =
             "This task has no active schedules and will never run.";
+
+    /** Shown on the name field when the entered service+name pair already exists. */
+    public static final String VALIDATION_DUPLICATE_SERVICE_NAME =
+            "A task with this service and name already exists.";
 }

@@ -276,6 +276,37 @@ class TaskApiTest extends JavalinApiTestBase {
     }
 
     @Test
+    void create_withDuplicateServiceAndName_returns409() throws Exception {
+        post(BASE_PATH, validCreateBody());
+
+        HttpResponse<String> response = post(BASE_PATH, validCreateBody());
+
+        assertEquals(HTTP_CONFLICT, response.statusCode());
+    }
+
+    @Test
+    void create_withDuplicateServiceAndName_errorResponseContainsMessage() throws Exception {
+        post(BASE_PATH, validCreateBody());
+
+        HttpResponse<String> response = post(BASE_PATH, validCreateBody());
+
+        JsonNode body = objectMapper.readTree(response.body());
+        assertFalse(body.get(FIELD_ERROR).asText().isBlank());
+    }
+
+    @Test
+    void create_afterDeletingDuplicateNamedTask_reusesTheName_returns201() throws Exception {
+        HttpResponse<String> createResponse = post(BASE_PATH, validCreateBody());
+        JsonNode createdBody = objectMapper.readTree(createResponse.body());
+        String createdId = createdBody.get(FIELD_ID).asText();
+        delete(taskPath(createdId));
+
+        HttpResponse<String> response = post(BASE_PATH, validCreateBody());
+
+        assertEquals(HTTP_CREATED, response.statusCode());
+    }
+
+    @Test
     void create_errorResponse_containsErrorField() throws Exception {
         String body = """
                 {
@@ -392,6 +423,43 @@ class TaskApiTest extends JavalinApiTestBase {
         HttpResponse<String> response = put(taskPath(MALFORMED_UUID), validUpdateBody());
 
         assertEquals(HTTP_BAD_REQUEST, response.statusCode());
+    }
+
+    @Test
+    void update_renamingToNameTakenByAnotherLiveTask_returns409() throws Exception {
+        taskRepository.seed(liveTask());
+        taskRepository.seed(liveTaskWithId(randomTaskId()));
+        HttpResponse<String> conflictingCreate = post(BASE_PATH, """
+                {
+                  "service": "%s",
+                  "name": "%s",
+                  "destinationId": "%s",
+                  "eventName": "%s",
+                  "timeoutMs": %d
+                }
+                """.formatted(SERVICE, UPDATED_NAME, DESTINATION_ID, EVENT_NAME, TIMEOUT_MS));
+        assertEquals(HTTP_CREATED, conflictingCreate.statusCode());
+
+        HttpResponse<String> response = put(taskPath(TASK_UUID.toString()), validUpdateBody());
+
+        assertEquals(HTTP_CONFLICT, response.statusCode());
+    }
+
+    @Test
+    void update_keepingSameNameWhileChangingOtherFields_returns200() throws Exception {
+        taskRepository.seed(liveTask());
+        String bodyWithSameName = """
+                {
+                  "name": "%s",
+                  "destinationId": "%s",
+                  "eventName": "%s",
+                  "timeoutMs": %d
+                }
+                """.formatted(NAME, DESTINATION_ID, UPDATED_EVENT_NAME, UPDATED_TIMEOUT_MS);
+
+        HttpResponse<String> response = put(taskPath(TASK_UUID.toString()), bodyWithSameName);
+
+        assertEquals(HTTP_OK, response.statusCode());
     }
 
     // ── DELETE /api/v1/tasks/{id} ─────────────────────────────────────────────

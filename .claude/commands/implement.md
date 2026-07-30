@@ -92,6 +92,20 @@ still read the code itself, so accuracy does not depend on your summary.
 This is the **only** place the sync agents run during the pipeline — once, for
 the whole slice, never per file edit. `/sync` covers hand-written code separately.
 
+**Record a run marker for every sync agent.** After running (or deliberately
+skipping) each of the five sync agents, append one line to
+`.claude/sdlc/<branch-slug>.md` (create the dir/file if absent) so the pre-PR
+`/sdlc-check` gate can tell "not needed" from "forgotten":
+
+```
+- <agent-name> | <ISO-date> | ran: <one-line what it did> | files: <n>
+- <agent-name> | <ISO-date> | skipped: <why not needed for this diff>
+```
+
+Mark a `skipped:` line only when the diff genuinely doesn't trigger that agent
+(per the table above) — the gate re-checks your call against the diff, so an
+untruthful skip will be caught and block the PR.
+
 ## Step 5 — Build green and report
 
 ```bash

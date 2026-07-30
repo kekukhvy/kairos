@@ -297,6 +297,10 @@ Returns `204 No Content` with no body. The task is soft-deleted: it will no
 longer appear in the list or be returned by GET. Any further GET or PUT on the
 same `id` returns `404`. A second DELETE on the same `id` returns `409 Conflict`.
 
+After deletion, the task's `(service, name)` pair is freed and can be reused: you
+can create a new task in the same service with the same name. The uniqueness
+constraint applies only to live tasks.
+
 ---
 
 ## Common errors
@@ -315,6 +319,8 @@ same `id` returns `404`. A second DELETE on the same `id` returns `409 Conflict`
 | Destination `id` does not exist | `404` | Message identifying the destination. |
 | Schedule `id` does not exist | `404` | Message identifying the schedule. |
 | Tried to delete an already-deleted task | `409` | Message identifying the task. |
+| Created a task with a duplicate `(service, name)` pair | `409` | Message: `Task '<name>' already exists in service '<service>'`. A task's service and name pair must be unique among live tasks. Delete the existing task first, or use a different name. |
+| Renamed a task into a name already taken in its service | `409` | Message: `Task '<name>' already exists in service '<service>'`. Soft-deleted tasks do not block the name — only live tasks. |
 | Created a destination with a duplicate `destinationId` | `409` | Message identifying the duplicate id. |
 | Deleted a destination still referenced by tasks | `409` | Message identifying the destination. |
 

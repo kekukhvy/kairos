@@ -7,6 +7,7 @@ import dev.kairos.domain.destination.exceptions.DestinationInUseException;
 import dev.kairos.domain.destination.exceptions.DestinationNotFoundException;
 import dev.kairos.domain.destination.exceptions.InvalidDestinationTypeException;
 import dev.kairos.domain.task.TaskAlreadyDeletedException;
+import dev.kairos.domain.task.TaskNameAlreadyExistsException;
 import io.javalin.Javalin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +23,8 @@ import org.slf4j.LoggerFactory;
  *             (malformed path param / bad UUID), {@link InvalidDestinationTypeException},
  *             {@link JacksonException} (malformed / unparseable request body)</li>
  *   <li>404 — {@link dev.kairos.domain.task.TaskNotFoundException}, {@link DestinationNotFoundException}</li>
- *   <li>409 — {@link TaskAlreadyDeletedException}, {@link DestinationAlreadyExistsException},
- *             {@link DestinationInUseException}</li>
+ *   <li>409 — {@link TaskAlreadyDeletedException}, {@link TaskNameAlreadyExistsException},
+ *             {@link DestinationAlreadyExistsException}, {@link DestinationInUseException}</li>
  *   <li>500 — anything else (logged, opaque message to client)</li>
  * </ul>
  */
@@ -48,6 +49,9 @@ public final class GlobalExceptionHandler {
                 ctx.status(404).json(new ErrorResponse(e.getMessage())));
 
         app.exception(TaskAlreadyDeletedException.class, (e, ctx) ->
+                ctx.status(409).json(new ErrorResponse(e.getMessage())));
+
+        app.exception(TaskNameAlreadyExistsException.class, (e, ctx) ->
                 ctx.status(409).json(new ErrorResponse(e.getMessage())));
 
 

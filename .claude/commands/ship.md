@@ -38,6 +38,17 @@ unmet acceptance criteria.
 If `--dry-run`, stop here and report: implemented, reviewed, fixed, verified —
 with the two report paths. Nothing is pushed.
 
+## Stage 3.5 — SDLC integrity gate (`/sdlc-check`)
+Verify the pipeline was not shortcut before the work is frozen into a PR: that
+every sync subagent the slice actually needed (`spec-keeper`, `user-docs-writer`,
+`test-author`, `javadoc-writer`, `logging-instrumenter`) ran and left real
+evidence on this diff. **Gate:** if any REQUIRED agent is missing or its artifact
+doesn't reflect the change, `/sdlc-check` **blocks**, runs the missing agents over
+the slice diff, records what each did, and re-gates to PASS (re-building green).
+Do not proceed to the PR until the gate is PASS. This is the check that stops a
+slice shipping with, e.g., a new endpoint but no user docs, or new use-case logic
+but no logging.
+
 ## Stage 4 — Open the PR (`/create-pr <issue>`)
 Opens a PR from the feature branch to `develop`, with a diff-based description,
 correct labels, and `Closes #<issue>`. **Gate:** commit/push are outward-facing —
@@ -55,6 +66,8 @@ A single summary of the whole run:
 - **Implemented:** cycles, files, build result
 - **Reviewed:** findings by source; validated VALID/INVALID/NEEDS-HUMAN; fixed
 - **Verified:** X/Y acceptance criteria green; gaps if any
+- **SDLC gate:** which sync agents were required, which ran during `/implement`,
+  which `/sdlc-check` had to run, and one line on what each did
 - **Artifacts:** the findings doc, the acceptance evidence doc, the PR URL
 
 Never merge automatically — merging to `develop`/`main` stays a human action.

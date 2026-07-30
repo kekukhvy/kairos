@@ -56,6 +56,14 @@ final class InMemoryTaskRepository implements TaskRepository {
                 .anyMatch(t -> t.destinationId().equals(id));
     }
 
+    @Override
+    public boolean existsByServiceAndName(String service, String name, TaskId excludeId) {
+        return store.values().stream()
+                .filter(t -> !t.isDeleted())
+                .filter(t -> !t.id().equals(excludeId))
+                .anyMatch(t -> t.service().equals(service) && t.name().equals(name));
+    }
+
     // --- test helpers -------------------------------------------------------
 
     int saveCallCount() {

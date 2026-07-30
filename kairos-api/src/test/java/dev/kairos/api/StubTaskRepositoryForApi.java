@@ -46,4 +46,9 @@ final class StubTaskRepositoryForApi implements TaskRepository {
 
     @Override
     public void softDelete(TaskId id, Instant deletedAt) {}
+
+    @Override
+    public boolean existsByServiceAndName(String service, String name, TaskId excludeId) {
+        return false;
+    }
 }

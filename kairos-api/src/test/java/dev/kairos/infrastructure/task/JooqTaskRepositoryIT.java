@@ -50,6 +50,9 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
 
     private static final String SERVICE = "it-service";
     private static final String NAME = "it-task";
+    private static final String OTHER_SERVICE = "other-it-service";
+    private static final String OTHER_NAME = "other-it-task";
+    private static final TaskId NO_EXCLUDED_TASK = null;
     private static final String DESCRIPTION = "integration test task";
     private static final String EVENT_NAME = "it.task.v1";
     private static final String PAYLOAD_JSON = "{\"key\":\"value\"}";
@@ -338,6 +341,74 @@ class JooqTaskRepositoryIT extends H2DatabaseBase {
         repository.softDelete(id, DELETED_AT);
 
         boolean result = repository.existsByDestinationId(DestinationId.of(DESTINATION_ID_VALUE));
+
+        assertTrue(result);
+    }
+
+    // ── existsByServiceAndName ───────────────────────────────────────────────
+
+    @Test
+    void existsByServiceAndName_liveDuplicate_returnsTrue() {
+        insertTask(fullTask(randomTaskId()));
+
+        boolean result = repository.existsByServiceAndName(SERVICE, NAME, NO_EXCLUDED_TASK);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void existsByServiceAndName_noMatchingRow_returnsFalse() {
+        boolean result = repository.existsByServiceAndName(SERVICE, NAME, NO_EXCLUDED_TASK);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByServiceAndName_differentService_returnsFalse() {
+        insertTask(fullTask(randomTaskId()));
+
+        boolean result = repository.existsByServiceAndName(OTHER_SERVICE, NAME, NO_EXCLUDED_TASK);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByServiceAndName_differentName_returnsFalse() {
+        insertTask(fullTask(randomTaskId()));
+
+        boolean result = repository.existsByServiceAndName(SERVICE, OTHER_NAME, NO_EXCLUDED_TASK);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByServiceAndName_afterSoftDelete_returnsFalse() {
+        TaskId id = randomTaskId();
+        insertTask(fullTask(id));
+        repository.softDelete(id, DELETED_AT);
+
+        boolean result = repository.existsByServiceAndName(SERVICE, NAME, NO_EXCLUDED_TASK);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByServiceAndName_excludingTheOnlyMatchingRow_returnsFalse() {
+        TaskId id = randomTaskId();
+        insertTask(fullTask(id));
+
+        boolean result = repository.existsByServiceAndName(SERVICE, NAME, id);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void existsByServiceAndName_excludingADifferentRow_stillReturnsTrue() {
+        TaskId matchingId = randomTaskId();
+        TaskId otherId = randomTaskId();
+        insertTask(fullTask(matchingId));
+
+        boolean result = repository.existsByServiceAndName(SERVICE, NAME, otherId);
 
         assertTrue(result);
     }
