@@ -209,11 +209,12 @@ commit-at-end (not commit-per-step) is required.
       was already created**, and a repeated **Finish** does not duplicate the
       already-created destination/task **or schedule**.
 - [ ] On success the wizard notifies, closes, and the originating view refreshes.
-- [ ] The Schedule step's **timezone picker** offers a curated shortlist of
-      common IANA zones (UTC, Europe/London, Europe/Berlin, Europe/Kyiv,
-      America/New_York, America/Los_Angeles, Asia/Tokyo, Asia/Singapore,
-      Australia/Sydney) but still accepts any free-typed valid `ZoneId`; invalid
-      zones are marked invalid and block advancing.
+- [ ] The Schedule step's **timezone picker** is built by the shared
+      `ScheduleWhenFields.timezoneField()` — the same shortlist
+      (`ScheduleText.TIMEZONE_OPTIONS`) and the same current-UTC-offset labels as
+      the standalone `ScheduleForm`, so the two cannot drift — and still accepts
+      any free-typed valid `ZoneId`; invalid zones are marked invalid and block
+      advancing.
 - [ ] No literals in components (all copy via `WizardText`); styling via
       `StyleConfig` + `Tokens` only; no Lombok; methods ≤ 40 lines; changes
       confined to `kairos-admin`; no domain/application/infrastructure/API/schema

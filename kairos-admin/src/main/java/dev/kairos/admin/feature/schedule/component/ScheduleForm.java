@@ -53,8 +53,7 @@ public class ScheduleForm extends Dialog {
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
     private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
-    private final ComboBox<String> timezone =
-            Fields.comboCustom(ScheduleText.COL_TIMEZONE, ScheduleText.HELPER_TIMEZONE, ScheduleText.TIMEZONE_OPTIONS);
+    private final ComboBox<String> timezone = ScheduleWhenFields.timezoneField();
 
     private ScheduleForm(List<TaskDto> tasks,
                          ScheduleResponse editing,

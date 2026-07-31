@@ -3,9 +3,9 @@ package dev.kairos.admin.feature.schedule.component;
 import com.vaadin.flow.component.combobox.ComboBox;
 import dev.kairos.admin.feature.schedule.ScheduleText;
 import dev.kairos.admin.feature.schedule.dto.ScheduleType;
-import dev.kairos.admin.shared.ui.Fields;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 
@@ -87,8 +87,45 @@ class ScheduleWhenFieldsTest {
         assertThat(ScheduleWhenFields.validateTimezoneIfApplicable(timezone, ScheduleType.ONCE)).isFalse();
     }
 
+    @Test
+    void zoneLabel_appendsCurrentOffset() {
+        ZoneOffset expected = ZoneId.of("Europe/Vienna").getRules().getOffset(Instant.now());
+
+        assertThat(ScheduleWhenFields.zoneLabel("Europe/Vienna"))
+                .isEqualTo("Europe/Vienna (UTC" + expected.getId() + ")");
+    }
+
+    @Test
+    void zoneLabel_utcRendersExplicitZeroOffsetNotZ() {
+        assertThat(ScheduleWhenFields.zoneLabel("UTC")).isEqualTo("UTC (UTC+00:00)");
+    }
+
+    @Test
+    void zoneLabel_unparseableZone_returnedAsIsWithoutThrowing() {
+        assertThat(ScheduleWhenFields.zoneLabel("Europe/Kyv")).isEqualTo("Europe/Kyv");
+    }
+
+    @Test
+    void timezoneField_labelsItemsWithOffsetButKeepsBareZoneAsValue() {
+        ComboBox<String> timezone = timezoneField();
+        timezone.setValue("Europe/Vienna");
+
+        // the API must receive the bare zone id, not the decorated label
+        assertThat(timezone.getValue()).isEqualTo("Europe/Vienna");
+        assertThat(timezone.getItemLabelGenerator().apply("Europe/Vienna")).startsWith("Europe/Vienna (UTC");
+    }
+
+    @Test
+    void timezoneOptions_leadWithUtcThenVienna() {
+        assertThat(ScheduleText.TIMEZONE_OPTIONS).startsWith("UTC", "Europe/Vienna");
+    }
+
+    @Test
+    void timezoneOptions_areAllValidZoneIds() {
+        assertThat(ScheduleText.TIMEZONE_OPTIONS).allSatisfy(zone -> assertThat(ZoneId.of(zone)).isNotNull());
+    }
+
     private static ComboBox<String> timezoneField() {
-        return Fields.comboCustom(
-                ScheduleText.COL_TIMEZONE, ScheduleText.HELPER_TIMEZONE, ScheduleText.TIMEZONE_OPTIONS);
+        return ScheduleWhenFields.timezoneField();
     }
 }

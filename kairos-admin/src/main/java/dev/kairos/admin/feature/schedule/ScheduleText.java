@@ -48,19 +48,56 @@ public final class ScheduleText {
     public static final String DEFAULT_TIMEZONE = "UTC";
     public static final String WHEN_EMPTY = "—";
 
-    /** Common IANA zones offered by the timezone picker; any other valid zone can still be typed in. */
+    /**
+     * Common IANA zones offered by the timezone picker; any other valid zone can
+     * still be typed in. UTC and the local zone (Vienna) lead the list as the two
+     * most-used entries, the rest follow west-to-east by region. Rendered with
+     * their current UTC offset — see {@code ScheduleWhenFields#zoneLabel}.
+     */
     public static final List<String> TIMEZONE_OPTIONS = List.of(
             "UTC",
+            "Europe/Vienna",
             "Europe/London",
+            "Europe/Lisbon",
+            "Europe/Madrid",
+            "Europe/Paris",
             "Europe/Berlin",
+            "Europe/Rome",
+            "Europe/Prague",
+            "Europe/Warsaw",
+            "Europe/Athens",
+            "Europe/Bucharest",
             "Europe/Kyiv",
-            "America/New_York",
+            "Europe/Istanbul",
+            "Europe/Moscow",
             "America/Los_Angeles",
-            "Asia/Tokyo",
+            "America/Denver",
+            "America/Chicago",
+            "America/New_York",
+            "America/Sao_Paulo",
+            "Africa/Lagos",
+            "Africa/Cairo",
+            "Africa/Johannesburg",
+            "Asia/Jerusalem",
+            "Asia/Dubai",
+            "Asia/Karachi",
+            "Asia/Kolkata",
+            "Asia/Bangkok",
+            "Asia/Shanghai",
+            "Asia/Hong_Kong",
             "Asia/Singapore",
-            "Australia/Sydney");
+            "Asia/Seoul",
+            "Asia/Tokyo",
+            "Australia/Perth",
+            "Australia/Sydney",
+            "Pacific/Auckland");
     public static final String HELPER_TIMEZONE = "Pick a common zone or type any IANA timezone id";
     public static final String VALIDATION_TIMEZONE_INVALID = "Not a valid timezone";
+
+    /** Wraps the current UTC offset appended to a zone id, e.g. {@code Europe/Vienna (UTC+02:00)}. */
+    public static final String TIMEZONE_OFFSET_PREFIX = " (UTC";
+    public static final String TIMEZONE_OFFSET_SUFFIX = ")";
+    public static final String TIMEZONE_OFFSET_ZERO = "+00:00";
 
     public static final String DETAILS_TITLE = "Schedule details";
     public static final String DETAIL_ID = "ID";

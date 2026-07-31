@@ -134,10 +134,13 @@ found) as notifications; the API's `GlobalExceptionHandler` already maps them.
 - [ ] No string literals in components (all via `ScheduleText`/`UiText`); methods
       ≤ 40 lines; layer boundaries respected (changes confined to `kairos-admin`).
 - [ ] **Timezone picker** offers a curated shortlist of common IANA zones
-      (UTC, Europe/London, Europe/Berlin, Europe/Kyiv, America/New_York,
-      America/Los_Angeles, Asia/Tokyo, Asia/Singapore, Australia/Sydney) but
-      still accepts any free-typed valid `ZoneId`; invalid zones are marked
-      invalid and block submission.
+      (`ScheduleText.TIMEZONE_OPTIONS` — UTC and the local zone `Europe/Vienna`
+      first, then the rest west-to-east by region) but still accepts any
+      free-typed valid `ZoneId`; invalid zones are marked invalid and block
+      submission. Each entry is rendered with its **current** UTC offset
+      (e.g. `Europe/Vienna (UTC+02:00)`) via an item-label generator; the offset
+      is computed per render because it shifts with DST, and the field's *value*
+      stays the bare zone id so it round-trips to the API unchanged.
 - [ ] API validation errors (e.g. past `runAt`, interval out of range) surface as
       error notifications rather than silent failures.
 - [ ] `./gradlew :kairos-admin:build` passes, including any new `*Test`s

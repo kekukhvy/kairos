@@ -12,6 +12,7 @@ import dev.kairos.admin.feature.schedule.ScheduleText;
 import dev.kairos.admin.feature.schedule.dto.ScheduleType;
 import dev.kairos.admin.shared.style.Tokens;
 import dev.kairos.admin.shared.ui.Buttons;
+import dev.kairos.admin.shared.ui.Fields;
 import dev.kairos.admin.shared.ui.UiText;
 import dev.kairos.admin.shared.util.Strings;
 import org.slf4j.Logger;
@@ -35,6 +36,49 @@ public final class ScheduleWhenFields {
     private static final Logger logger = LoggerFactory.getLogger(ScheduleWhenFields.class);
 
     private ScheduleWhenFields() {
+    }
+
+    /**
+     * Builds the timezone picker: the shared shortlist from
+     * {@link ScheduleText#TIMEZONE_OPTIONS}, rendered with each zone's current
+     * UTC offset, still accepting any free-typed valid zone.
+     *
+     * <p>Created here rather than at each call site so {@link ScheduleForm} and
+     * the wizard's {@code ScheduleStep} cannot drift apart in either the option
+     * list or the offset rendering.
+     *
+     * @return a combo whose <em>value</em> is always the bare zone id (e.g.
+     *         {@code Europe/Vienna}), so it round-trips to the API unchanged —
+     *         only the displayed label carries the offset
+     */
+    public static ComboBox<String> timezoneField() {
+        ComboBox<String> field = Fields.comboCustom(
+                ScheduleText.COL_TIMEZONE, ScheduleText.HELPER_TIMEZONE, ScheduleText.TIMEZONE_OPTIONS);
+        field.setItemLabelGenerator(ScheduleWhenFields::zoneLabel);
+        return field;
+    }
+
+    /**
+     * Renders {@code zone} with its offset as it is <em>right now</em>, e.g.
+     * {@code Europe/Vienna (UTC+02:00)}. The offset is computed per call rather
+     * than stored alongside the zone id because it shifts with daylight saving
+     * time — a hard-coded offset would be wrong for half the year.
+     *
+     * <p>A zone id that no longer parses is returned as-is rather than throwing,
+     * so a stored legacy value still renders in the picker.
+     */
+    static String zoneLabel(String zone) {
+        try {
+            ZoneOffset offset = ZoneId.of(zone).getRules().getOffset(Instant.now());
+            return zone + ScheduleText.TIMEZONE_OFFSET_PREFIX + offsetLabel(offset) + ScheduleText.TIMEZONE_OFFSET_SUFFIX;
+        } catch (DateTimeException ex) {
+            return zone;
+        }
+    }
+
+    /** {@link ZoneOffset#getId()} renders UTC as {@code "Z"}; spell it out as {@code +00:00} instead. */
+    private static String offsetLabel(ZoneOffset offset) {
+        return offset.getTotalSeconds() == 0 ? ScheduleText.TIMEZONE_OFFSET_ZERO : offset.getId();
     }
 
     /**
