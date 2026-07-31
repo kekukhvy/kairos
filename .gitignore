@@ -33,3 +33,5 @@ replay_pid*
 **/target/
 /src/
 /kairos-admin/src/main/frontend/generated/
+# Generated code-map report (report.html + index.json) — regenerated on demand.
+/codemap/

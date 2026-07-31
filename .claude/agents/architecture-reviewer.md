@@ -103,3 +103,11 @@ valid outcome — do not manufacture findings to look thorough.
   settled decision, flag that specifically instead.
 - End with a short verdict: must-fix count, suggestion count, and a one-line
   overall assessment (clean / minor cleanup / needs rework).
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 architecture-reviewer` comment: must-fix count, suggestion count,
+the one-line verdict (clean / minor cleanup / needs rework), and the top 1–2
+findings (file:line — one line each). You are read-only — the comment is your
+result; don't paste the full findings list.

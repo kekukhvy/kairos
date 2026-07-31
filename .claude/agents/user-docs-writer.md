@@ -58,3 +58,11 @@ them.
 - Prefer examples over prose. Every endpoint gets at least one example.
 - End with a summary of which docs changed and any field whose meaning was
   unclear from the code (so a human can clarify).
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 user-docs-writer` comment: which `doc/usage/` files you updated
+(api / getting-started / sdk) and what changed (endpoints, fields, error codes),
+plus any field whose meaning was unclear. If no client-facing surface changed,
+say "no changes needed — <why>".

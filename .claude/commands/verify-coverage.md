@@ -38,9 +38,8 @@ resolved spec path (or issue). It will:
    row per criterion: criterion → evidence → ran? → PASS/FAIL/GAP), an evidence
    log of the real test output, and a gaps list.
 
-Integration/repository tests use Testcontainers + Postgres; if Docker isn't
-available the verifier records those as **not-run (environment)** rather than
-claiming PASS.
+Integration/repository tests run on in-process H2 (`H2DatabaseBase`) — no Docker
+needed, so they always run; a repo IT is never "not-run (environment)".
 
 ## Step 3 — Post the acceptance evidence to the issue
 

@@ -1,6 +1,6 @@
 ---
 name: test-author
-description: Writes unit and integration tests for Kairos. Use after implementing or changing domain logic, use cases, repositories, or API endpoints, or when the user asks for tests/coverage. Writes unit tests (no DB) for domain/use cases, Testcontainers + Postgres integration tests for repositories, and API tests for endpoints including edge cases.
+description: Writes unit and integration tests for Kairos. Use after implementing or changing domain logic, use cases, repositories, or API endpoints, or when the user asks for tests/coverage. Writes unit tests (no DB) for domain/use cases, in-process H2 (H2DatabaseBase) integration tests for repositories, and API tests for endpoints including edge cases.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
 ---
@@ -28,10 +28,13 @@ Tests obey the same rules as production code — read `.claude/GUIDELINES.md`:
   soft-deleted task is rejected; illegal `Execution` transitions are impossible).
   Use fakes/in-memory implementations of ports (e.g. an in-memory
   `TaskRepository`) — do not hit a database.
-- **Integration tests — Testcontainers + real Postgres.** Repository
-  implementations (`JooqTaskRepository`, etc.). Verify mapping, soft-delete
-  filtering (`deleted_at IS NULL`), pagination, and `SKIP LOCKED` claim behavior
-  where relevant. Apply Flyway migrations against the container.
+- **Integration tests — in-process H2 (PostgreSQL mode).** Extend
+  `H2DatabaseBase` (no Docker/Testcontainers); the schema comes from the
+  `h2-schema.sql` test resource — if you test a new table/column, ensure it's
+  mirrored there. Cover repository implementations (`JooqTaskRepository`, etc.):
+  mapping, soft-delete filtering (`deleted_at IS NULL`), pagination, and
+  `SKIP LOCKED` claim behavior where relevant. (Behavior H2 can't express, e.g.
+  partial unique indexes, is verified against real Postgres out of band — not here.)
 - **API tests.** Every endpoint, including edge cases: 404 after delete,
   soft-deleted rows excluded from list, 400 on validation, 409 on
   already-deleted. Use the documented contracts in `common`.
@@ -41,7 +44,7 @@ Tests obey the same rules as production code — read `.claude/GUIDELINES.md`:
 1. Read the code under test and the relevant `doc/` sections to learn the
    intended behavior and invariants.
 2. Find existing test conventions (test directory layout, naming, base classes,
-   Testcontainers setup) and match them. Check the build for the test framework
+   `H2DatabaseBase` setup) and match them. Check the build for the test framework
    in use before writing (`build.gradle`).
 3. Write tests covering happy path + edge cases + invariant violations.
 4. Run them: `./gradlew test` (and the relevant module's integration task).
@@ -56,3 +59,10 @@ Tests obey the same rules as production code — read `.claude/GUIDELINES.md`:
 - Keep tests fast and deterministic; unit tests never touch a DB or network.
 - End with a summary: what was covered, what was deliberately left out, and any
   production bug or unclear behavior you found.
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 test-author` comment: which tests you added (by layer — unit / H2
+repo IT / API), coverage gaps you closed, anything left for someone else, and
+`Tests: <added> · Build: ✅`. If you found a production bug, say so in one line.

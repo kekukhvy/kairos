@@ -55,3 +55,11 @@ the stated architecture.
   don't paraphrase.
 - End with a short summary: which docs changed and why, plus any contradiction
   between code and a previously-settled decision that a human should review.
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 spec-keeper` comment: which `doc/` files you updated (specification
+/ database / plan) and the gist of each change, plus any code-vs-settled-decision
+contradiction you flagged. If nothing documented changed, say "no changes needed
+— <why>".
