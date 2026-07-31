@@ -2,6 +2,7 @@ package dev.kairos.infrastructure;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import dev.kairos.persistence.DSLContextFactory;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeAll;
 

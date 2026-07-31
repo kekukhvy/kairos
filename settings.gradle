@@ -9,6 +9,7 @@ pluginManagement {
 rootProject.name = 'kairos'
 
 include 'common'
+include 'kairos-persistence'
 include 'kairos-api'
 include 'kairos-engine'
 include 'kairos-worker'

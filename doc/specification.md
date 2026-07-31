@@ -748,6 +748,11 @@ outermost ring, depending on the application layer but unknown to it:
   routes are registered via `Router.registerTaskRoutes`,
   `Router.registerDestinationRoutes`, and `Router.registerScheduleRoutes`. The
   Javalin server port is read from `config.getIntProperty("server.port", 8080)`.
+  Before building use cases, `ApplicationContext` calls
+  `SchemaReadinessCheck.verify(dataSource)` — **schema ownership moved to
+  `kairos-engine` (M3.5+)**, so the API no longer runs Flyway. Against an
+  un-migrated DB it fails fast with "Database schema not initialized (missing
+  table 'tasks') — start kairos-engine first, it owns and applies the schema."
   `KairosApplication.main` loads `AppConfig`, calls
   `ApplicationContext.build(config).start()`, and exits normally — the
   Javalin thread keeps the process alive.

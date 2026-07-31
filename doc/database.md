@@ -2,7 +2,7 @@
 
 > Reference for the key tables based on our design discussion. The schema
 > is now **implemented** as Flyway migrations under
-> `kairos-api/src/main/resources/db/migration/` — one file per table:
+> `kairos-persistence/src/main/resources/db/migration/` — one file per table:
 >
 > | Migration | Table |
 > |---|---|

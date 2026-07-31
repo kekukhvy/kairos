@@ -1,4 +1,4 @@
-package dev.kairos.config;
+package dev.kairos.persistence;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;

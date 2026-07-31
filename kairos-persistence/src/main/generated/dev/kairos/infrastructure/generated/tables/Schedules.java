@@ -243,7 +243,7 @@ public class Schedules extends TableImpl<SchedulesRecord> {
     public List<Check<SchedulesRecord>> getChecks() {
         return Arrays.asList(
             Internal.createCheck(this, DSL.name("schedules_type_check"), "(((type)::text = ANY ((ARRAY['ONCE'::character varying, 'CRON'::character varying, 'FIXED'::character varying])::text[])))", true),
-            Internal.createCheck(this, DSL.name("schedules_type_fields_check"), "(((((type)::text = 'ONCE'::text) AND (run_at IS NOT NULL) AND (cron_expression IS NULL) AND (interval_seconds IS NULL)) OR (((type)::text = 'CRON'::text) AND (cron_expression IS NOT NULL) AND (run_at IS NULL) AND (interval_seconds IS NULL)) OR (((type)::text = 'FIXED'::text) AND (interval_seconds IS NOT NULL) AND (interval_seconds > 0) AND (run_at IS NULL) AND (cron_expression IS NULL))))", true)
+            Internal.createCheck(this, DSL.name("schedules_type_fields_check"), "(((((type)::text = 'ONCE'::text) AND (run_at IS NOT NULL) AND (cron_expression IS NULL) AND (interval_seconds IS NULL)) OR (((type)::text = 'CRON'::text) AND (cron_expression IS NOT NULL) AND (run_at IS NULL) AND (interval_seconds IS NULL)) OR (((type)::text = 'FIXED'::text) AND (interval_seconds IS NOT NULL) AND (interval_seconds > 0) AND (interval_seconds <= 86400) AND (run_at IS NULL) AND (cron_expression IS NULL))))", true)
         );
     }
 

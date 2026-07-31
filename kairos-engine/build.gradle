@@ -1,1 +1,25 @@
-description = 'TODO'
+plugins {
+    id 'application'
+}
+
+description = 'Kairos scheduler engine: planner, claim loop, retry — owns the database schema'
+
+application {
+    mainClass = 'dev.kairos.engine.KairosEngine'
+}
+
+dependencies {
+    implementation project(':kairos-persistence')
+
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    runtimeOnly "ch.qos.logback:logback-classic:${logbackVersion}"
+
+    testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation "com.h2database:h2:${h2Version}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -8,17 +8,17 @@ import dev.kairos.api.task.TaskHandler;
 import dev.kairos.application.destination.usecases.*;
 import dev.kairos.application.schedule.usecases.*;
 import dev.kairos.application.task.usecases.*;
-import dev.kairos.config.AppConfig;
-import dev.kairos.config.DataSourceFactory;
-import dev.kairos.config.DatabaseMigrator;
 import dev.kairos.domain.destination.DestinationRepository;
 import dev.kairos.domain.schedule.ScheduleRepository;
 import dev.kairos.domain.task.TaskRepository;
-import dev.kairos.infrastructure.DSLContextFactory;
 import dev.kairos.infrastructure.ObjectMapperFactory;
 import dev.kairos.infrastructure.destination.JooqDestinationRepository;
 import dev.kairos.infrastructure.schedule.JooqScheduleRepository;
 import dev.kairos.infrastructure.task.JooqTaskRepository;
+import dev.kairos.persistence.AppConfig;
+import dev.kairos.persistence.DSLContextFactory;
+import dev.kairos.persistence.DataSourceFactory;
+import dev.kairos.persistence.SchemaReadinessCheck;
 import io.javalin.Javalin;
 import org.jooq.DSLContext;
 
@@ -42,7 +42,7 @@ final class ApplicationContext {
     static ApplicationContext build(AppConfig config) {
         // ── Infrastructure ────────────────────────────────────────────────────
         DataSource dataSource = DataSourceFactory.getDataSource(config);
-        DatabaseMigrator.migrate(dataSource, config);
+        SchemaReadinessCheck.verify(dataSource);
         DSLContext dsl = DSLContextFactory.create(dataSource);
         ObjectMapper objectMapper = ObjectMapperFactory.create();
         Clock clock = Clock.systemUTC();

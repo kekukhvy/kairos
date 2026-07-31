@@ -16,13 +16,27 @@ All examples use `curl`. The server runs on port `8080` by default.
    docker compose up -d
    ```
 
-2. Start the Kairos API:
+2. Start the Kairos Engine (this owns and applies the database schema):
+
+   ```bash
+   ./gradlew :kairos-engine:run
+   ```
+
+   The engine writes a health marker file once migrations complete (default:
+   `/tmp/kairos-engine/engine.health`). This is what orchestration uses to
+   confirm the schema is ready before starting the API. The engine stays running
+   after startup — it hosts the scheduler loop in later milestones.
+
+3. In a new terminal, start the Kairos API:
 
    ```bash
    ./gradlew :kairos-api:run
    ```
 
-3. A **destination** must exist before you can create tasks. Tasks reference a
+   The API will fail fast if the database schema is not initialized (schema
+   ownership moved to the engine).
+
+4. A **destination** must exist before you can create tasks. Tasks reference a
    destination by `destinationId`, and the reference is enforced at the API
    level. Creating a task with a `destinationId` that does not exist returns
    `400 Bad Request`.
