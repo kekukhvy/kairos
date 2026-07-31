@@ -53,7 +53,7 @@ public class ScheduleForm extends Dialog {
     private final TextField cronExpression = Fields.text(ScheduleText.FIELD_CRON);
     private final HorizontalLayout cronRow = ScheduleWhenFields.cronRow(cronExpression);
     private final IntegerField intervalSeconds = Fields.integer(ScheduleText.FIELD_INTERVAL);
-    private final TextField timezone = Fields.text(ScheduleText.COL_TIMEZONE);
+    private final ComboBox<String> timezone = ScheduleWhenFields.timezoneField();
 
     private ScheduleForm(List<TaskDto> tasks,
                          ScheduleResponse editing,
@@ -139,7 +139,7 @@ public class ScheduleForm extends Dialog {
         return Buttons.tertiary(UiText.BTN_CANCEL, e -> close());
     }
 
-    private void save() {
+    void save() {
         if (!validate()) {
             return;
         }
@@ -162,13 +162,14 @@ public class ScheduleForm extends Dialog {
         close();
     }
 
-    private boolean validate() {
+    boolean validate() {
         boolean whenValid = switch (type.getValue()) {
             case ONCE -> ScheduleWhenFields.validateRunAt(runAt, timezone);
             case CRON -> FieldValidation.require(cronExpression, UiText.VALIDATION_REQUIRED);
             case FIXED -> ScheduleWhenFields.validateInterval(intervalSeconds);
         };
-        return validateTask() & whenValid;
+        boolean timezoneValid = ScheduleWhenFields.validateTimezoneIfApplicable(timezone, type.getValue());
+        return validateTask() & whenValid & timezoneValid;
     }
 
     private boolean validateTask() {
@@ -200,5 +201,25 @@ public class ScheduleForm extends Dialog {
         if (schedule.runAt() != null) {
             runAt.setValue(LocalDateTime.ofInstant(schedule.runAt(), selectedZone()));
         }
+    }
+
+    ComboBox<TaskDto> task() {
+        return task;
+    }
+
+    Select<ScheduleType> type() {
+        return type;
+    }
+
+    DateTimePicker runAt() {
+        return runAt;
+    }
+
+    IntegerField intervalSeconds() {
+        return intervalSeconds;
+    }
+
+    ComboBox<String> timezone() {
+        return timezone;
     }
 }

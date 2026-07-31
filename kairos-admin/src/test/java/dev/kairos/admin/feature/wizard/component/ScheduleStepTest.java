@@ -2,12 +2,14 @@ package dev.kairos.admin.feature.wizard.component;
 
 import com.vaadin.flow.component.button.Button;
 import dev.kairos.admin.feature.schedule.CronText;
+import dev.kairos.admin.feature.schedule.ScheduleText;
 import dev.kairos.admin.feature.schedule.dto.ScheduleType;
 import dev.kairos.admin.feature.wizard.WizardDraft;
 import dev.kairos.common.dto.schedule.CreateScheduleRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -26,6 +28,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ScheduleStepTest {
 
     private static final Instant FUTURE = Instant.now().plusSeconds(3_600);
+    /** Far enough ahead to stay in the future in any timezone's wall-clock reinterpretation. */
+    private static final Instant FAR_FUTURE = Instant.now().plus(Duration.ofDays(2));
     private static final String CRON = "0 0 * * *";
     private static final UUID RESOLVED_TASK_ID = UUID.randomUUID();
 
@@ -120,5 +124,70 @@ class ScheduleStepTest {
                 .map(Button.class::cast)
                 .filter(b -> CronText.BUILD_BUTTON.equals(b.getText()))
                 .findFirst();
+    }
+
+    // --- timezone picker ---
+
+    @Test
+    void timezone_defaultsToUtc() {
+        assertThat(step.timezone().getValue()).isEqualTo(ScheduleText.DEFAULT_TIMEZONE);
+    }
+
+    @Test
+    void timezone_offersSharedShortlist() {
+        assertThat(step.timezone().getListDataView().getItems().toList())
+                .isEqualTo(ScheduleText.TIMEZONE_OPTIONS);
+    }
+
+    @Test
+    void timezone_shortlistZone_selectable() {
+        step.timezone().setValue("Europe/Kyiv");
+
+        assertThat(step.timezone().getValue()).isEqualTo("Europe/Kyiv");
+    }
+
+    @Test
+    void timezone_validCustomZoneOffShortlist_acceptedByValidate() {
+        step.type().setValue(ScheduleType.ONCE);
+        step.runAt().setValue(LocalDateTime.ofInstant(FAR_FUTURE, ZoneOffset.UTC));
+        step.timezone().setValue("Pacific/Chatham");
+
+        assertThat(step.validate()).isTrue();
+        assertThat(step.timezone().isInvalid()).isFalse();
+    }
+
+    @Test
+    void timezone_invalidCustomZone_blocksValidateAndMarksInvalid() {
+        step.type().setValue(ScheduleType.ONCE);
+        step.runAt().setValue(LocalDateTime.ofInstant(FAR_FUTURE, ZoneOffset.UTC));
+        step.timezone().setValue("Europe/Kyv");
+
+        assertThat(step.validate()).isFalse();
+        assertThat(step.timezone().isInvalid()).isTrue();
+    }
+
+    @Test
+    void fixedType_timezoneFieldHidden() {
+        step.type().setValue(ScheduleType.FIXED);
+
+        assertThat(step.timezone().isVisible()).isFalse();
+    }
+
+    @Test
+    void fixedType_invalidTimezoneDoesNotBlockValidate() {
+        step.type().setValue(ScheduleType.FIXED);
+        step.timezone().setValue("Europe/Kyv");
+        step.intervalSeconds().setValue(60);
+
+        assertThat(step.validate()).isTrue();
+    }
+
+    @Test
+    void nonFixedType_timezoneFieldVisible() {
+        step.type().setValue(ScheduleType.ONCE);
+        assertThat(step.timezone().isVisible()).isTrue();
+
+        step.type().setValue(ScheduleType.CRON);
+        assertThat(step.timezone().isVisible()).isTrue();
     }
 }

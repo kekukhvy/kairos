@@ -80,12 +80,15 @@ task's id is threaded into all task-scoped calls.
 **Type-driven form:** `ScheduleForm` holds a `Select<ScheduleType>` and one
 field per "when":
 - `DateTimePicker runAt`, `TextField cronExpression`, `IntegerField intervalSeconds`,
-  `TextField timezone` (default `UTC`), `TextField label`.
+  `ComboBox<String> timezone` (searchable picker with common IANA zones + custom
+  value support, default `UTC`), `TextField label`.
 - A `valueChangeListener` on the Type select toggles field visibility so only
   the active type's field(s) show. On edit, the Type select is `setReadOnly(true)`
-  and prefilled.
+  and prefilled. The timezone field is hidden for `FIXED` schedules (they have no
+  wall-clock meaning).
 - Validation: required "when" field present for the chosen type; `intervalSeconds`
-  in `(0, 86400]`; `runAt` in the future — mirror the API's rules for a good UX,
+  in `(0, 86400]`; `runAt` in the future; `timezone` is blank or a valid `ZoneId`
+  (any IANA zone, not just the shortlist) — mirror the API's rules for a good UX,
   but the API remains the source of truth (surface API 400s via `Notifications`).
 
 **Service / client:** `ScheduleService` uses `KairosApiClient` like
@@ -130,6 +133,14 @@ found) as notifications; the API's `GlobalExceptionHandler` already maps them.
 - [ ] Client-side search/filter over loaded schedules works like Tasks/Destinations.
 - [ ] No string literals in components (all via `ScheduleText`/`UiText`); methods
       ≤ 40 lines; layer boundaries respected (changes confined to `kairos-admin`).
+- [ ] **Timezone picker** offers a curated shortlist of common IANA zones
+      (`ScheduleText.TIMEZONE_OPTIONS` — UTC and the local zone `Europe/Vienna`
+      first, then the rest west-to-east by region) but still accepts any
+      free-typed valid `ZoneId`; invalid zones are marked invalid and block
+      submission. Each entry is rendered with its **current** UTC offset
+      (e.g. `Europe/Vienna (UTC+02:00)`) via an item-label generator; the offset
+      is computed per render because it shifts with DST, and the field's *value*
+      stays the bare zone id so it round-trips to the API unchanged.
 - [ ] API validation errors (e.g. past `runAt`, interval out of range) surface as
       error notifications rather than silent failures.
 - [ ] `./gradlew :kairos-admin:build` passes, including any new `*Test`s
