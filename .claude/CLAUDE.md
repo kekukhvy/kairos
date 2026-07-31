@@ -145,7 +145,8 @@ anything that *prevents* it — keep components independently packageable. See
 - **Kafka** — first delivery adapter
 - **SLF4J + Logback** — logging
 - **Docker Compose** — all local infrastructure
-- **Testcontainers** — repository integration tests (real Postgres)
+- **H2 (PostgreSQL mode)** — repository integration tests, in-process via
+  `H2DatabaseBase` (no Docker/Testcontainers)
 
 ---
 
@@ -250,5 +251,6 @@ the ones that need judgment (`tdd-implementer`, `architecture-reviewer`,
 1. Follow [GUIDELINES.md](./GUIDELINES.md) — no exceptions.
 2. Respect the layer boundaries above. No framework imports in `domain`.
 3. Match the conventions in the doc/ for the milestone you're working on.
-4. Test: unit tests for domain/use cases (no DB); Testcontainers for
-   repositories; API tests for every endpoint including edge cases.
+4. Test: unit tests for domain/use cases (no DB); in-process H2
+   (`H2DatabaseBase`) for repository ITs; API tests for every endpoint including
+   edge cases.

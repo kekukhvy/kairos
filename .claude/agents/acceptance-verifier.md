@@ -59,9 +59,9 @@ Actually execute the relevant tests and capture output:
 - Prefer the narrowest command that covers the mapped tests, e.g.
   `./gradlew :kairos-admin:test --tests 'dev.kairos.admin.feature.dashboard.*'`
 - Run the build gate ACs too, e.g. `./gradlew :kairos-admin:build`.
-- If a repository/integration test is mapped, it uses Testcontainers + Postgres
-  — run it if the environment allows; if Docker isn't available, record that as
-  **not-run (environment)**, do not claim PASS.
+- Repository/integration tests run on in-process H2 (`H2DatabaseBase`) — no
+  Docker, so they always run; there is no "not-run (environment)" excuse for a
+  repo IT. Just run them.
 - Gradle is quiet about individual tests by default. To capture per-test
   PASS/FAIL for the evidence blocks, add `-i` (info) to the run, or read the
   generated report at `<module>/build/reports/tests/test/index.html` and the
@@ -166,3 +166,11 @@ One line: DONE (all covered & green) / GAPS (list) / BLOCKED (env/build broke).
   failure of this agent. Surface not-run (environment) distinctly from PASS.
 - Keep the coverage matrix 1 row per criterion so nothing is silently dropped.
 - End with the one-line verdict and the counts.
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 acceptance-verifier` comment: the verdict `X/Y criteria verified`,
+any GAP/FAIL/not-run count, whether the end-to-end happy path was driven, and a
+link/path to the full evidence report. Keep it to the matrix headline, not the
+whole report (the report already lives in `.claude/reviews/`).

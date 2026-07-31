@@ -140,7 +140,7 @@ injected clock for determinism and testability.
 
 ### Tests
 - [ ] Unit tests for domain/use cases (no DB)
-- [ ] Integration tests for the repository (Testcontainers + Postgres)
+- [ ] Integration tests for the repository (in-process H2, `H2DatabaseBase`)
 - [ ] API tests for all 5 endpoints, including edge cases (404 after
   delete, deleted tasks excluded from the list)
 
@@ -246,7 +246,7 @@ injected clock for determinism and testability.
 - [ ] Cron expression parsing/validation (a Java library) — deferred to a
   future dedicated cron builder issue
 - [ ] Unit tests for domain/use cases (no DB)
-- [ ] Integration tests for the repository (Testcontainers + Postgres)
+- [ ] Integration tests for the repository (in-process H2, `H2DatabaseBase`)
 - [ ] API tests for all seven endpoints, including edge cases (400 for each
   invalid "when" combination, 404 for missing task/schedule, past `ONCE`,
   `FIXED` over one day)

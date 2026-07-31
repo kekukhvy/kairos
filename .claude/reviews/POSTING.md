@@ -47,9 +47,19 @@ acceptance. Each run appends a new comment (history), never edits a prior one.
 
 ## 3. Confirm before posting (outward-facing)
 
-Posting to a public issue is outward-facing. **Show the exact comment body and
-the target issue, and ask for confirmation before running `gh issue comment`.**
-Do not post silently. On approval:
+**Exception — automated sync-agent result comments post WITHOUT confirmation.**
+The post-TDD sync agents (test-author, acceptance-verifier, architecture-reviewer,
+logging-instrumenter, javadoc-writer, spec-keeper, user-docs-writer) each record
+their own short result to the issue automatically (see
+`.claude/agents/ISSUE-POSTING.md`, ≤15 lines each) — that per-agent proof-of-run is
+the whole point, so it is not gated on a prompt. This exception covers **only**
+those bounded, agent-authored result comments. Everything else below still applies.
+
+Posting to a public issue is outward-facing. For **human-authored summary
+comments** (a review write-up, a rewrite of the issue body, an acceptance summary
+you compose): **show the exact comment body and the target issue, and ask for
+confirmation before running `gh issue comment`.** Do not post those silently. On
+approval:
 
 ```bash
 gh issue comment <n> --body-file <path-to-comment-md>

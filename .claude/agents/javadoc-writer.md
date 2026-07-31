@@ -65,3 +65,11 @@ Add Javadoc where it is **absent and adds real value**, in priority order:
 - End with a summary: which types/members you documented, which you deliberately
   skipped (and why), and anything whose behavior was unclear from the code so a
   human can clarify.
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 javadoc-writer` comment: which types/members you documented, how
+many you deliberately skipped as trivial, anything whose behavior was unclear,
+and `Files: N · Build: ✅`. If nothing needed Javadoc, say "no changes needed —
+<why>".

@@ -128,7 +128,11 @@ in `common`.
 ## Testing
 
 - Unit tests for domain and use cases — **no DB**.
-- Repository integration tests with **Testcontainers + real Postgres**.
+- Repository integration tests on **in-process H2 (PostgreSQL mode)** — extend
+  `H2DatabaseBase`; mirror new schema into the `h2-schema.sql` test resource. No
+  Docker/Testcontainers. (Anything H2 can't express — e.g. partial/filtered
+  unique indexes — is verified against a real Postgres out-of-band, not in the
+  suite.)
 - API tests for every endpoint, including edge cases (404 after delete,
   soft-deleted excluded from list, etc.).
 - Tests follow the same rules: no magic literals, clear names, one assertion

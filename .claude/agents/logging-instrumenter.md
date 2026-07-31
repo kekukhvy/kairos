@@ -94,3 +94,11 @@ INFO — use DEBUG/TRACE and guard expensive message construction.
 - End with a summary: what you instrumented and at which levels, any level you
   corrected, and any swallowed exception or genuinely missing error handling you
   found (so a human can fix the underlying code).
+
+# Post your result to the issue
+
+Follow `.claude/agents/ISSUE-POSTING.md` (shared format, ≤15 lines, no confirm).
+Post a `### 🤖 logging-instrumenter` comment: what you instrumented (which
+classes / at which levels — e.g. INFO on create/delete, WARN on rejections), any
+level you corrected, any swallowed exception you flagged, and `Files: N · Build:
+✅`. If nothing needed logging, say "no changes needed — <why>".

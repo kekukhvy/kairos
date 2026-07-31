@@ -35,7 +35,7 @@ boundaries, aggregate rules, and the coding rules below are not optional.
 ## 0. Understand & plan
 - Resolve the acceptance criteria (issue body or spec). Number them AC1, AC2, …
 - Read the surrounding code and conventions (neighbouring classes, existing
-  ports, test layout, base classes, Testcontainers setup). Match them.
+  ports, test layout, base classes, the `H2DatabaseBase` IT setup). Match them.
 - Break the work into the **smallest ordered behaviors** — one red/green cycle
   each. Start with the domain (pure, no DB), then application, then
   infrastructure. Write down the cycle list before coding.
@@ -59,8 +59,12 @@ they must stay green. Do not add behavior here.
 ## 4. Repeat
 Next behavior → next cycle. For schema work, add the Flyway migration
 (`V<n>__description.sql`) and, if JOOQ types are needed,
-`./gradlew :kairos-api:generateJooq` after it applies. Integration tests for
-repositories use Testcontainers + Postgres.
+`./gradlew :kairos-api:generateJooq` after it applies. **Also mirror the new
+schema into the `h2-schema.sql` test resource** — repository ITs run on
+in-process H2 (`H2DatabaseBase`, PostgreSQL mode), so a new table/column the IT
+touches must exist there or the test won't see it. Anything H2 can't express
+(partial/filtered unique indexes) is verified against a real Postgres out of
+band, not in the suite.
 
 ## 5. Finish
 - Run the full affected module test + build: `./gradlew :<module>:build`.
