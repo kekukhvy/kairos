@@ -172,7 +172,7 @@ pick the same job — safe for horizontal scaling.
 
 ```bash
 docker compose up -d                      # infrastructure
-./gradlew :kairos-api:generateJooq        # JOOQ codegen (after migration changes)
+./gradlew :kairos-persistence:generateJooq        # JOOQ codegen (after migration changes)
 ./gradlew build                           # build + tests
 ```
 

@@ -105,7 +105,8 @@ injected clock for determinism and testability.
 - [x] JOOQ codegen wiring — `nu.studer.jooq` plugin pinned in
   `pluginManagement` (version from `gradle.properties`); generated sources
   at `kairos-api/src/main/generated` (package
-  `dev.kairos.infrastructure.generated`). JSONB columns (`tasks.payload`,
+  `dev.kairos.infrastructure.generated`) — moved to `kairos-persistence` in
+  M3.5, package unchanged. JSONB columns (`tasks.payload`,
   `destinations.config`, `execution_history.result`) are typed as
   `org.jooq.JSONB`; conversion to/from `String` is handled in `TaskMapper`.
   DB connection resolves: env var → `local.properties`
