@@ -1,5 +1,6 @@
 plugins {
     id 'nu.studer.jooq'  // version pinned in pluginManagement (settings.gradle)
+    id 'java-test-fixtures'
 }
 
 description = 'Kairos persistence: datasource, Flyway migrations, JOOQ codegen — shared by every component that talks to the database'
@@ -38,6 +39,14 @@ dependencies {
     testImplementation "com.h2database:h2:${h2Version}"
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // testFixtures: H2DatabaseBase, the shared in-process H2 (PostgreSQL mode)
+    // harness for repository integration tests. Exposed as `api` so any module
+    // depending on testFixtures(project(':kairos-persistence')) gets JUnit and
+    // H2 on its test classpath without redeclaring them.
+    testFixturesApi platform("org.junit:junit-bom:${junitBomVersion}")
+    testFixturesApi 'org.junit.jupiter:junit-jupiter'
+    testFixturesApi "com.h2database:h2:${h2Version}"
 }
 
 // ── jOOQ codegen ──────────────────────────────────────────────────────────────

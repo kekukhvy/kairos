@@ -68,7 +68,8 @@ domain/application layers (milestone M7+).
 ## Module map (Gradle multi-project)
 
 ```
-kairos-api/         # REST API (entry point)
+kairos-core/        # Domain + application layers (entities, use cases) — shared library
+kairos-api/         # REST API (entry point): api/ + infrastructure/ only
 kairos-engine/      # Scheduler engine: owns schema, planner, claim loop, retry
 kairos-persistence/ # Shared DB layer: Flyway, JOOQ codegen, DataSource, migrations
 kairos-worker/      # Delivery workers
@@ -77,6 +78,15 @@ kairos-admin/       # Admin UI (Vaadin + Spring) — the ONLY place Spring is al
 kairos-sdk/         # Java SDK for client services
 common/             # Shared models, DTO/API contracts
 ```
+
+`domain/` and `application/` (see "Architecture" above) live in `kairos-core`, a pure
+Java library with zero framework dependencies — any runnable component can
+depend on it without pulling in HTTP/JOOQ. `kairos-api` keeps only its `api/`
+(REST handlers) and `infrastructure/` (JOOQ repositories) packages and depends
+on `kairos-core`. `kairos-persistence` also publishes a `testFixtures` source
+set (`H2DatabaseBase`, the in-process H2/PostgreSQL-mode harness) so any
+module's repository-style integration tests can depend on
+`testFixtures(project(':kairos-persistence'))` instead of duplicating it.
 
 Package root: `dev.kairos`.
 

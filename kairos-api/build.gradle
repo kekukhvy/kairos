@@ -11,6 +11,7 @@ application {
 // ── Dependencies ───────────────────────────────────────────────────────────────
 dependencies {
     implementation project(':common')
+    implementation project(':kairos-core')
     implementation project(':kairos-persistence')
 
     implementation "io.javalin:javalin:${javalinVersion}"
@@ -21,7 +22,9 @@ dependencies {
     testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation "com.h2database:h2:${h2Version}"
+    // H2DatabaseBase (in-process H2, PostgreSQL mode) for repository ITs —
+    // brings JUnit + H2 transitively.
+    testImplementation testFixtures(project(':kairos-persistence'))
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
