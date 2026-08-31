@@ -137,6 +137,7 @@ Tracks the result: `SUCCESS` · `FAILED` · `RETRYING` · `DEAD_LETTER`
 
 ```
 kairos/
+├── kairos-core/           # Domain model + application use cases (shared library)
 ├── kairos-api/            # REST API
 ├── kairos-engine/         # Scheduler engine (claim, retry, cron)
 ├── kairos-worker/         # Delivery workers

@@ -278,6 +278,27 @@ transfer schema ownership from `kairos-api` to `kairos-engine`.
   on the engine (not yet containerized, so this is out of scope for this
   slice)
 
+## M3.6 — Core Module Extraction ✅
+
+**Goal:** extract `domain/` and `application/` out of `kairos-api` into a new
+`kairos-core` library, so any runnable component can embed the scheduling
+domain without pulling in HTTP/JOOQ.
+
+- [x] New `kairos-core` module — pure Java library, zero framework
+  dependencies, depends only on `common`
+- [x] Moved `domain/` and `application/` (main + tests) from `kairos-api` to
+  `kairos-core` with `git mv`; package names unchanged
+  (`dev.kairos.domain`, `dev.kairos.application`)
+- [x] `kairos-api` now holds only `api/` (REST handlers) and
+  `infrastructure/` (JOOQ repositories); depends on `kairos-core`
+- [x] `kairos-engine` depends on `kairos-core` (currently `testImplementation`,
+  since only its tests reference the domain until the planner lands in M5/M6)
+  and can reference `Schedule` / `ScheduleType`
+- [x] `H2DatabaseBase` published as a `kairos-persistence` `testFixtures`
+  source set (`java-test-fixtures` plugin) so repository-style integration
+  tests in any module — not just `kairos-api` — can depend on
+  `testFixtures(project(':kairos-persistence'))`
+
 ## M4 — Retry Policy
 
 **Goal:** configurable retry steps per task.

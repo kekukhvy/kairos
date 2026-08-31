@@ -41,7 +41,10 @@ public abstract class H2DatabaseBase {
 
     private static DataSource buildDataSource() {
         // One shared in-memory DB per JVM, kept alive by DB_CLOSE_DELAY=-1.
-        // Class name in the URL keeps separate IT classes isolated.
+        // Every subclass therefore shares this database, and each one's @BeforeAll
+        // recreates the schema — safe only while tests run sequentially (no
+        // maxParallelForks is set anywhere in the build). If parallel forks are
+        // ever enabled, give each class its own URL before that assumption breaks.
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl("jdbc:h2:mem:kairos_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
         cfg.setUsername("sa");

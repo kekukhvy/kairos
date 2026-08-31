@@ -1,7 +1,5 @@
 package dev.kairos.domain.schedule;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,7 +28,6 @@ public record ScheduleId(UUID value) {
         return new ScheduleId(UUID.fromString(id));
     }
 
-    @NotNull
     @Override
     public String toString() {
         return "ScheduleId{value=" + value + '}';

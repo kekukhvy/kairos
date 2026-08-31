@@ -16,7 +16,13 @@ dependencies {
 
     testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation "com.h2database:h2:${h2Version}"
+    // Domain types (Schedule, ScheduleType) are referenced only by tests today —
+    // the planner and claim loop land in M5/M6. Promote to `implementation` when
+    // the engine's main source set actually uses them.
+    testImplementation project(':kairos-core')
+    // H2DatabaseBase (in-process H2, PostgreSQL mode) for repository-style ITs —
+    // brings JUnit + H2 transitively.
+    testImplementation testFixtures(project(':kairos-persistence'))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

@@ -1,0 +1,17 @@
+description = 'Kairos core: domain model and application use cases, shared by every component that embeds the scheduling logic'
+
+// ── Dependencies ───────────────────────────────────────────────────────────────
+// Exposed as `api`: domain/application types appear on this module's public
+// signatures (e.g. DestinationType, DomainException), so consumers need them
+// on their own compile classpath too.
+dependencies {
+    api project(':common')
+
+    testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
