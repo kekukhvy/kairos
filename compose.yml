@@ -17,29 +17,91 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Scheduler engine. Owns the schema: it runs the Flyway migrations on startup
+  # and only then writes its readiness marker (engine.health.file), which is the
+  # signal kairos-api waits for before it starts. Built from source here rather
+  # than pulled, since it is not published yet. Config comes from the
+  # environment (AppConfig resolves DB_URL etc. ahead of the packaged
+  # application.properties, whose defaults point at localhost for host runs).
+  engine:
+    build:
+      context: .
+      dockerfile: kairos-engine/Dockerfile
+    image: kairos-engine:dev
+    container_name: kairos-engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/kairos
+      DB_USERNAME: kairos
+      DB_PASSWORD: kairos
+    volumes:
+      # Exposes the readiness marker so other components can probe for it.
+      - kairos-engine-health:/var/run/kairos
+    healthcheck:
+      # Healthy only once migrations have completed and the marker exists.
+      test: [ "CMD-SHELL", "test -f /var/run/kairos/engine.health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # REST API. Does not own the schema — it only reads/writes through it, and
+  # SchemaReadinessCheck fails fast if the tables are missing. Hence it waits
+  # for the engine to report healthy (i.e. migrations done), not merely for
+  # Postgres to accept connections. Built from source; not published yet.
+  api:
+    build:
+      context: .
+      dockerfile: kairos-api/Dockerfile
+    image: kairos-api:dev
+    container_name: kairos-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/kairos
+      DB_USERNAME: kairos
+      DB_PASSWORD: kairos
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # The JRE image ships no curl/wget/nc, so probe the port with bash's
+      # built-in /dev/tcp rather than installing a package just to health-check.
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
   # Admin UI. Runs the published image. 0.3.0 is amd64-only, so `platform` is
   # pinned to run it (via emulation) on Apple Silicon; images from the next
   # release are multi-arch (amd64+arm64) — drop the `platform` line then. The
-  # admin is a REST client to kairos-api, which for now runs on the host (not in
-  # compose), so it targets the API via host.docker.internal. It listens on 8090.
+  # admin is a REST client to kairos-api: it reaches it over the compose network
+  # by service name, so no host.docker.internal hop is needed. It listens on 8090.
   admin:
     image: ghcr.io/kekukhvy/kairos-admin:0.3.0
     container_name: kairos-admin
     platform: linux/amd64
     depends_on:
-      postgres:
+      api:
         condition: service_healthy
     environment:
-      # kairos-api runs on the host machine; reach it from the container.
-      KAIROS_API_BASE_URL: http://host.docker.internal:8080
+      # kairos-api runs in this compose project; reach it by service name.
+      KAIROS_API_BASE_URL: http://api:8080
       # Don't pop a browser inside the container.
       VAADIN_LAUNCH_BROWSER: "false"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "8090:8090"
     restart: unless-stopped
 
 volumes:
   kairos-postgres-data:
+    driver: local
+  kairos-engine-health:
     driver: local
