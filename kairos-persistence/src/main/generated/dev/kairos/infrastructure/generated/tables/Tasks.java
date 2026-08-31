@@ -216,7 +216,7 @@ public class Tasks extends TableImpl<TasksRecord> {
 
     @Override
     public List<Index> getIndexes() {
-        return Arrays.asList(Indexes.IDX_TASKS_ACTIVE_NOT_DELETED, Indexes.IDX_TASKS_DESTINATION_ID);
+        return Arrays.asList(Indexes.IDX_TASKS_ACTIVE_NOT_DELETED, Indexes.IDX_TASKS_DESTINATION_ID, Indexes.IDX_TASKS_SERVICE_NAME_UNIQUE);
     }
 
     @Override

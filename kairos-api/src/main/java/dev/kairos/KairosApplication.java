@@ -1,6 +1,6 @@
 package dev.kairos;
 
-import dev.kairos.config.AppConfig;
+import dev.kairos.persistence.AppConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

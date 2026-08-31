@@ -105,7 +105,8 @@ injected clock for determinism and testability.
 - [x] JOOQ codegen wiring — `nu.studer.jooq` plugin pinned in
   `pluginManagement` (version from `gradle.properties`); generated sources
   at `kairos-api/src/main/generated` (package
-  `dev.kairos.infrastructure.generated`). JSONB columns (`tasks.payload`,
+  `dev.kairos.infrastructure.generated`) — moved to `kairos-persistence` in
+  M3.5, package unchanged. JSONB columns (`tasks.payload`,
   `destinations.config`, `execution_history.result`) are typed as
   `org.jooq.JSONB`; conversion to/from `String` is handled in `TaskMapper`.
   DB connection resolves: env var → `local.properties`
@@ -250,6 +251,32 @@ injected clock for determinism and testability.
 - [ ] API tests for all seven endpoints, including edge cases (400 for each
   invalid "when" combination, 404 for missing task/schedule, past `ONCE`,
   `FIXED` over one day)
+
+## M3.5 — Persistence Module Extraction & Schema Ownership ✅
+
+**Goal:** extract all DB plumbing into a shared `kairos-persistence` module;
+transfer schema ownership from `kairos-api` to `kairos-engine`.
+
+- [x] New `kairos-persistence` module — owns `AppConfig`, `DataSourceFactory`,
+  `DatabaseMigrator`, `DSLContextFactory`, `SchemaReadinessCheck`
+- [x] Migrate `V1`–`V8` from `kairos-api/src/main/resources/db/migration/` to
+  `kairos-persistence/src/main/resources/db/migration/`
+- [x] Move JOOQ codegen plugin config to `kairos-persistence`; generated
+  sources remain in package `dev.kairos.infrastructure.generated`
+- [x] Expose persistence types as `api` (transitive) so consumers get
+  `DataSource`/`DSLContext` on their compile classpath; only `kairos-api` and
+  `kairos-engine` depend on the module. `kairos-sdk`, `kairos-admin` and
+  `common` simply don't — the module is deliberately separate from `common`
+  so client JARs never drag the persistence stack
+- [x] `kairos-engine` owns and runs Flyway on startup via `EngineBootstrap`
+  → `DatabaseMigrator.migrate(...)`; exposes health signal at
+  `engine.health.file` (path from config), readable only after migration
+  completes
+- [x] `kairos-api` no longer migrates; calls `SchemaReadinessCheck.verify`
+  instead (fails fast with clear message if engine hasn't migrated yet)
+- [x] Compose orchestration will use `depends_on: condition: service_healthy`
+  on the engine (not yet containerized, so this is out of scope for this
+  slice)
 
 ## M4 — Retry Policy
 

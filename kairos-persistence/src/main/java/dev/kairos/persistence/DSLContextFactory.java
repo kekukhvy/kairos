@@ -1,4 +1,4 @@
-package dev.kairos.infrastructure;
+package dev.kairos.persistence;
 
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;

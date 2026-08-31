@@ -196,7 +196,7 @@ docker compose up -d
 ### Run JOOQ codegen
 
 ```bash
-./gradlew :kairos-api:generateJooq
+./gradlew :kairos-persistence:generateJooq
 ```
 
 ### Build

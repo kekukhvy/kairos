@@ -1,4 +1,4 @@
-package dev.kairos.config;
+package dev.kairos.persistence;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -135,7 +135,7 @@ insert and flag.
 ## Acceptance criteria
 
 - [ ] A migration adds `materialized_at` to `schedules`; it applies cleanly on a
-      fresh database, and `./gradlew :kairos-api:generateJooq` regenerates
+      fresh database, and `./gradlew :kairos-persistence:generateJooq` regenerates
       without error.
 - [ ] An active `ONCE` schedule with `materialized_at IS NULL` results in exactly
       one `executions` row with `scheduled_for` = `next_attempt_at` = the

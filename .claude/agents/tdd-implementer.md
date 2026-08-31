@@ -59,7 +59,7 @@ they must stay green. Do not add behavior here.
 ## 4. Repeat
 Next behavior → next cycle. For schema work, add the Flyway migration
 (`V<n>__description.sql`) and, if JOOQ types are needed,
-`./gradlew :kairos-api:generateJooq` after it applies. **Also mirror the new
+`./gradlew :kairos-persistence:generateJooq` after it applies. **Also mirror the new
 schema into the `h2-schema.sql` test resource** — repository ITs run on
 in-process H2 (`H2DatabaseBase`, PostgreSQL mode), so a new table/column the IT
 touches must exist there or the test won't see it. Anything H2 can't express

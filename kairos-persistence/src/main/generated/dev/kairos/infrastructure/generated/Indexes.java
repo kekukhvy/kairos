@@ -38,4 +38,5 @@ public class Indexes {
     public static final Index IDX_SCHEDULES_TASK_ID = Internal.createIndex(DSL.name("idx_schedules_task_id"), Schedules.SCHEDULES, new OrderField[] { Schedules.SCHEDULES.TASK_ID }, false);
     public static final Index IDX_TASKS_ACTIVE_NOT_DELETED = Internal.createIndex(DSL.name("idx_tasks_active_not_deleted"), Tasks.TASKS, new OrderField[] { Tasks.TASKS.CREATED_AT }, false);
     public static final Index IDX_TASKS_DESTINATION_ID = Internal.createIndex(DSL.name("idx_tasks_destination_id"), Tasks.TASKS, new OrderField[] { Tasks.TASKS.DESTINATION_ID }, false);
+    public static final Index IDX_TASKS_SERVICE_NAME_UNIQUE = Internal.createIndex(DSL.name("idx_tasks_service_name_unique"), Tasks.TASKS, new OrderField[] { Tasks.TASKS.SERVICE, Tasks.TASKS.NAME }, true);
 }

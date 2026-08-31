@@ -69,7 +69,8 @@ domain/application layers (milestone M7+).
 
 ```
 kairos-api/         # REST API (entry point)
-kairos-engine/      # Scheduler engine: planner, claim loop, retry
+kairos-engine/      # Scheduler engine: owns schema, planner, claim loop, retry
+kairos-persistence/ # Shared DB layer: Flyway, JOOQ codegen, DataSource, migrations
 kairos-worker/      # Delivery workers
 kairos-adapters/    # Pluggable delivery adapters (kafka, sqs, webhook, rabbitmq)
 kairos-admin/       # Admin UI (Vaadin + Spring) — the ONLY place Spring is allowed
@@ -103,13 +104,16 @@ binary.
 Composition scenarios the design must support:
 - **A. Full stack** — engine + api + admin + adapters, each its own container.
   A ready `docker-compose.yml` bundles them so the user runs one
-  `docker compose up`; internally still separate processes.
+  `docker compose up`; internally still separate processes. The engine starts
+  first, migrates the schema, and signals readiness via `engine.health.file`;
+  the api waits for that signal and then starts.
 - **B. Engine-only** — `kairos-engine` image + the DB. The user writes to the
-  tables directly (no api/admin). **Kairos owns the schema** (Flyway migrations
-  are the single source of truth); the user writes against the *documented*
-  table contract in `doc/database.md`.
+  tables directly (no api/admin). **`kairos-engine` owns and migrates the
+  schema** (Flyway migrations in `kairos-persistence` are the single source of
+  truth); the user writes against the *documented* table contract in
+  `doc/database.md`.
 - **C. Engine + API** — engine + api images; the user builds their own admin UI
-  on the API.
+  on the API. The api requires the engine to have migrated first.
 - **D. Any of the above + selected adapters** at chosen versions.
 
 Rules that follow from this — apply them to **every** change:
@@ -139,8 +143,9 @@ anything that *prevents* it — keep components independently packageable. See
 ## Tech stack
 
 - **Java 26** — pure Java, **no Spring** (except `kairos-admin`)
-- **JOOQ** — type-safe SQL (`./gradlew :kairos-api:generateJooq`)
-- **Flyway** — migrations (`V<n>__description.sql`)
+- **JOOQ** — type-safe SQL (`./gradlew :kairos-persistence:generateJooq`)
+- **Flyway** — migrations in `kairos-persistence/src/main/resources/db/migration/`
+  (`V<n>__description.sql`), run by `kairos-engine` on startup
 - **HikariCP** — connection pooling
 - **Kafka** — first delivery adapter
 - **SLF4J + Logback** — logging
@@ -167,7 +172,7 @@ pick the same job — safe for horizontal scaling.
 
 ```bash
 docker compose up -d                      # infrastructure
-./gradlew :kairos-api:generateJooq        # JOOQ codegen (after migration changes)
+./gradlew :kairos-persistence:generateJooq        # JOOQ codegen (after migration changes)
 ./gradlew build                           # build + tests
 ```
 
