@@ -22,6 +22,11 @@ def jooqDbPassword = System.getenv('DB_PASSWORD')  ?: localProps.getProperty('db
 // DataSource/DSLContext/Flyway types on its own compile classpath, not just at
 // runtime.
 dependencies {
+    // Repository implementations (JooqTaskRepository, JooqScheduleRepository,
+    // JooqDestinationRepository) implement the ports and return the domain
+    // types declared in kairos-core — `api` so consumers see them too.
+    api project(':kairos-core')
+
     api "com.zaxxer:HikariCP:${hikariVersion}"
 
     api "org.flywaydb:flyway-core:${flywayVersion}"

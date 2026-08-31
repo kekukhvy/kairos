@@ -1,6 +1,5 @@
 package dev.kairos.application.destination.usecases;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.application.destination.commands.CreateDestinationCommand;
 import dev.kairos.common.destination.DestinationType;
 import dev.kairos.domain.destination.*;
@@ -42,14 +41,14 @@ public final class CreateDestinationUseCase {
 
     private final DestinationRepository repository;
     private final Clock clock;
-    private final ObjectMapper objectMapper;
+    private final ConfigKeyReader configKeyReader;
 
     public CreateDestinationUseCase(DestinationRepository repository,
                                     Clock clock,
-                                    ObjectMapper objectMapper) {
+                                    ConfigKeyReader configKeyReader) {
         this.repository = Objects.requireNonNull(repository, "'repository' must not be null.");
         this.clock = Objects.requireNonNull(clock, "'clock' must not be null.");
-        this.objectMapper = Objects.requireNonNull(objectMapper, "'objectMapper' must not be null.");
+        this.configKeyReader = Objects.requireNonNull(configKeyReader, "'configKeyReader' must not be null.");
     }
 
     public Destination execute(CreateDestinationCommand command) {
@@ -58,7 +57,7 @@ public final class CreateDestinationUseCase {
 
         validateExistingDestination(destinationId);
         DestinationType type = parseDestinationType(command.destinationType());
-        validateConfigSchema(type, command.config(), objectMapper);
+        validateConfigSchema(type, command.config(), configKeyReader);
 
         Instant now = clock.instant();
         Destination.Builder builder = Destination.builder()

@@ -291,6 +291,8 @@ domain without pulling in HTTP/JOOQ.
   (`dev.kairos.domain`, `dev.kairos.application`)
 - [x] `kairos-api` now holds only `api/` (REST handlers) and
   `infrastructure/` (JOOQ repositories); depends on `kairos-core`
+  <!-- the repositories moved on to kairos-persistence in M3.7 below -->
+
 - [x] `kairos-engine` depends on `kairos-core` (currently `testImplementation`,
   since only its tests reference the domain until the planner lands in M5/M6)
   and can reference `Schedule` / `ScheduleType`
@@ -298,6 +300,35 @@ domain without pulling in HTTP/JOOQ.
   source set (`java-test-fixtures` plugin) so repository-style integration
   tests in any module — not just `kairos-api` — can depend on
   `testFixtures(project(':kairos-persistence'))`
+
+## M3.7 — Repository Extraction ✅
+
+**Goal:** finish the split M3.6 started. `kairos-core` held the repository
+*ports*, but their only *implementations* were still locked inside
+`kairos-api` — a module no other runnable component may depend on. The engine
+could build a `Schedule` but not read one, which would have blocked the M6
+claim loop exactly as the missing domain blocked #55.
+
+- [x] `Jooq{Task,Schedule,Destination}Repository` + `TaskMapper` /
+  `ScheduleMapper` moved from `kairos-api` to `kairos-persistence` with
+  `git mv`; packages kept as `dev.kairos.infrastructure.*` so no import
+  anywhere needed rewriting (same tactic as the generated JOOQ code in M3.5)
+- [x] `kairos-persistence` depends on `kairos-core` (`api`, since domain types
+  appear on the repositories' public signatures) — direction stays inward:
+  `persistence` → `core` → `common`
+- [x] `kairos-engine` can read schedules through the `ScheduleRepository`
+  **port**, backed by the real `JooqScheduleRepository` — proven by
+  `ScheduleRepositoryReadinessIT`, which could not previously compile from the
+  engine at all
+- [x] `kairos-api` reduced to its `api/` package plus the JSON wiring the HTTP
+  layer owns (`ObjectMapperFactory`, `JacksonConfigKeyReader`)
+- [x] Jackson removed from the `application` layer: new framework-free port
+  `ConfigKeyReader` (`kairos-core`, one method) replaces the `ObjectMapper` the
+  destination use cases used to hold, with the Jackson-backed implementation in
+  `kairos-api` (closes the layer leak filed as a follow-up to M3.6)
+- [x] `kairos-admin`, `kairos-sdk` and `common` gain no JOOQ / Hikari /
+  Postgres on their classpath — the constraint that kept `persistence` separate
+  from `common` in M3.5 still holds
 
 ## M4 — Retry Policy
 

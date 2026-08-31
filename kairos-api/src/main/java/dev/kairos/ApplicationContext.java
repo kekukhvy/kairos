@@ -8,10 +8,12 @@ import dev.kairos.api.task.TaskHandler;
 import dev.kairos.application.destination.usecases.*;
 import dev.kairos.application.schedule.usecases.*;
 import dev.kairos.application.task.usecases.*;
+import dev.kairos.domain.destination.ConfigKeyReader;
 import dev.kairos.domain.destination.DestinationRepository;
 import dev.kairos.domain.schedule.ScheduleRepository;
 import dev.kairos.domain.task.TaskRepository;
 import dev.kairos.infrastructure.ObjectMapperFactory;
+import dev.kairos.infrastructure.destination.JacksonConfigKeyReader;
 import dev.kairos.infrastructure.destination.JooqDestinationRepository;
 import dev.kairos.infrastructure.schedule.JooqScheduleRepository;
 import dev.kairos.infrastructure.task.JooqTaskRepository;
@@ -45,6 +47,7 @@ final class ApplicationContext {
         SchemaReadinessCheck.verify(dataSource);
         DSLContext dsl = DSLContextFactory.create(dataSource);
         ObjectMapper objectMapper = ObjectMapperFactory.create();
+        ConfigKeyReader configKeyReader = new JacksonConfigKeyReader(objectMapper);
         Clock clock = Clock.systemUTC();
 
         // ── Repositories ──────────────────────────────────────────────────────
@@ -65,8 +68,8 @@ final class ApplicationContext {
         );
 
         DestinationHandler destinationHandler = new DestinationHandler(
-                new CreateDestinationUseCase(destinationRepository, clock, objectMapper),
-                new UpdateDestinationUseCase(destinationRepository, objectMapper),
+                new CreateDestinationUseCase(destinationRepository, clock, configKeyReader),
+                new UpdateDestinationUseCase(destinationRepository, configKeyReader),
                 new DeleteDestinationUseCase(destinationRepository, taskRepository),
                 new ListDestinationsUseCase(destinationRepository),
                 new GetDestinationByIdUseCase(destinationRepository),

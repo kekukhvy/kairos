@@ -1,21 +1,20 @@
 package dev.kairos.application.destination.usecases;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.common.destination.DestinationConfigSchema;
 import dev.kairos.common.destination.DestinationType;
+import dev.kairos.domain.destination.ConfigKeyReader;
 
 import java.util.Set;
 
-import static dev.kairos.common.util.helpers.JsonConverter.topLevelKeys;
-
 /**
  * Validates a raw destination {@code config} JSON string against the per-type
- * {@link DestinationConfigSchema}: parses the config into its top-level key set
- * and checks that every key the type requires is present.
+ * {@link DestinationConfigSchema}: extracts the config's top-level key set via
+ * the {@link ConfigKeyReader} port and checks that every key the type requires
+ * is present.
  *
- * <p>Kept in the application layer (not domain) because it uses Jackson to
- * parse JSON — the domain stays framework-free and only ever sees the
- * resulting validated config string.
+ * <p>Framework-free: JSON parsing is delegated to {@link ConfigKeyReader},
+ * whose implementation lives in the infrastructure layer, so this class (and
+ * the rest of the application layer) never imports a JSON library directly.
  */
 final class DestinationConfigValidator {
 
@@ -27,8 +26,8 @@ final class DestinationConfigValidator {
      * @throws dev.kairos.common.exceptions.ValidationException if {@code config} is
      *         not a JSON object, or omits a key required for {@code type}
      */
-    static void validateConfigSchema(DestinationType type, String config, ObjectMapper objectMapper) {
-        Set<String> presentKeys = topLevelKeys(config, objectMapper);
+    static void validateConfigSchema(DestinationType type, String config, ConfigKeyReader configKeyReader) {
+        Set<String> presentKeys = configKeyReader.topLevelKeys(config);
         DestinationConfigSchema.validate(type, presentKeys);
     }
 }

@@ -1,6 +1,6 @@
 package dev.kairos.application.destination.usecases;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.kairos.domain.destination.ConfigKeyReader;
 import dev.kairos.domain.destination.Destination;
 import dev.kairos.domain.destination.DestinationId;
 import dev.kairos.domain.destination.DestinationRepository;
@@ -31,11 +31,11 @@ public final class UpdateDestinationUseCase {
     private static final Logger logger = LoggerFactory.getLogger(UpdateDestinationUseCase.class);
 
     private final DestinationRepository destinationRepository;
-    private final ObjectMapper objectMapper;
+    private final ConfigKeyReader configKeyReader;
 
-    public UpdateDestinationUseCase(DestinationRepository destinationRepository, ObjectMapper objectMapper) {
+    public UpdateDestinationUseCase(DestinationRepository destinationRepository, ConfigKeyReader configKeyReader) {
         this.destinationRepository = Objects.requireNonNull(destinationRepository);
-        this.objectMapper = Objects.requireNonNull(objectMapper, "'objectMapper' must not be null.");
+        this.configKeyReader = Objects.requireNonNull(configKeyReader, "'configKeyReader' must not be null.");
     }
 
     /**
@@ -56,7 +56,7 @@ public final class UpdateDestinationUseCase {
         Destination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new DestinationNotFoundException(destinationId));
 
-        validateConfigSchema(destination.destinationType(), config, objectMapper);
+        validateConfigSchema(destination.destinationType(), config, configKeyReader);
 
         destination.updateConfig(config);
         destinationRepository.save(destination);
