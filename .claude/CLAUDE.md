@@ -69,9 +69,9 @@ domain/application layers (milestone M7+).
 
 ```
 kairos-core/        # Domain + application layers (entities, use cases) — shared library
-kairos-api/         # REST API (entry point): api/ + infrastructure/ only
+kairos-api/         # REST API (entry point): api/ handlers + JSON wiring only
 kairos-engine/      # Scheduler engine: owns schema, planner, claim loop, retry
-kairos-persistence/ # Shared DB layer: Flyway, JOOQ codegen, DataSource, migrations
+kairos-persistence/ # Persistence adapter: JOOQ repositories, Flyway, codegen, DataSource
 kairos-worker/      # Delivery workers
 kairos-adapters/    # Pluggable delivery adapters (kafka, sqs, webhook, rabbitmq)
 kairos-admin/       # Admin UI (Vaadin + Spring) — the ONLY place Spring is allowed
@@ -81,11 +81,31 @@ common/             # Shared models, DTO/API contracts
 
 `domain/` and `application/` (see "Architecture" above) live in `kairos-core`, a pure
 Java library with zero framework dependencies — any runnable component can
-depend on it without pulling in HTTP/JOOQ. `kairos-api` keeps only its `api/`
-(REST handlers) and `infrastructure/` (JOOQ repositories) packages and depends
-on `kairos-core`. `kairos-persistence` also publishes a `testFixtures` source
-set (`H2DatabaseBase`, the in-process H2/PostgreSQL-mode harness) so any
-module's repository-style integration tests can depend on
+depend on it without pulling in HTTP/JOOQ.
+
+**Ports live in `kairos-core`, their JOOQ implementations in
+`kairos-persistence`.** The repository interfaces (`TaskRepository`,
+`ScheduleRepository`, `DestinationRepository`) sit next to their aggregates in
+`kairos-core/domain/`; the `Jooq*Repository` classes implementing them live in
+`kairos-persistence`, which therefore depends on `kairos-core` (`api` — domain
+types appear on the repositories' public signatures). Dependencies still point
+inward: `persistence` → `core` → `common`. This is what lets `kairos-engine`
+read the schema it owns without depending on `kairos-api` — no runnable
+component may depend on another runnable component.
+
+`kairos-api` keeps only its `api/` package (REST handlers, DTO mappers) plus the
+JSON wiring the HTTP layer needs (`ObjectMapperFactory`, `JacksonConfigKeyReader`).
+
+Note the two package roots inside `kairos-persistence`: `dev.kairos.persistence.*`
+is the DB plumbing (DataSource, Flyway, DSLContext), while
+`dev.kairos.infrastructure.*` holds the repositories, mappers, the generated JOOQ
+code, and `H2DatabaseBase`. The split is deliberate — those classes kept their
+original package names across two module moves (#51, #63) so that no import
+anywhere in the codebase had to be rewritten.
+
+`kairos-persistence` also publishes a `testFixtures` source set
+(`H2DatabaseBase`, the in-process H2/PostgreSQL-mode harness) so any module's
+repository-style integration tests can depend on
 `testFixtures(project(':kairos-persistence'))` instead of duplicating it.
 
 Package root: `dev.kairos`.

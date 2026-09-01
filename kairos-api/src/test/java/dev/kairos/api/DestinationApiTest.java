@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.api.destination.DestinationHandler;
 import dev.kairos.application.destination.usecases.*;
+import dev.kairos.domain.destination.ConfigKeyReader;
 import dev.kairos.infrastructure.ObjectMapperFactory;
+import dev.kairos.infrastructure.destination.JacksonConfigKeyReader;
 import io.javalin.Javalin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,12 +97,13 @@ class DestinationApiTest {
     @BeforeEach
     void startApp() {
         objectMapper = ObjectMapperFactory.create();
+        ConfigKeyReader configKeyReader = new JacksonConfigKeyReader(objectMapper);
         destinationRepository = new InMemoryDestinationRepositoryForApi();
         taskRepository = new StubTaskRepositoryForApi();
 
         DestinationHandler handler = new DestinationHandler(
-                new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, objectMapper),
-                new UpdateDestinationUseCase(destinationRepository, objectMapper),
+                new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, configKeyReader),
+                new UpdateDestinationUseCase(destinationRepository, configKeyReader),
                 new DeleteDestinationUseCase(destinationRepository, taskRepository),
                 new ListDestinationsUseCase(destinationRepository),
                 new GetDestinationByIdUseCase(destinationRepository),

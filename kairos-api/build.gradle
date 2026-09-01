@@ -22,9 +22,6 @@ dependencies {
     testImplementation platform("org.junit:junit-bom:${junitBomVersion}")
 
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    // H2DatabaseBase (in-process H2, PostgreSQL mode) for repository ITs —
-    // brings JUnit + H2 transitively.
-    testImplementation testFixtures(project(':kairos-persistence'))
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

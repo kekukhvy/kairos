@@ -1,6 +1,5 @@
 package dev.kairos.application.destination.usecases;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.kairos.application.destination.commands.CreateDestinationCommand;
 import dev.kairos.common.exceptions.ValidationException;
 import dev.kairos.domain.destination.Destination;
@@ -42,7 +41,7 @@ class CreateDestinationUseCaseTest {
     @BeforeEach
     void setUp() {
         destinationRepository = new InMemoryDestinationRepository();
-        useCase = new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, new ObjectMapper());
+        useCase = new CreateDestinationUseCase(destinationRepository, FIXED_CLOCK, new JacksonConfigKeyReaderForTests());
     }
 
     // --- happy path ---
